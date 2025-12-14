@@ -184,14 +184,19 @@ async function analyze(sym,bear=false){
   return {sym,prob:p,bias,reasons:rs};
 }
 
-/* ================= UI HELPERS ================= */
+/* ================= UI ================= */
 
 function renderCard(d,el,extra=""){
   const cls=d.bias.includes("Bull")?"bull":d.bias.includes("Bear")?"bear":"neutral";
+  const dd = typeof d.drawdown==="number"
+    ? `<div class="muted">24h Drawdown: <b>${d.drawdown.toFixed(2)}%</b></div>`
+    : "";
+
   el.innerHTML+=`
   <div class="card">
     <b>${d.sym}</b>
     <div class="prob ${cls}">${d.bias} — ${d.prob}%</div>
+    ${dd}
     <div class="muted">${d.reasons.join(" • ")}</div>
     ${extra}
   </div>`;
@@ -219,12 +224,13 @@ function toggleFavorite(sym){
 
 async function runScan(){
   alertPlayed=false;
-  document.getElementById("greenGrid").innerHTML="";
-  document.getElementById("redGrid").innerHTML="";
-  document.getElementById("status").innerText="Scanning top movers...";
+  greenGrid.innerHTML="";
+  redGrid.innerHTML="";
+  status.innerText="Scanning top movers...";
 
   const t=await fetchJSON(`${API}/fapi/v1/ticker/24hr`);
   const usdt=t.filter(x=>x.symbol.endsWith("USDT")&&!BLACKSET.has(x.symbol));
+
   const green=[...usdt].sort((a,b)=>b.priceChangePercent-a.priceChangePercent).slice(0,30);
   const red=[...usdt].sort((a,b)=>a.priceChangePercent-b.priceChangePercent).slice(0,30);
 
@@ -232,37 +238,42 @@ async function runScan(){
   lastTopRed=red.map(x=>x.symbol);
 
   for(const x of green){
+    const last=+x.lastPrice, high24=+x.highPrice;
     const r=await analyze(x.symbol,false);
+    r.drawdown=((last-high24)/high24)*100;
     if(r.prob>=80&&!alertPlayed){alertSound.play();alertPlayed=true;}
-    renderCard(r,document.getElementById("greenGrid"));
+    renderCard(r,greenGrid);
   }
 
   for(const x of red){
+    const last=+x.lastPrice, high24=+x.highPrice;
     const r=await analyze(x.symbol,true);
+    r.drawdown=((last-high24)/high24)*100;
     if(r.prob>=80&&!alertPlayed){alertSound.play();alertPlayed=true;}
-    renderCard(r,document.getElementById("redGrid"));
+    renderCard(r,redGrid);
   }
 
-  document.getElementById("timestamp").innerText="Updated: "+new Date().toLocaleString();
-  document.getElementById("status").innerText="Completed";
+  timestamp.innerText="Updated: "+new Date().toLocaleString();
+  status.innerText="Completed";
 }
 
 async function runSearch(symOverride=null){
   const sym=(symOverride||symbolSearch.value).trim().toUpperCase();
-  const el=document.getElementById("searchGrid");
-  el.innerHTML="";
+  searchGrid.innerHTML="";
   if(!sym.endsWith("USDT")||BLACKSET.has(sym)) return;
 
   pinnedSymbol=sym;
   const t=await fetchJSON(`${API}/fapi/v1/ticker/24hr?symbol=${sym}`);
-  const bear=Number(t.priceChangePercent)<0;
+  const bear=+t.priceChangePercent<0;
   const r=await analyze(sym,bear);
+
+  r.drawdown=((+t.lastPrice-+t.highPrice)/+t.highPrice)*100;
 
   let ctx="Outside Top Movers";
   if(lastTopGreen.includes(sym)) ctx="Top 30 Gainer";
   if(lastTopRed.includes(sym)) ctx="Top 30 Loser";
 
-  renderCard(r,el,`
+  renderCard(r,searchGrid,`
     <div class="muted">Context: ${ctx}</div>
     <button class="secondary" onclick="toggleFavorite('${sym}')">⭐ Favorite</button>
   `);
