@@ -1,0 +1,291 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>1D Bull / Bear Probability — Pro Scanner</title>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+
+<style>
+body{
+  font-family:Inter,system-ui,Arial;
+  background:#0f1720;
+  color:#e6eef8;
+  margin:16px;
+}
+h1{font-size:18px;margin-bottom:6px}
+h2{font-size:16px;margin-top:14px}
+.muted{color:#9fb3cc;font-size:13px}
+button,input{
+  padding:8px 12px;
+  border-radius:6px;
+  border:1px solid #334155;
+  background:#0b1220;
+  color:#e6eef8;
+}
+button.primary{
+  background:#22c55e;
+  border:0;
+  color:#042e16;
+  font-weight:700;
+  cursor:pointer;
+}
+button.secondary{
+  background:#334155;
+  border:0;
+  cursor:pointer;
+}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(280px,1fr));
+  gap:12px;
+  margin-top:10px;
+}
+.card{
+  background:#0b1220;
+  border:1px solid #172033;
+  border-radius:10px;
+  padding:12px;
+}
+.bull{color:#22c55e}
+.bear{color:#fb7185}
+.neutral{color:#facc15}
+.prob{font-weight:700}
+</style>
+</head>
+<body>
+
+<h1>📊 Daily Bull / Bear Probability — Pro Scanner</h1>
+<div class="muted" id="status">Idle</div>
+
+<div class="row">
+  <button class="primary" onclick="runScan()">Run Scan</button>
+  <button class="secondary" onclick="toggleAuto()">Auto Refresh Top Movers</button>
+  <div class="muted" id="timestamp"></div>
+</div>
+
+<div class="row">
+  <input id="symbolSearch" placeholder="Search symbol (BTCUSDT)" />
+  <button class="secondary" onclick="runSearch()">Analyze</button>
+  <button class="secondary" onclick="toggleSearchAuto()">Auto Refresh Search</button>
+</div>
+
+<h2>⭐ Favorites</h2>
+<div class="grid" id="favoritesGrid"></div>
+
+<h2>🟢 Top 30 GREEN (Bullish Bias)</h2>
+<div class="grid" id="greenGrid"></div>
+
+<h2>🔴 Top 30 RED (Bearish Bias)</h2>
+<div class="grid" id="redGrid"></div>
+
+<h2>🔍 Manual Symbol Analysis</h2>
+<div class="grid" id="searchGrid"></div>
+
+<audio id="alertSound">
+  <source src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg">
+</audio>
+
+<script>
+/* ================= CONFIG ================= */
+
+const API = 'https://fapi.binance.com';
+const DELAY = 300;
+const AUTO_INTERVAL = 5 * 60 * 1000;
+
+const BLACKLIST = [
+  "ALPACAUSDT","BNXUSDT","ALPHAUSDT","OCEANUSDT","DGBUSDT","AGIXUSDT",
+  "LINAUSDT","LOKAUSDT","KEYUSDT","MDTUSDT","LOOMUSDT","RENUSDT",
+  "OMNIUSDT","SLERFUSDT","STMXUSDT","UXLINKUSDT","BSWUSDT",
+  "NEIROETHUSDT","VIDTUSDT","TROYUSDT","BAKEUSDT","MEMEFIUSDT",
+  "NULSUSDT","HIFIUSDT","LEVERUSDT","XEMUSDT","STRAXUSDT",
+  "COMBOUSDT","AI16ZUSDT","MILKUSDT","TOKENUSDT","SXPUSDT",
+  "MYROUSDT","1000XUSDT","DARUSDT"
+];
+const BLACKSET = new Set(BLACKLIST);
+
+/* ================= STATE ================= */
+
+let autoTimer=null, searchAutoTimer=null;
+let pinnedSymbol=null, alertPlayed=false;
+let favorites = JSON.parse(localStorage.getItem("favorites")||"[]");
+let dailyOpenCache={};
+let lastTopGreen=[], lastTopRed=[];
+
+/* ================= HELPERS ================= */
+
+const sleep = ms => new Promise(r=>setTimeout(r,ms));
+
+async function fetchJSON(url){
+  const r = await fetch(url);
+  if(!r.ok) throw new Error("Fetch failed");
+  return r.json();
+}
+
+function ema(vals,p){
+  const k=2/(p+1); let e=vals[0];
+  for(let i=1;i<vals.length;i++) e=vals[i]*k+e*(1-k);
+  return e;
+}
+
+function rsi(c,p=14){
+  let g=0,l=0;
+  for(let i=1;i<=p;i++){const d=c[i]-c[i-1]; d>0?g+=d:l-=d;}
+  let rs=g/(l||1), r=100-(100/(1+rs));
+  for(let i=p+1;i<c.length;i++){
+    const d=c[i]-c[i-1];
+    if(d>0){g=(g*(p-1)+d)/p;l=(l*(p-1))/p;}
+    else{g=(g*(p-1))/p;l=(l*(p-1)-d)/p;}
+    rs=g/(l||1); r=100-(100/(1+rs));
+  }
+  return r;
+}
+
+async function getDailyOpen(sym){
+  if(dailyOpenCache[sym]) return dailyOpenCache[sym];
+  const d = await fetchJSON(`${API}/fapi/v1/klines?symbol=${sym}&interval=1d&limit=1`);
+  dailyOpenCache[sym]=+d[0][1];
+  await sleep(DELAY);
+  return dailyOpenCache[sym];
+}
+
+/* ================= ANALYSIS ================= */
+
+async function analyze(sym,bear=false){
+  const k4=await fetchJSON(`${API}/fapi/v1/klines?symbol=${sym}&interval=4h&limit=60`);
+  await sleep(DELAY);
+  const dailyOpen=await getDailyOpen(sym);
+  const c=k4.map(k=>+k[4]), v=k4.map(k=>+k[5]);
+  const last=k4[k4.length-1];
+  const avgVol=v.slice(-20).reduce((a,b)=>a+b,0)/20;
+  const emaHTF=ema(c.slice(-40),20), r=rsi(c);
+
+  let s=0, rs=[];
+  if(!bear){
+    if(+last[4]>dailyOpen){s++;rs.push("Above Daily Open");}
+    if(+last[4]>emaHTF){s++;rs.push("Above HTF EMA");}
+    if(+last[4]>+k4[k4.length-2][4]){s++;rs.push("Acceptance Up");}
+    if(r>50){s++;rs.push("RSI > 50");}
+    if(+last[5]>avgVol){s++;rs.push("Volume Confirmed");}
+  }else{
+    if(+last[4]<dailyOpen){s++;rs.push("Below Daily Open");}
+    if(+last[4]<emaHTF){s++;rs.push("Below HTF EMA");}
+    if(+last[4]<+k4[k4.length-2][4]){s++;rs.push("Acceptance Down");}
+    if(r<50){s++;rs.push("RSI < 50");}
+    if(+last[5]>avgVol){s++;rs.push("Sell Volume");}
+  }
+
+  const p=s*20;
+  const bias=s>=4?(bear?"Strong Bear":"Strong Bull"):
+             s===3?(bear?"Weak Bear":"Weak Bull"):
+             s===2?"Neutral":
+             (bear?"Weak Bull":"Weak Bear");
+
+  return {sym,prob:p,bias,reasons:rs};
+}
+
+/* ================= UI HELPERS ================= */
+
+function renderCard(d,el,extra=""){
+  const cls=d.bias.includes("Bull")?"bull":d.bias.includes("Bear")?"bear":"neutral";
+  el.innerHTML+=`
+  <div class="card">
+    <b>${d.sym}</b>
+    <div class="prob ${cls}">${d.bias} — ${d.prob}%</div>
+    <div class="muted">${d.reasons.join(" • ")}</div>
+    ${extra}
+  </div>`;
+}
+
+function renderFavorites(){
+  const el=document.getElementById("favoritesGrid");
+  el.innerHTML="";
+  favorites.forEach(s=>{
+    el.innerHTML+=`
+      <div class="card">
+        ⭐ <b>${s}</b>
+        <button class="secondary" onclick="runSearch('${s}')">Analyze</button>
+      </div>`;
+  });
+}
+
+function toggleFavorite(sym){
+  favorites=favorites.includes(sym)?favorites.filter(x=>x!==sym):[...favorites,sym];
+  localStorage.setItem("favorites",JSON.stringify(favorites));
+  renderFavorites();
+}
+
+/* ================= MAIN ================= */
+
+async function runScan(){
+  alertPlayed=false;
+  document.getElementById("greenGrid").innerHTML="";
+  document.getElementById("redGrid").innerHTML="";
+  document.getElementById("status").innerText="Scanning top movers...";
+
+  const t=await fetchJSON(`${API}/fapi/v1/ticker/24hr`);
+  const usdt=t.filter(x=>x.symbol.endsWith("USDT")&&!BLACKSET.has(x.symbol));
+  const green=[...usdt].sort((a,b)=>b.priceChangePercent-a.priceChangePercent).slice(0,30);
+  const red=[...usdt].sort((a,b)=>a.priceChangePercent-b.priceChangePercent).slice(0,30);
+
+  lastTopGreen=green.map(x=>x.symbol);
+  lastTopRed=red.map(x=>x.symbol);
+
+  for(const x of green){
+    const r=await analyze(x.symbol,false);
+    if(r.prob>=80&&!alertPlayed){alertSound.play();alertPlayed=true;}
+    renderCard(r,document.getElementById("greenGrid"));
+  }
+
+  for(const x of red){
+    const r=await analyze(x.symbol,true);
+    if(r.prob>=80&&!alertPlayed){alertSound.play();alertPlayed=true;}
+    renderCard(r,document.getElementById("redGrid"));
+  }
+
+  document.getElementById("timestamp").innerText="Updated: "+new Date().toLocaleString();
+  document.getElementById("status").innerText="Completed";
+}
+
+async function runSearch(symOverride=null){
+  const sym=(symOverride||symbolSearch.value).trim().toUpperCase();
+  const el=document.getElementById("searchGrid");
+  el.innerHTML="";
+  if(!sym.endsWith("USDT")||BLACKSET.has(sym)) return;
+
+  pinnedSymbol=sym;
+  const t=await fetchJSON(`${API}/fapi/v1/ticker/24hr?symbol=${sym}`);
+  const bear=Number(t.priceChangePercent)<0;
+  const r=await analyze(sym,bear);
+
+  let ctx="Outside Top Movers";
+  if(lastTopGreen.includes(sym)) ctx="Top 30 Gainer";
+  if(lastTopRed.includes(sym)) ctx="Top 30 Loser";
+
+  renderCard(r,el,`
+    <div class="muted">Context: ${ctx}</div>
+    <button class="secondary" onclick="toggleFavorite('${sym}')">⭐ Favorite</button>
+  `);
+}
+
+function toggleAuto(){
+  if(autoTimer){clearInterval(autoTimer);autoTimer=null;}
+  else{runScan();autoTimer=setInterval(runScan,AUTO_INTERVAL);}
+}
+
+function toggleSearchAuto(){
+  if(searchAutoTimer){clearInterval(searchAutoTimer);searchAutoTimer=null;}
+  else{
+    if(!pinnedSymbol) return alert("Search & pin a symbol first");
+    runSearch(pinnedSymbol);
+    searchAutoTimer=setInterval(()=>runSearch(pinnedSymbol),60000);
+  }
+}
+
+/* ================= INIT ================= */
+
+renderFavorites();
+symbolSearch.addEventListener("keydown",e=>{if(e.key==="Enter")runSearch();});
+</script>
+</body>
+</html>
