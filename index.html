@@ -114,9 +114,12 @@ const BLACKSET = new Set(BLACKLIST);
 let autoTimer=null, searchAutoTimer=null;
 let pinnedSymbol=null, alertPlayed=false;
 let favorites = JSON.parse(localStorage.getItem("favorites")||"[]");
+
 let dailyOpenCache={};
 let lastTopGreen=[], lastTopRed=[];
-let baseVolumeMap={}, baseVolumeRanks=[];
+
+// 15m volume cache
+let vol15mCache = {};
 
 /* ================= HELPERS ================= */
 
@@ -133,14 +136,6 @@ function formatNum(n){
   if(n>=1e6) return (n/1e6).toFixed(2)+"M";
   if(n>=1e3) return (n/1e3).toFixed(2)+"K";
   return n.toFixed(2);
-}
-
-function baseVolumeTag(sym){
-  const v = baseVolumeMap[sym] || 0;
-  const rank = baseVolumeRanks.indexOf(v) / baseVolumeRanks.length;
-  if(rank <= 0.10) return `<span class="vol-high">High Vol</span>`;
-  if(rank <= 0.30) return `<span class="vol-mid">Avg Vol</span>`;
-  return `<span class="vol-low">Low Vol</span>`;
 }
 
 function ema(vals,p){
@@ -170,11 +165,40 @@ async function getDailyOpen(sym){
   return dailyOpenCache[sym];
 }
 
+/* ================= 15M BASE VOLUME STRENGTH ================= */
+
+async function get15mVolumeStrength(sym){
+  // cache for 1 minute
+  if(vol15mCache[sym] && Date.now() - vol15mCache[sym].ts < 60_000){
+    return vol15mCache[sym];
+  }
+
+  // last 24h = 96 candles
+  const k15 = await fetchJSON(
+    `${API}/fapi/v1/klines?symbol=${sym}&interval=15m&limit=96`
+  );
+  await sleep(DELAY);
+
+  const vols = k15.map(k => Number(k[5]));
+  const maxVol = Math.max(...vols);
+  const curVol = vols[vols.length - 1];
+  const ratio = maxVol ? curVol / maxVol : 0;
+
+  let tag='Low', cls='vol-low';
+  if(ratio >= 0.7){ tag='High'; cls='vol-high'; }
+  else if(ratio >= 0.4){ tag='Mid'; cls='vol-mid'; }
+
+  const res = {curVol,maxVol,ratio,tag,cls,ts:Date.now()};
+  vol15mCache[sym] = res;
+  return res;
+}
+
 /* ================= ANALYSIS ================= */
 
 async function analyze(sym,bear=false){
   const k4=await fetchJSON(`${API}/fapi/v1/klines?symbol=${sym}&interval=4h&limit=60`);
   await sleep(DELAY);
+
   const dailyOpen=await getDailyOpen(sym);
   const c=k4.map(k=>+k[4]), v=k4.map(k=>+k[5]);
   const last=k4[k4.length-1];
@@ -209,18 +233,28 @@ async function analyze(sym,bear=false){
 
 /* ================= UI ================= */
 
-function renderCard(d,el,extra=""){
+async function renderCard(d,el,extra=""){
   const cls=d.bias.includes("Bull")?"bull":d.bias.includes("Bear")?"bear":"neutral";
+  const id = `vol15m-${d.sym}-${Math.random().toString(36).slice(2)}`;
+
   el.innerHTML+=`
-  <div class="card">
-    <b>${d.sym}</b>
-    <div class="muted">
-      Base Vol: ${formatNum(baseVolumeMap[d.sym]||0)} • ${baseVolumeTag(d.sym)}
-    </div>
-    <div class="prob ${cls}">${d.bias} — ${d.prob}%</div>
-    <div class="muted">${d.reasons.join(" • ")}</div>
-    ${extra}
-  </div>`;
+    <div class="card">
+      <b>${d.sym}</b>
+      <div class="muted" id="${id}">15m Vol: loading…</div>
+      <div class="prob ${cls}">${d.bias} — ${d.prob}%</div>
+      <div class="muted">${d.reasons.join(" • ")}</div>
+      ${extra}
+    </div>`;
+
+  try{
+    const v = await get15mVolumeStrength(d.sym);
+    const e = document.getElementById(id);
+    if(e){
+      e.innerHTML =
+        `15m Vol: ${formatNum(v.curVol)} / ${formatNum(v.maxVol)}
+         <span class="${v.cls}">(${v.tag})</span>`;
+    }
+  }catch{}
 }
 
 function renderFavorites(){
@@ -230,9 +264,6 @@ function renderFavorites(){
     el.innerHTML+=`
       <div class="card">
         ⭐ <b>${s}</b>
-        <div class="muted">
-          Base Vol: ${formatNum(baseVolumeMap[s]||0)} • ${baseVolumeTag(s)}
-        </div>
         <button class="secondary" onclick="runSearch('${s}')">Analyze</button>
       </div>`;
   });
@@ -254,11 +285,6 @@ async function runScan(){
   const t=await fetchJSON(`${API}/fapi/v1/ticker/24hr`);
   const usdt=t.filter(x=>x.symbol.endsWith("USDT")&&!BLACKSET.has(x.symbol));
 
-  // build BASE volume map
-  baseVolumeMap={};
-  usdt.forEach(x=>baseVolumeMap[x.symbol]=Number(x.volume||0));
-  baseVolumeRanks=Object.values(baseVolumeMap).sort((a,b)=>b-a);
-
   const green=[...usdt].sort((a,b)=>b.priceChangePercent-a.priceChangePercent).slice(0,30);
   const red=[...usdt].sort((a,b)=>a.priceChangePercent-b.priceChangePercent).slice(0,30);
 
@@ -268,13 +294,13 @@ async function runScan(){
   for(const x of green){
     const r=await analyze(x.symbol,false);
     if(r.prob>=80&&!alertPlayed){alertSound.play();alertPlayed=true;}
-    renderCard(r,greenGrid);
+    await renderCard(r,greenGrid);
   }
 
   for(const x of red){
     const r=await analyze(x.symbol,true);
     if(r.prob>=80&&!alertPlayed){alertSound.play();alertPlayed=true;}
-    renderCard(r,redGrid);
+    await renderCard(r,redGrid);
   }
 
   timestamp.innerText="Updated: "+new Date().toLocaleString();
@@ -288,8 +314,6 @@ async function runSearch(symOverride=null){
 
   pinnedSymbol=sym;
   const t=await fetchJSON(`${API}/fapi/v1/ticker/24hr?symbol=${sym}`);
-  baseVolumeMap[sym]=Number(t.volume||0);
-
   const bear=Number(t.priceChangePercent)<0;
   const r=await analyze(sym,bear);
 
@@ -297,7 +321,7 @@ async function runSearch(symOverride=null){
   if(lastTopGreen.includes(sym)) ctx="Top 30 Gainer";
   if(lastTopRed.includes(sym)) ctx="Top 30 Loser";
 
-  renderCard(r,searchGrid,`
+  await renderCard(r,searchGrid,`
     <div class="muted">Context: ${ctx}</div>
     <button class="secondary" onclick="toggleFavorite('${sym}')">⭐ Favorite</button>
   `);
