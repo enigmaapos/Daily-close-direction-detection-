@@ -87,6 +87,17 @@ button.secondary{
 </audio>
 
 <script>
+/* ================= DOM BINDINGS (FIX) ================= */
+
+const greenGrid      = document.getElementById("greenGrid");
+const redGrid        = document.getElementById("redGrid");
+const searchGrid     = document.getElementById("searchGrid");
+const favoritesGrid  = document.getElementById("favoritesGrid");
+const status         = document.getElementById("status");
+const timestamp      = document.getElementById("timestamp");
+const symbolSearch   = document.getElementById("symbolSearch");
+const alertSound     = document.getElementById("alertSound");
+
 /* ================= CONFIG ================= */
 
 const API = 'https://fapi.binance.com';
@@ -130,7 +141,10 @@ function ema(vals,p){
 
 function rsi(c,p=14){
   let g=0,l=0;
-  for(let i=1;i<=p;i++){const d=c[i]-c[i-1]; d>0?g+=d:l-=d;}
+  for(let i=1;i<=p;i++){
+    const d=c[i]-c[i-1];
+    d>0?g+=d:l-=d;
+  }
   let rs=g/(l||1), r=100-(100/(1+rs));
   for(let i=p+1;i<c.length;i++){
     const d=c[i]-c[i-1];
@@ -154,11 +168,13 @@ async function getDailyOpen(sym){
 async function analyze(sym,bear=false){
   const k4=await fetchJSON(`${API}/fapi/v1/klines?symbol=${sym}&interval=4h&limit=60`);
   await sleep(DELAY);
+
   const dailyOpen=await getDailyOpen(sym);
   const c=k4.map(k=>+k[4]), v=k4.map(k=>+k[5]);
   const last=k4[k4.length-1];
   const avgVol=v.slice(-20).reduce((a,b)=>a+b,0)/20;
-  const emaHTF=ema(c.slice(-40),20), r=rsi(c);
+  const emaHTF=ema(c.slice(-40),20);
+  const r=rsi(c);
 
   let s=0, rs=[];
   if(!bear){
@@ -203,10 +219,9 @@ function renderCard(d,el,extra=""){
 }
 
 function renderFavorites(){
-  const el=document.getElementById("favoritesGrid");
-  el.innerHTML="";
+  favoritesGrid.innerHTML="";
   favorites.forEach(s=>{
-    el.innerHTML+=`
+    favoritesGrid.innerHTML+=`
       <div class="card">
         ⭐ <b>${s}</b>
         <button class="secondary" onclick="runSearch('${s}')">Analyze</button>
@@ -238,17 +253,15 @@ async function runScan(){
   lastTopRed=red.map(x=>x.symbol);
 
   for(const x of green){
-    const last=+x.lastPrice, high24=+x.highPrice;
     const r=await analyze(x.symbol,false);
-    r.drawdown=((last-high24)/high24)*100;
+    r.drawdown=((+x.lastPrice-+x.highPrice)/+x.highPrice)*100;
     if(r.prob>=80&&!alertPlayed){alertSound.play();alertPlayed=true;}
     renderCard(r,greenGrid);
   }
 
   for(const x of red){
-    const last=+x.lastPrice, high24=+x.highPrice;
     const r=await analyze(x.symbol,true);
-    r.drawdown=((last-high24)/high24)*100;
+    r.drawdown=((+x.lastPrice-+x.highPrice)/+x.highPrice)*100;
     if(r.prob>=80&&!alertPlayed){alertSound.play();alertPlayed=true;}
     renderCard(r,redGrid);
   }
@@ -296,7 +309,9 @@ function toggleSearchAuto(){
 /* ================= INIT ================= */
 
 renderFavorites();
-symbolSearch.addEventListener("keydown",e=>{if(e.key==="Enter")runSearch();});
+symbolSearch.addEventListener("keydown",e=>{
+  if(e.key==="Enter") runSearch();
+});
 </script>
 </body>
 </html>
