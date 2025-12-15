@@ -29,9 +29,9 @@ button.secondary{background:#334155;border:0;cursor:pointer}
 <button class="secondary" onclick="runSearch()">Analyze</button>
 </div>
 
-<h2>🟢 STRONG BULL / EARLY WEAK BEAR (15m)</h2><div class="grid" id="greenGrid"></div>
-<h2>🔴 Strong / Weak Bear (Context)</h2><div class="grid" id="redGrid"></div>
-<h2>🔍 Manual Analysis (All Results)</h2><div class="grid" id="searchGrid"></div>
+<h2>🟢 Strong Bull / Weak Bear (Top Green)</h2><div class="grid" id="greenGrid"></div>
+<h2>🔴 Strong Bear / Weak Bull (Top Red)</h2><div class="grid" id="redGrid"></div>
+<h2>🔍 Manual Analysis</h2><div class="grid" id="searchGrid"></div>
 
 <audio id="alertSound"><source src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg"></audio>
 
@@ -72,25 +72,17 @@ ptotal=60;
 
 for(const x of u.sort((a,b)=>b.priceChangePercent-a.priceChangePercent).slice(0,40)){
 const dd=(x.lastPrice-x.highPrice)/x.highPrice*100,r1=await analyze(x.symbol,false,dd);r1.drawdown=dd;
-if(r1.bias==="Strong Bull"||r1.bias==="Weak Bear"){
-  r1.prob>=80&&a.play();render(r1,g)
-}
+if(r1.bias==="Strong Bull"||r1.bias==="Weak Bear"){render(r1,g)}
 pcur++;upd()
 }
 
 for(const x of u.sort((a,b)=>a.priceChangePercent-b.priceChangePercent).slice(0,20)){
-const dd=(x.lastPrice-x.highPrice)/x.highPrice*100,r2=await analyze(x.symbol,true,dd);
-r2.drawdown=dd;render(r2,r);pcur++;upd()
+const dd=(x.lastPrice-x.highPrice)/x.highPrice*100,r2=await analyze(x.symbol,true,dd);r2.drawdown=dd;
+if(r2.bias==="Strong Bear"||r2.bias==="Weak Bull"){render(r2,r)}
+pcur++;upd()
 }
 
 ts.innerText="Last scan: "+new Date().toLocaleString();st.innerText="Completed"
-}
-
-async function runSearch(){
-const sym=q.value.trim().toUpperCase();if(!sym.endsWith("USDT")||BL.has(sym))return;
-s.innerHTML="";const t=await fj(`${API}/fapi/v1/ticker/24hr?symbol=${sym}`);
-const dd=(t.lastPrice-t.highPrice)/t.highPrice*100,r3=await analyze(sym,t.priceChangePercent<0,dd);
-r3.drawdown=dd;render(r3,s)
 }
 
 function toggleAuto(){if(at){clearInterval(at);at=null;st.innerText="Auto refresh stopped";return}
@@ -102,8 +94,7 @@ let pc=d.bias.includes("Bull")?"bull":d.bias.includes("Bear")?"bear":"neutral";
 let dc=d.drawdown>=-1?"bull":d.drawdown<=-4?"bear":"neutral";
 if(!c){c=document.createElement("div");c.className="card";ci.set(d.sym,c)}
 c.parentNode!==el&&el.appendChild(c);
-c.innerHTML=`<b>${d.sym}</b>
-<div class="prob ${pc}">${d.bias} — ${d.prob}%</div>
+c.innerHTML=`<b>${d.sym}</b><div class="prob ${pc}">${d.bias} — ${d.prob}%</div>
 <div class="muted ${dc}">24h Drawdown: ${d.drawdown.toFixed(2)}%</div>
 <div class="muted">Updated: ${lu.get(d.sym)}</div>`
 }
