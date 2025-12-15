@@ -121,17 +121,14 @@ const API = "https://fapi.binance.com";
 const DELAY = 200;
 const AUTO_INTERVAL = 5 * 60 * 1000;
 const MAX_SCORE = 10;
-  const EVAL_CANDLES = 12; // forward check (12×15m = 3h)
 
 const BLACKSET = new Set([
  "ALPACAUSDT","BNXUSDT","ALPHAUSDT","OCEANUSDT","DGBUSDT","AGIXUSDT",
-  "LINAUSDT","LOKAUSDT","KEYUSDT","MDTUSDT","LOOMUSDT","RENUSDT",
-  "OMNIUSDT","SLERFUSDT","STMXUSDT","UXLINKUSDT","BSWUSDT",
-  "NEIROETHUSDT","VIDTUSDT","TROYUSDT","BAKEUSDT","MEMEFIUSDT",
-  "NULSUSDT","HIFIUSDT","LEVERUSDT","XEMUSDT","STRAXUSDT",
-  "COMBOUSDT","AI16ZUSDT","MILKUSDT","TOKENUSDT","SXPUSDT",
-  "MYROUSDT","1000XUSDT","DARUSDT","PORT3USDT","SKATEUSDT",
-  "AIAUSDT","AMBUSDT","FLMUSDT","PERPUSDT","OBOLUSDT"
+ "LINAUSDT","LOKAUSDT","KEYUSDT","MDTUSDT","LOOMUSDT","RENUSDT",
+ "OMNIUSDT","SLERFUSDT","STMXUSDT","UXLINKUSDT","BSWUSDT",
+ "NEIROETHUSDT","VIDTUSDT","TROYUSDT","BAKEUSDT","MEMEFIUSDT",
+ "NULSUSDT","HIFIUSDT","LEVERUSDT","XEMUSDT","STRAXUSDT",
+ "COMBOUSDT","AI16ZUSDT","MILKUSDT","TOKENUSDT","SXPUSDT"
 ]);
 
 /* ================= STATE ================= */
@@ -202,7 +199,7 @@ function atr(h,l,c,p=14){
 }
 
 
-  /* ================= ANALYSIS ================= */
+/* ================= ANALYSIS ================= */
 async function analyze(sym, bear, dd, dChange){
   const k = await fetchJSON(`${API}/fapi/v1/klines?symbol=${sym}&interval=15m&limit=240`);
   await sleep(DELAY);
@@ -214,7 +211,7 @@ async function analyze(sym, bear, dd, dChange){
   const last = k[k.length-1];
 
   /* === Dominant 24h Volume === */
-  let dominantVol=0, dominantBull=true;
+  let dominantVol = 0, dominantBull = true;
   for(let i=k.length-96;i<k.length;i++){
     if(v[i]>dominantVol){
       dominantVol=v[i];
@@ -231,46 +228,60 @@ async function analyze(sym, bear, dd, dChange){
   const aNow=atr(h,l,c), aPrev=atr(h.slice(0,-1),l.slice(0,-1),c.slice(0,-1));
   const bodyR=Math.abs(last[4]-last[1])/(last[2]-last[3]||1);
 
-  /* === STRUCTURE SCORE === */
+  /* === STRUCTURE SCORE (8–10 factors) === */
   let s=0, rs=[];
+
   if(!bear){
-    if(last[4]>e50) s++;
-    if(e50>e50p) s++;
-    if(rNow>50) s++;
-    if(rNow>rPrev) s++;
-    if(last[5]>avgV) s++;
-    if(bodyR>0.55) s++;
-    if(aNow>aPrev) s++;
-    if(dd>-2) s++;
+    if(last[4]>e50){s++;rs.push("Above EMA50")}
+    if(e50>e50p){s++;rs.push("EMA Rising")}
+    if(rNow>50){s++;rs.push("RSI > 50")}
+    if(rNow>rPrev){s++;rs.push("RSI Rising")}
+    if(last[5]>avgV){s++;rs.push("Volume Expansion")}
+    if(bodyR>0.55){s++;rs.push("Strong Bull Candle")}
+    if(aNow>aPrev){s++;rs.push("Volatility Expansion")}
+    if(dd>-2){s++;rs.push("Holding Highs")}
   }else{
-    if(last[4]<e50) s++;
-    if(e50<e50p) s++;
-    if(rNow<50) s++;
-    if(rNow<rPrev) s++;
-    if(last[5]>avgV) s++;
-    if(bodyR>0.55) s++;
-    if(aNow>aPrev) s++;
-    if(dd<-2) s++;
+    if(last[4]<e50){s++;rs.push("Below EMA50")}
+    if(e50<e50p){s++;rs.push("EMA Falling")}
+    if(rNow<50){s++;rs.push("RSI < 50")}
+    if(rNow<rPrev){s++;rs.push("RSI Falling")}
+    if(last[5]>avgV){s++;rs.push("Sell Volume")}
+    if(bodyR>0.55){s++;rs.push("Strong Bear Candle")}
+    if(aNow>aPrev){s++;rs.push("Volatility Expansion")}
+    if(dd<-2){s++;rs.push("Acceptance Below High")}
   }
 
-  const baseProb=Math.round((Math.min(MAX_SCORE,s)/MAX_SCORE)*100);
+  s=Math.min(MAX_SCORE,s);
+  const baseProb=Math.round((s/MAX_SCORE)*100);
 
-  /* === ADJUSTMENTS === */
+  /* === Probability Adjustments === */
   let finalProb=baseProb;
   let volumeAlign="neutral";
 
-  if((!bear&&dominantBull)||(bear&&!dominantBull)){
-    finalProb+=10; volumeAlign="confirm";
+  if((!bear && dominantBull)||(bear && !dominantBull)){
+    finalProb+=10; volumeAlign="confirm"; rs.push("Volume Confirms Bias");
   }else{
-    finalProb-=5; volumeAlign="contradict";
+    finalProb-=5; volumeAlign="contradict"; rs.push("Volume Contradicts Bias");
   }
 
   if(!bear){
-    if(ema200Dist>12||dChange>12) finalProb-=8;
-    else if(ema200Dist>0&&ema200Dist<8) finalProb+=5;
+    if(ema200Dist>0 && ema200Dist<8){finalProb+=5;rs.push("Healthy EMA200 Regime")}
+    else if(ema200Dist>12){finalProb-=7;rs.push("EMA200 Exhaustion Risk")}
+    else if(ema200Dist<0){finalProb-=10;rs.push("Below EMA200")}
   }else{
-    if(ema200Dist<-12||dChange<-12) finalProb-=8;
-    else if(ema200Dist<0&&ema200Dist>-8) finalProb+=5;
+    if(ema200Dist<0 && ema200Dist>-8){finalProb+=5;rs.push("Healthy EMA200 Bear Regime")}
+    else if(ema200Dist<-12){finalProb-=7;rs.push("EMA200 Capitulation Risk")}
+    else if(ema200Dist>0){finalProb-=10;rs.push("Above EMA200")}
+  }
+
+  if(!bear){
+    if(dChange>1 && dChange<6){finalProb+=5;rs.push("Healthy 24h Trend")}
+    else if(dChange>12){finalProb-=8;rs.push("24h Overextension")}
+    else if(dChange<0){finalProb-=10;rs.push("24h Weakness")}
+  }else{
+    if(dChange<-1 && dChange>-6){finalProb+=5;rs.push("Healthy 24h Bear Trend")}
+    else if(dChange<-12){finalProb-=8;rs.push("24h Capitulation")}
+    else if(dChange>0){finalProb-=10;rs.push("24h Weakness")}
   }
 
   finalProb=Math.max(0,Math.min(100,finalProb));
@@ -288,70 +299,37 @@ async function analyze(sym, bear, dd, dChange){
   /* === FINAL TREND STAGE (DOMINANT ENERGY) === */
   let trendStage="Healthy Continuation";
 
-  const exhaustion =
-    volumeAlign==="contradict" ||
-    (!bear && (ema200Dist>12 || dChange>12)) ||
-    (bear && (ema200Dist<-12 || dChange<-12));
+  const volExp=rs.includes("Volatility Expansion");
+  const healthyEMA=(!bear&&ema200Dist>0&&ema200Dist<8)||(bear&&ema200Dist<0&&ema200Dist>-8);
+  const exhaustionEMA=(!bear&&ema200Dist>12)||(bear&&ema200Dist<-12);
+  const over24h=(!bear&&dChange>12)||(bear&&dChange<-12);
 
-  if(exhaustion){
+  if(exhaustionEMA || over24h || volumeAlign==="contradict"){
     trendStage="Exhaustion Risk";
-  }else if(aNow>aPrev && volumeAlign==="confirm" && finalProb>=75){
+  }else if(volExp && volumeAlign==="confirm" && finalProb>=75){
     trendStage="Expansion";
-  }else if(finalProb>=65){
+  }else if(finalProb>=65 && !volExp){
     trendStage="Late / Extended";
+  }else if(healthyEMA && finalProb>=55){
+    trendStage="Healthy Continuation";
   }
 
-  const result={
-    sym, prob:finalProb, baseProb, bias, trendStage,
-    dominantVol, dominantBull,
-    ema200Dist, change:dChange,
-    lastPrice:last[4], atr:aNow, ema50:e50,
-    time:Date.now()
+  return {
+    sym,
+    prob:finalProb,
+    baseProb,
+    bias,
+    trendStage,
+    volumeAlign,
+    reasons:rs,
+    drawdown:dd,
+    dominantVol,
+    dominantBull,
+    ema200Dist,
+    change:dChange
   };
-
-  logPrediction(result);
-  return result;
 }
 
-/* ================= ACCURACY ================= */
-async function updateAccuracy(){
-  await evaluateAccuracy();
-  window._accuracyCache = getAccuracyReport();
-}
-
-  /* ================= ACCURACY STORAGE ================= */
-function logPrediction(d){
-  const log = JSON.parse(localStorage.getItem("trendAccuracyLog") || "[]");
-  log.push({
-    sym: d.sym,
-    trendStage: d.trendStage,
-    lastPrice: d.lastPrice,
-    atr: d.atr,
-    ema50: d.ema50,
-    time: d.time
-  });
-  localStorage.setItem("trendAccuracyLog", JSON.stringify(log));
-}
-
-/* ================= ACCURACY REPORT ================= */
-function getAccuracyReport(){
-  const log = JSON.parse(localStorage.getItem("trendAccuracyLog") || "[]");
-  const stats = {};
-
-  for(const p of log){
-    if(!stats[p.trendStage]) stats[p.trendStage] = { ok: 0, total: 0 };
-    stats[p.trendStage].total++;
-    stats[p.trendStage].ok++; // placeholder until forward validation runs
-  }
-
-  Object.keys(stats).forEach(k=>{
-    stats[k].accuracy =
-      ((stats[k].ok / stats[k].total) * 100).toFixed(1) + "%";
-  });
-
-  return stats;
-}
-  
 
 /* ================= RENDER ================= */
 function renderCard(d, el){
@@ -363,32 +341,39 @@ function renderCard(d, el){
     el.appendChild(card);
   }
 
-  const icon={
+  const biasColor=d.bias.includes("Bull")?"bull":d.bias.includes("Bear")?"bear":"neutral";
+  const trendIcon={
     "Expansion":"🟢",
     "Healthy Continuation":"🟡",
     "Late / Extended":"⚠️",
     "Exhaustion Risk":"🔴"
   }[d.trendStage];
 
-  const acc=window._accuracyCache?.[d.trendStage];
-  const accText=acc?`${acc.accuracy} (${acc.ok}/${acc.total})`:"Collecting data…";
-
   card.innerHTML=`
     <b>${d.sym}</b>
-    <div class="prob ${d.bias.includes("Bull")?"bull":"bear"}">
-      ${d.bias} — ${d.prob}% (base ${d.baseProb}%)
+
+    <div class="prob ${biasColor}">
+      ${d.bias} — ${d.prob}% <span class="muted">(base ${d.baseProb}%)</span>
     </div>
+
     <div class="muted ${d.change>=0?"bull":"bear"}">
       24h Change: ${d.change.toFixed(2)}%
     </div>
+
     <div class="muted ${d.ema200Dist>=0?"bull":"bear"}">
-      EMA200 Dist: ${d.ema200Dist.toFixed(2)}%
+      EMA200 Distance: ${d.ema200Dist.toFixed(2)}%
     </div>
-    <div class="muted">
-      ${icon} <b>${d.trendStage}</b>
+
+    <div class="muted ${d.dominantBull?"bull":"bear"}">
+      Dominant Vol: ${Number(d.dominantVol).toLocaleString()}
     </div>
+
+    <div class="muted ${d.trendStage==="Exhaustion Risk"?"bear":"bull"}">
+      ${trendIcon} Trend State: <b>${d.trendStage}</b>
+    </div>
+
     <div class="muted">
-      🎯 Accuracy: <b>${accText}</b>
+      ${d.reasons.join(" • ")}
     </div>
   `;
 }
@@ -432,7 +417,6 @@ async function runScan(){
 
   timestamp.innerText=new Date().toLocaleString();
   status.innerText="Completed";
-  window._accuracyCache = getAccuracyReport();
   scanRunning = false;   // ✅ unlock
       }
 
