@@ -21,20 +21,18 @@ button.primary{background:#22c55e;border:0;color:#042e16;font-weight:700;cursor:
 
 <div class="bar"><div id="pb"></div></div>
 
-<!-- CONTROLS -->
 <div class="row">
 <button class="primary" onclick="runScan()">Run Scan</button>
 <button onclick="toggleAuto()">Auto</button>
 <span class="muted" id="timestamp"></span>
 </div>
 
-<!-- SEARCH -->
+<!-- 🔍 SEARCH ENGINE -->
 <div class="row">
-<input id="symbolSearch" placeholder="Search symbol (BTCUSDT)" />
+<input id="symbolSearch" placeholder="Search symbol (BTCUSDT)">
 <button onclick="runSearch()">Analyze</button>
 </div>
 
-<!-- FILTERS -->
 <div class="row">
 <label><input type="checkbox" id="fSB" checked> Strong Bull</label>
 <label><input type="checkbox" id="fWB" checked> Weak Bull ≥20%</label>
@@ -64,7 +62,7 @@ const BL=new Set(["ALPACAUSDT","BNXUSDT","ALPHAUSDT","OCEANUSDT","DGBUSDT","AGIX
 "MEMEFIUSDT","NULSUSDT","HIFIUSDT","LEVERUSDT","XEMUSDT","STRAXUSDT","COMBOUSDT",
 "AI16ZUSDT","MILKUSDT","TOKENUSDT","SXPUSDT","MYROUSDT","1000XUSDT","DARUSDT"]);
 
-let cards=new Map(),auto=null,done=0;
+let auto=null,done=0;
 
 /* ===== HELPERS ===== */
 const f=()=>({SB:fSB.checked,WB:fWB.checked,SR:fSR.checked,WR:fWR.checked});
@@ -80,7 +78,8 @@ rs=g/(l||1);r=100-(100/(1+rs))}return r};
 
 /* ===== ANALYSIS ===== */
 async function analyze(sym,bear,dd){
-const k=await fj(`${API}/fapi/v1/klines?symbol=${sym}&interval=15m&limit=120`);await sl(DELAY);
+const k=await fj(`${API}/fapi/v1/klines?symbol=${sym}&interval=15m&limit=120`);
+await sl(DELAY);
 const c=k.map(x=>+x[4]),v=k.map(x=>+x[5]),l=k.at(-1);
 let s=0,av=v.slice(-40).reduce((a,b)=>a+b,0)/40,e=ema(c.slice(-60),50),ri=rsi(c);
 if(!bear){l[4]>e&&s++;l[4]>k.at(-2)[4]&&s++;ri>50&&s++;l[5]>av&&s++}
@@ -129,7 +128,11 @@ render(await analyze(sym,t.priceChangePercent<0,(t.lastPrice-t.highPrice)/t.high
 
 /* ===== SCAN ===== */
 async function runScan(){
-gG.innerHTML="";rG.innerHTML="";done=0;pb.style.width="0%";st.innerText="Scanning...";
+gG.innerHTML="";rG.innerHTML="";sG.innerHTML="";
+done=0;pb.style.width="0%";
+st.innerText="Scanning...";
+await new Promise(r=>setTimeout(r,0));   // 🔑 FIX IDLE
+
 const t=await fj(`${API}/fapi/v1/ticker/24hr`);
 const u=t.filter(x=>x.symbol.endsWith("USDT")&&!BL.has(x.symbol));
 const total=60;
@@ -142,7 +145,8 @@ for(const x of u.sort((a,b)=>a.priceChangePercent-b.priceChangePercent).slice(0,
 render(await analyze(x.symbol,true,(x.lastPrice-x.highPrice)/x.highPrice*100),rG);
 pb.style.width=`${(++done/total)*100}%`;
 }
-ts.innerText=new Date().toLocaleString();st.innerText="Completed";
+ts.innerText=new Date().toLocaleString();
+st.innerText="Completed";
 }
 
 function toggleAuto(){
