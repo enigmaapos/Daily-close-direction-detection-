@@ -95,7 +95,8 @@ const alertSound = document.getElementById("alertSound");
 
 /* ================= STATE ================= */
 
-const cardIndex = new Map(); // symbol -> card element
+const cardIndex = new Map();      // symbol -> card element
+const lastUpdateMap = new Map();  // symbol -> last refresh time
 let autoTimer = null;
 
 /* ================= CONFIG ================= */
@@ -118,6 +119,10 @@ const BLACKSET = new Set([
 /* ================= HELPERS ================= */
 
 const sleep = ms => new Promise(r=>setTimeout(r,ms));
+
+function timeNow(){
+  return new Date().toLocaleTimeString();
+}
 
 async function fetchJSON(url){
   const r = await fetch(url);
@@ -226,7 +231,7 @@ async function runScan(){
     renderCard(r,redGrid);
   }
 
-  timestamp.innerText=new Date().toLocaleString();
+  timestamp.innerText="Last scan: " + new Date().toLocaleString();
   status.innerText="Completed";
 }
 
@@ -258,6 +263,7 @@ function toggleAuto(){
 
 function renderCard(d, el){
   let card = cardIndex.get(d.sym);
+  lastUpdateMap.set(d.sym, timeNow());
 
   let probClass = d.bias.includes("Bull") ? "bull" :
                   d.bias.includes("Bear") ? "bear" : "neutral";
@@ -280,6 +286,9 @@ function renderCard(d, el){
     </div>
     <div class="muted ${ddClass}">
       24h Drawdown: ${d.drawdown.toFixed(2)}%
+    </div>
+    <div class="muted">
+      Updated: ${lastUpdateMap.get(d.sym)}
     </div>
     <div class="muted">
       ${d.reasons.join(" • ")}
