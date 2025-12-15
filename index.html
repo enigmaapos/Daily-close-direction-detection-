@@ -204,168 +204,152 @@ async function analyze(sym, bear, dd, dChange){
   const k = await fetchJSON(`${API}/fapi/v1/klines?symbol=${sym}&interval=15m&limit=240`);
   await sleep(DELAY);
 
-  const c = k.map(x => +x[4]);
-  const h = k.map(x => +x[2]);
-  const l = k.map(x => +x[3]);
-  const v = k.map(x => +x[5]);
-  const last = k[k.length - 1];
+  const c = k.map(x=>+x[4]);
+  const h = k.map(x=>+x[2]);
+  const l = k.map(x=>+x[3]);
+  const v = k.map(x=>+x[5]);
+  const last = k[k.length-1];
 
-  /* === Dominant 24h Volume (15m candle) === */
-  let dominantVol = 0;
-  let dominantBull = true;
-
-  for(let i = k.length - 96; i < k.length; i++){
-    if(v[i] > dominantVol){
-      dominantVol = v[i];
-      dominantBull = k[i][4] > k[i][1];
+  /* === Dominant 24h Volume === */
+  let dominantVol = 0, dominantBull = true;
+  for(let i=k.length-96;i<k.length;i++){
+    if(v[i]>dominantVol){
+      dominantVol=v[i];
+      dominantBull=k[i][4]>k[i][1];
     }
   }
 
   /* === Indicators === */
-  const avgV = v.slice(-40).reduce((a,b)=>a+b,0)/40;
+  const avgV=v.slice(-40).reduce((a,b)=>a+b,0)/40;
+  const e50=ema(c.slice(-60),50), e50p=ema(c.slice(-65,-5),50);
+  const e200=ema(c.slice(-220),200);
+  const ema200Dist=((last[4]-e200)/e200)*100;
+  const rNow=rsi(c), rPrev=rsi(c.slice(0,-1));
+  const aNow=atr(h,l,c), aPrev=atr(h.slice(0,-1),l.slice(0,-1),c.slice(0,-1));
+  const bodyR=Math.abs(last[4]-last[1])/(last[2]-last[3]||1);
 
-  const e50Now  = ema(c.slice(-60), 50);
-  const e50Prev = ema(c.slice(-65,-5), 50);
-
-  const e200 = ema(c.slice(-220), 200);
-  const ema200Dist = ((last[4] - e200) / e200) * 100;
-
-  const rNow  = rsi(c);
-  const rPrev = rsi(c.slice(0,-1));
-
-  const aNow  = atr(h,l,c);
-  const aPrev = atr(h.slice(0,-1), l.slice(0,-1), c.slice(0,-1));
-
-  const body  = Math.abs(last[4] - last[1]);
-  const range = last[2] - last[3];
-  const bodyR = range ? body / range : 0;
-
-  /* === STRUCTURE SCORING (8–10 FACTORS) === */
-  let s = 0;
-  let rs = [];
+  /* === STRUCTURE SCORE (8–10 factors) === */
+  let s=0, rs=[];
 
   if(!bear){
-    if(last[4] > e50Now){ s++; rs.push("Above EMA50"); }
-    if(e50Now > e50Prev){ s++; rs.push("EMA Rising"); }
-    if(rNow > 50){ s++; rs.push("RSI > 50"); }
-    if(rNow > rPrev){ s++; rs.push("RSI Rising"); }
-    if(last[5] > avgV){ s++; rs.push("Volume Expansion"); }
-    if(bodyR > 0.55){ s++; rs.push("Strong Bull Candle"); }
-    if(aNow > aPrev){ s++; rs.push("Volatility Expansion"); }
-    if(dd > -2){ s++; rs.push("Holding Highs"); }
+    if(last[4]>e50){s++;rs.push("Above EMA50")}
+    if(e50>e50p){s++;rs.push("EMA Rising")}
+    if(rNow>50){s++;rs.push("RSI > 50")}
+    if(rNow>rPrev){s++;rs.push("RSI Rising")}
+    if(last[5]>avgV){s++;rs.push("Volume Expansion")}
+    if(bodyR>0.55){s++;rs.push("Strong Bull Candle")}
+    if(aNow>aPrev){s++;rs.push("Volatility Expansion")}
+    if(dd>-2){s++;rs.push("Holding Highs")}
   }else{
-    if(last[4] < e50Now){ s++; rs.push("Below EMA50"); }
-    if(e50Now < e50Prev){ s++; rs.push("EMA Falling"); }
-    if(rNow < 50){ s++; rs.push("RSI < 50"); }
-    if(rNow < rPrev){ s++; rs.push("RSI Falling"); }
-    if(last[5] > avgV){ s++; rs.push("Sell Volume"); }
-    if(bodyR > 0.55){ s++; rs.push("Strong Bear Candle"); }
-    if(aNow > aPrev){ s++; rs.push("Volatility Expansion"); }
-    if(dd < -2){ s++; rs.push("Acceptance Below High"); }
+    if(last[4]<e50){s++;rs.push("Below EMA50")}
+    if(e50<e50p){s++;rs.push("EMA Falling")}
+    if(rNow<50){s++;rs.push("RSI < 50")}
+    if(rNow<rPrev){s++;rs.push("RSI Falling")}
+    if(last[5]>avgV){s++;rs.push("Sell Volume")}
+    if(bodyR>0.55){s++;rs.push("Strong Bear Candle")}
+    if(aNow>aPrev){s++;rs.push("Volatility Expansion")}
+    if(dd<-2){s++;rs.push("Acceptance Below High")}
   }
 
-  s = Math.max(0, Math.min(MAX_SCORE, s));
-  const baseProb = Math.round((s / MAX_SCORE) * 100);
+  s=Math.min(MAX_SCORE,s);
+  const baseProb=Math.round((s/MAX_SCORE)*100);
 
-  /* === VOLUME CONFIRMATION ADJUSTMENT === */
-  let finalProb = baseProb;
-  let volumeAlign = "neutral";
+  /* === Probability Adjustments === */
+  let finalProb=baseProb;
+  let volumeAlign="neutral";
 
-  if((!bear && dominantBull) || (bear && !dominantBull)){
-    finalProb += 10;
-    volumeAlign = "confirm";
-    rs.push("Volume Confirms Bias");
+  if((!bear && dominantBull)||(bear && !dominantBull)){
+    finalProb+=10; volumeAlign="confirm"; rs.push("Volume Confirms Bias");
   }else{
-    finalProb -= 5;
-    volumeAlign = "contradict";
-    rs.push("Volume Contradicts Bias");
+    finalProb-=5; volumeAlign="contradict"; rs.push("Volume Contradicts Bias");
   }
 
-  /* === EMA200 REGIME / EXHAUSTION === */
   if(!bear){
-    if(ema200Dist > 0 && ema200Dist < 8){
-      finalProb += 5; rs.push("Healthy EMA200 Regime");
-    }else if(ema200Dist > 12){
-      finalProb -= 7; rs.push("EMA200 Exhaustion Risk");
-    }else if(ema200Dist < 0){
-      finalProb -= 10; rs.push("Below EMA200 (Bull Risk)");
-    }
+    if(ema200Dist>0 && ema200Dist<8){finalProb+=5;rs.push("Healthy EMA200 Regime")}
+    else if(ema200Dist>12){finalProb-=7;rs.push("EMA200 Exhaustion Risk")}
+    else if(ema200Dist<0){finalProb-=10;rs.push("Below EMA200")}
   }else{
-    if(ema200Dist < 0 && ema200Dist > -8){
-      finalProb += 5; rs.push("Healthy EMA200 Bear Regime");
-    }else if(ema200Dist < -12){
-      finalProb -= 7; rs.push("EMA200 Capitulation Risk");
-    }else if(ema200Dist > 0){
-      finalProb -= 10; rs.push("Above EMA200 (Bear Risk)");
-    }
+    if(ema200Dist<0 && ema200Dist>-8){finalProb+=5;rs.push("Healthy EMA200 Bear Regime")}
+    else if(ema200Dist<-12){finalProb-=7;rs.push("EMA200 Capitulation Risk")}
+    else if(ema200Dist>0){finalProb-=10;rs.push("Above EMA200")}
   }
 
-  /* === 24H PRICE CHANGE CONTEXT === */
   if(!bear){
-    if(dChange > 1 && dChange < 6){
-      finalProb += 5; rs.push("Healthy 24h Bull Trend");
-    }else if(dChange > 12){
-      finalProb -= 8; rs.push("24h Overextension Risk");
-    }else if(dChange < 0){
-      finalProb -= 10; rs.push("24h Bull Weakness");
-    }
+    if(dChange>1 && dChange<6){finalProb+=5;rs.push("Healthy 24h Trend")}
+    else if(dChange>12){finalProb-=8;rs.push("24h Overextension")}
+    else if(dChange<0){finalProb-=10;rs.push("24h Weakness")}
   }else{
-    if(dChange < -1 && dChange > -6){
-      finalProb += 5; rs.push("Healthy 24h Bear Trend");
-    }else if(dChange < -12){
-      finalProb -= 8; rs.push("24h Capitulation Risk");
-    }else if(dChange > 0){
-      finalProb -= 10; rs.push("24h Bear Weakness");
-    }
+    if(dChange<-1 && dChange>-6){finalProb+=5;rs.push("Healthy 24h Bear Trend")}
+    else if(dChange<-12){finalProb-=8;rs.push("24h Capitulation")}
+    else if(dChange>0){finalProb-=10;rs.push("24h Weakness")}
   }
 
-  finalProb = Math.max(0, Math.min(100, finalProb));
+  finalProb=Math.max(0,Math.min(100,finalProb));
 
-  /* === FINAL BIAS (FIXED) === */
-  let bias = "Neutral";
+  /* === BIAS === */
+  let bias="Neutral";
   if(!bear){
-    if(finalProb >= 75) bias = "Strong Bull";
-    else if(finalProb >= 55) bias = "Weak Bull";
+    if(finalProb>=75) bias="Strong Bull";
+    else if(finalProb>=55) bias="Weak Bull";
   }else{
-    if(finalProb >= 75) bias = "Strong Bear";
-    else if(finalProb >= 55) bias = "Weak Bear";
+    if(finalProb>=75) bias="Strong Bear";
+    else if(finalProb>=55) bias="Weak Bear";
+  }
+
+  /* === FINAL TREND STAGE (DOMINANT ENERGY) === */
+  let trendStage="Healthy Continuation";
+
+  const volExp=rs.includes("Volatility Expansion");
+  const healthyEMA=(!bear&&ema200Dist>0&&ema200Dist<8)||(bear&&ema200Dist<0&&ema200Dist>-8);
+  const exhaustionEMA=(!bear&&ema200Dist>12)||(bear&&ema200Dist<-12);
+  const over24h=(!bear&&dChange>12)||(bear&&dChange<-12);
+
+  if(exhaustionEMA || over24h || volumeAlign==="contradict"){
+    trendStage="Exhaustion Risk";
+  }else if(volExp && volumeAlign==="confirm" && finalProb>=75){
+    trendStage="Expansion";
+  }else if(finalProb>=65 && !volExp){
+    trendStage="Late / Extended";
+  }else if(healthyEMA && finalProb>=55){
+    trendStage="Healthy Continuation";
   }
 
   return {
     sym,
-    prob: finalProb,
+    prob:finalProb,
     baseProb,
     bias,
+    trendStage,
     volumeAlign,
-    reasons: rs,
-    drawdown: dd,
+    reasons:rs,
+    drawdown:dd,
     dominantVol,
     dominantBull,
     ema200Dist,
-    change: dChange
+    change:dChange
   };
 }
 
+
 /* ================= RENDER ================= */
 function renderCard(d, el){
-  let card = document.getElementById(el.id + "-" + d.sym);
+  let card=document.getElementById(el.id+"-"+d.sym);
   if(!card){
-    card = document.createElement("div");
-    card.className = "card";
-    card.id = el.id + "-" + d.sym;
+    card=document.createElement("div");
+    card.className="card";
+    card.id=el.id+"-"+d.sym;
     el.appendChild(card);
   }
 
-  const biasColor =
-    d.bias.includes("Bull") ? "bull" :
-    d.bias.includes("Bear") ? "bear" : "neutral";
+  const biasColor=d.bias.includes("Bull")?"bull":d.bias.includes("Bear")?"bear":"neutral";
+  const trendIcon={
+    "Expansion":"🟢",
+    "Healthy Continuation":"🟡",
+    "Late / Extended":"⚠️",
+    "Exhaustion Risk":"🔴"
+  }[d.trendStage];
 
-  const volumeText =
-    d.volumeAlign === "confirm"
-      ? "Volume confirms bias (Continuation likely)"
-      : "Volume contradicts bias (Trap / Absorption risk)";
-
-  card.innerHTML = `
+  card.innerHTML=`
     <b>${d.sym}</b>
 
     <div class="prob ${biasColor}">
@@ -376,20 +360,16 @@ function renderCard(d, el){
       24h Change: ${d.change.toFixed(2)}%
     </div>
 
-    <div class="muted ${d.drawdown>=-1?"bull":d.drawdown<=-4?"bear":"neutral"}">
-      24h Drawdown: ${d.drawdown.toFixed(2)}%
-    </div>
-
     <div class="muted ${d.ema200Dist>=0?"bull":"bear"}">
       EMA200 Distance: ${d.ema200Dist.toFixed(2)}%
     </div>
 
     <div class="muted ${d.dominantBull?"bull":"bear"}">
-      24h Dominant Volume: ${Number(d.dominantVol).toLocaleString()}
+      Dominant Vol: ${Number(d.dominantVol).toLocaleString()}
     </div>
 
-    <div class="muted ${d.volumeAlign==="confirm"?"bull":"bear"}">
-      ${volumeText}
+    <div class="muted ${d.trendStage==="Exhaustion Risk"?"bear":"bull"}">
+      ${trendIcon} Trend State: <b>${d.trendStage}</b>
     </div>
 
     <div class="muted">
@@ -397,7 +377,7 @@ function renderCard(d, el){
     </div>
   `;
 }
-
+  
 
 /* ================= SCAN ================= */
 async function runScan(){
