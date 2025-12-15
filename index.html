@@ -278,34 +278,62 @@ async function analyze(sym,bear,dd){
 }
 
 /* ================= RENDER ================= */
-function renderCard(d,el){
-  let card=document.getElementById(el.id+"-"+d.sym);
+function renderCard(d, el){
+  let card = document.getElementById(el.id + "-" + d.sym);
   if(!card){
-    card=document.createElement("div");
-    card.className="card";
-    card.id=el.id+"-"+d.sym;
+    card = document.createElement("div");
+    card.className = "card";
+    card.id = el.id + "-" + d.sym;
     el.appendChild(card);
   }
 
-  card.innerHTML=`
+  const biasColor =
+    d.bias.includes("Bull") ? "bull" :
+    d.bias.includes("Bear") ? "bear" : "neutral";
+
+  const changeColor = d.change >= 0 ? "bull" : "bear";
+
+  const drawdownColor =
+    d.drawdown >= -1 ? "bull" :
+    d.drawdown <= -4 ? "bear" : "neutral";
+
+  const volumeInterpretation =
+    d.volumeAlign === "confirm"
+      ? "Volume confirms bias (Continuation likely)"
+      : d.volumeAlign === "contradict"
+      ? "Volume contradicts bias (Trap / Absorption risk)"
+      : "Volume neutral";
+
+  const volumeInterpretationColor =
+    d.volumeAlign === "confirm" ? "bull" :
+    d.volumeAlign === "contradict" ? "bear" : "neutral";
+
+  card.innerHTML = `
     <b>${d.sym}</b>
-    <div class="prob ${d.bias.includes("Bull")?"bull":d.bias.includes("Bear")?"bear":"neutral"}">
-      ${d.bias} — ${d.prob}% (base ${d.baseProb}%)
+
+    <div class="prob ${biasColor}">
+      ${d.bias} — ${d.prob}% <span class="muted">(base ${d.baseProb}%)</span>
     </div>
-    <div class="muted ${d.dominantBull?"bull":"bear"}">
+
+    <div class="muted ${changeColor}">
+      24h Change: ${d.change.toFixed(2)}%
+    </div>
+
+    <div class="muted ${drawdownColor}">
+      24h Drawdown: ${d.drawdown.toFixed(2)}%
+    </div>
+
+    <div class="muted ${d.dominantBull ? "bull" : "bear"}">
       24h Dominant Vol: ${Number(d.dominantVol).toLocaleString()}
     </div>
-    <div class="muted ${
-      d.volumeAlign==="confirm"?"bull":
-      d.volumeAlign==="contradict"?"bear":"neutral"
-    }">
-      ${
-        d.volumeAlign==="confirm"
-          ?"Volume confirms bias (Continuation likely)"
-          :"Volume contradicts bias (Trap / Absorption risk)"
-      }
+
+    <div class="muted ${volumeInterpretationColor}">
+      ${volumeInterpretation}
     </div>
-    <div class="muted">${d.reasons.join(" • ")}</div>
+
+    <div class="muted">
+      ${d.reasons.join(" • ")}
+    </div>
   `;
 }
 
