@@ -201,6 +201,26 @@ function atr(h,l,c,p=14){
   return t.slice(-p).reduce((a,b)=>a+b,0)/p;
 }
 
+  /* === 15m SWING DETECTION === */
+function findSwings(h, l){
+  const supports = [];
+  const resistances = [];
+
+  for(let i = 2; i < h.length - 2; i++){
+    if(l[i] < l[i-1] && l[i] < l[i+1]){
+      supports.push(l[i]);
+    }
+    if(h[i] > h[i-1] && h[i] > h[i+1]){
+      resistances.push(h[i]);
+    }
+  }
+
+  return {
+    supports: supports.slice(-2).reverse(),       // S1, S2
+    resistances: resistances.slice(-2).reverse()  // R1, R2
+  };
+}
+
 
   
 /* ================= ANALYSIS ================= */
@@ -262,67 +282,34 @@ async function analyze(sym, bear, dd, dChange){
   s = Math.min(MAX_SCORE, s);
   const baseProb = Math.round((s / MAX_SCORE) * 100);
 
-  /* === PROBABILITY ADJUSTMENTS === */
+  /* === ADJUSTMENTS === */
   let finalProb = baseProb;
   let volumeAlign = "neutral";
 
   if((!bear && dominantBull) || (bear && !dominantBull)){
-    finalProb += 10;
-    volumeAlign = "confirm";
-    rs.push("Volume Confirms Bias");
+    finalProb += 10; volumeAlign = "confirm";
   }else{
-    finalProb -= 5;
-    volumeAlign = "contradict";
-    rs.push("Volume Contradicts Bias");
-  }
-
-  if(!bear){
-    if(ema200Dist > 0 && ema200Dist < 8){ finalProb += 5; rs.push("Healthy EMA200 Regime"); }
-    else if(ema200Dist > 12){ finalProb -= 7; rs.push("EMA200 Exhaustion Risk"); }
-    else if(ema200Dist < 0){ finalProb -= 10; rs.push("Below EMA200"); }
-  }else{
-    if(ema200Dist < 0 && ema200Dist > -8){ finalProb += 5; rs.push("Healthy EMA200 Bear Regime"); }
-    else if(ema200Dist < -12){ finalProb -= 7; rs.push("EMA200 Capitulation Risk"); }
-    else if(ema200Dist > 0){ finalProb -= 10; rs.push("Above EMA200"); }
-  }
-
-  if(!bear){
-    if(dChange > 1 && dChange < 6){ finalProb += 5; rs.push("Healthy 24h Trend"); }
-    else if(dChange > 12){ finalProb -= 8; rs.push("24h Overextension"); }
-    else if(dChange < 0){ finalProb -= 10; rs.push("24h Weakness"); }
-  }else{
-    if(dChange < -1 && dChange > -6){ finalProb += 5; rs.push("Healthy 24h Bear Trend"); }
-    else if(dChange < -12){ finalProb -= 8; rs.push("24h Capitulation"); }
-    else if(dChange > 0){ finalProb -= 10; rs.push("24h Weakness"); }
+    finalProb -= 5; volumeAlign = "contradict";
   }
 
   finalProb = Math.max(0, Math.min(100, finalProb));
 
   /* === BIAS === */
-  let bias = "Neutral";
+  let bias="Neutral";
   if(!bear){
-    if(finalProb >= 75) bias = "Strong Bull";
-    else if(finalProb >= 55) bias = "Weak Bull";
+    if(finalProb>=75) bias="Strong Bull";
+    else if(finalProb>=55) bias="Weak Bull";
   }else{
-    if(finalProb >= 75) bias = "Strong Bear";
-    else if(finalProb >= 55) bias = "Weak Bear";
+    if(finalProb>=75) bias="Strong Bear";
+    else if(finalProb>=55) bias="Weak Bear";
   }
 
-  /* === TREND STAGE === */
-  let trendStage = "Healthy Continuation";
-  const volExp = rs.includes("Volatility Expansion");
-  const exhaustionEMA = (!bear && ema200Dist > 12) || (bear && ema200Dist < -12);
-  const over24h = (!bear && dChange > 12) || (bear && dChange < -12);
+  /* === SUPPORT / RESISTANCE LEVELS (15m) === */
+  const swings = findSwings(h, l);
+  const supportLevels = swings.supports;
+  const resistanceLevels = swings.resistances;
 
-  if(exhaustionEMA || over24h || volumeAlign === "contradict"){
-    trendStage = "Exhaustion Risk";
-  }else if(volExp && volumeAlign === "confirm" && finalProb >= 75){
-    trendStage = "Expansion";
-  }else if(finalProb >= 65 && !volExp){
-    trendStage = "Late / Extended";
-  }
-
-  /* === SUPPORT / RESISTANCE INTERPRETATION === */
+  /* === INTERPRETATION === */
   let levelType, levelStrength, levelText;
 
   if(dominantBull){
@@ -356,25 +343,21 @@ async function analyze(sym, bear, dd, dChange){
     prob: finalProb,
     baseProb,
     bias,
-    trendStage,
-    volumeAlign,
     reasons: rs,
-    drawdown: dd,
-    dominantVol,
     dominantBull,
+    dominantVol,
     ema200Dist,
     change: dChange,
     levelType,
     levelStrength,
-    levelText
+    levelText,
+    supportLevels,
+    resistanceLevels
   };
     }
-  
-  
 
-  
 
-/* ================= RENDER ================= */
+  /* ================= RENDER ================= */
 function renderCard(d, el){
   let card = document.getElementById(el.id+"-"+d.sym);
   if(!card){
@@ -392,35 +375,15 @@ function renderCard(d, el){
     d.levelStrength.includes("Strong") ? "bull" :
     d.levelStrength.includes("Weak") ? "bear" : "neutral";
 
-  const trendIcon = {
-    "Expansion":"🟢",
-    "Healthy Continuation":"🟡",
-    "Late / Extended":"⚠️",
-    "Exhaustion Risk":"🔴"
-  }[d.trendStage];
-
   card.innerHTML = `
     <b>${d.sym}</b>
 
     <div class="prob ${biasColor}">
       ${d.bias} — ${d.prob}%
-      <span class="muted">(Daily Close Bias • base ${d.baseProb}%)</span>
+      <span class="muted">(Daily Close Bias)</span>
     </div>
 
-    <div class="muted">
-      Probability that the <b>current session/day</b> closes favoring this bias
-      <span title="Based on 15m structure + 24h regime. Not a next-candle prediction.">ⓘ</span>
-    </div>
-
-    <div class="muted ${d.change >= 0 ? "bull":"bear"}">
-      24h Change: ${d.change.toFixed(2)}%
-    </div>
-
-    <div class="muted ${d.ema200Dist >= 0 ? "bull":"bear"}">
-      EMA200 Distance: ${d.ema200Dist.toFixed(2)}%
-    </div>
-
-    <div class="muted ${d.dominantBull ? "bull":"bear"}">
+    <div class="muted ${d.dominantBull?"bull":"bear"}">
       Dominant 24h Volume: ${Number(d.dominantVol).toLocaleString()}
     </div>
 
@@ -432,15 +395,29 @@ function renderCard(d, el){
       ${d.levelText}
     </div>
 
-    <div class="muted ${d.trendStage==="Exhaustion Risk"?"bear":"bull"}">
-      ${trendIcon} Trend State: <b>${d.trendStage}</b>
-    </div>
+    ${
+      d.levelType==="Support Test" && d.supportLevels.length ? `
+      <div class="muted bull">
+        🟢 Support Levels (15m)
+        <br>• S1: <b>${d.supportLevels[0].toFixed(4)}</b>
+        ${d.supportLevels[1]?`<br>• S2: <b>${d.supportLevels[1].toFixed(4)}</b>`:``}
+      </div>` : ``
+    }
+
+    ${
+      d.levelType==="Resistance Test" && d.resistanceLevels.length ? `
+      <div class="muted bear">
+        🔴 Resistance Levels (15m)
+        <br>• R1: <b>${d.resistanceLevels[0].toFixed(4)}</b>
+        ${d.resistanceLevels[1]?`<br>• R2: <b>${d.resistanceLevels[1].toFixed(4)}</b>`:``}
+      </div>` : ``
+    }
 
     <div class="muted">
       ${d.reasons.join(" • ")}
     </div>
   `;
-}
+    }
   
   
 
