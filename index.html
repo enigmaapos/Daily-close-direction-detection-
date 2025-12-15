@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"/>
-<title>15m Bull / Bear Probability — Pro Scanner</title>
+<title>15m Bull / Bear Probability Daily Close Bias Scanner — Pro Scanner</title>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 
 <style>
@@ -70,7 +70,10 @@ button.secondary{
 
 <body>
 
-<h1>📊 15m Bull / Bear Probability — Pro Scanner</h1>
+<h1>📊 15m Structure → Daily Close Bias Scanner</h1>
+<div class="muted">
+  Uses 15m market structure to estimate <b>daily/session close direction</b>
+</div>
 <div class="muted" id="status">Idle</div>
 <div class="muted" id="refreshTimer">Auto refresh: OFF</div>
 
@@ -352,8 +355,18 @@ function renderCard(d, el){
   card.innerHTML=`
     <b>${d.sym}</b>
 
+    <!-- ✅ UPDATED LABEL -->
     <div class="prob ${biasColor}">
-      ${d.bias} — ${d.prob}% <span class="muted">(base ${d.baseProb}%)</span>
+      ${d.bias} — ${d.prob}%
+      <span class="muted">
+        (Daily Close Bias • base ${d.baseProb}%)
+      </span>
+    </div>
+
+    <!-- ✅ NEW EXPLANATION LINE -->
+    <div class="muted">
+      Probability that the <b>current session/day</b> closes favoring this bias
+      <span title="Based on 15m structure + 24h regime. Not a next-candle prediction.">ⓘ</span>
     </div>
 
     <div class="muted ${d.change>=0?"bull":"bear"}">
@@ -365,7 +378,7 @@ function renderCard(d, el){
     </div>
 
     <div class="muted ${d.dominantBull?"bull":"bear"}">
-      Dominant Vol: ${Number(d.dominantVol).toLocaleString()}
+      Dominant 24h Volume: ${Number(d.dominantVol).toLocaleString()}
     </div>
 
     <div class="muted ${d.trendStage==="Exhaustion Risk"?"bear":"bull"}">
