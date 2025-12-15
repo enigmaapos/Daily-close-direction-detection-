@@ -151,7 +151,6 @@ function startCountdown(){
 function toggleAuto(){
   autoEnabled=!autoEnabled;
   clearInterval(autoTimer); clearInterval(countdownTimer);
-
   if(autoEnabled){
     isAuto=true;
     runScan();
@@ -210,6 +209,17 @@ async function analyze(sym,bear,dd){
   const v=k.map(x=>+x[5]);
   const last=k[k.length-1];
 
+  /* === Dominant 24h Volume (15m candle) === */
+  let dominantVol = 0;
+  let dominantBull = true;
+
+  for(let i=k.length-96;i<k.length;i++){
+    if(v[i] > dominantVol){
+      dominantVol = v[i];
+      dominantBull = k[i][4] > k[i][1];
+    }
+  }
+
   const avgV=v.slice(-40).reduce((a,b)=>a+b,0)/40;
   const eNow=ema(c.slice(-60),50), ePrev=ema(c.slice(-65,-5),50);
   const rNow=rsi(c), rPrev=rsi(c.slice(0,-1));
@@ -222,9 +232,6 @@ async function analyze(sym,bear,dd){
   const hi=Math.max(...h.slice(-20));
   const lo=Math.min(...l.slice(-20));
   const pos=(last[4]-lo)/(hi-lo||1);
-
-  /* === Dominant 24h Volume === */
-  const dominantVol=Math.max(...v.slice(-96));
 
   let s=0, rs=[];
 
@@ -248,8 +255,6 @@ async function analyze(sym,bear,dd){
   if(bear&&rNow<rPrev){s++;rs.push("RSI Falling")}
   if(bodyR>0.6){s++;rs.push("Strong Candle")}
   if(aNow>aPrev){s++;rs.push("Volatility")}
-  if(!bear&&pos>0.3&&pos<0.8){s++;rs.push("Healthy Range")}
-  if(bear&&pos<0.7&&pos>0.2){s++;rs.push("Bear Range")}
 
   s=Math.max(0,Math.min(MAX_SCORE,s));
   const p=Math.round(s/MAX_SCORE*100);
@@ -257,17 +262,20 @@ async function analyze(sym,bear,dd){
              p>=60?(bear?"Weak Bear":"Weak Bull"):
              p>=40?"Neutral":(bear?"Weak Bull":"Weak Bear");
 
-  return {sym,prob:p,bias,reasons:rs,drawdown:dd,dominantVol};
+  return {
+    sym,
+    prob:p,
+    bias,
+    reasons:rs,
+    drawdown:dd,
+    dominantVol,
+    dominantBull
+  };
 }
 
 /* ================= RENDER ================= */
 function renderCard(d,el){
   let card=document.getElementById(el.id+"-"+d.sym);
-  const pc=d.change>=0?"bull":"bear";
-  const ps=d.change>=0?"+":"";
-  const bc=d.bias.includes("Bull")?"bull":d.bias.includes("Bear")?"bear":"neutral";
-  const dc=d.drawdown>=-1?"bull":d.drawdown<=-4?"bear":"neutral";
-
   if(!card){
     card=document.createElement("div");
     card.className="card";
@@ -277,10 +285,18 @@ function renderCard(d,el){
 
   card.innerHTML=`
     <b>${d.sym}</b>
-    <div class="prob ${bc}">${d.bias} — ${d.prob}%</div>
-    <div class="muted ${pc}">24h Change: ${ps}${d.change.toFixed(2)}%</div>
-    <div class="muted ${dc}">24h Drawdown: ${d.drawdown.toFixed(2)}%</div>
-    <div class="muted">24h Dominant Vol: ${Number(d.dominantVol).toLocaleString()}</div>
+    <div class="prob ${d.bias.includes("Bull")?"bull":d.bias.includes("Bear")?"bear":"neutral"}">
+      ${d.bias} — ${d.prob}%
+    </div>
+    <div class="muted ${d.change>=0?"bull":"bear"}">
+      24h Change: ${d.change.toFixed(2)}%
+    </div>
+    <div class="muted ${d.drawdown>=-1?"bull":d.drawdown<=-4?"bear":"neutral"}">
+      24h Drawdown: ${d.drawdown.toFixed(2)}%
+    </div>
+    <div class="muted ${d.dominantBull ? "bull" : "bear"}">
+      24h Dominant Vol: ${Number(d.dominantVol).toLocaleString()}
+    </div>
     <div class="muted">${d.reasons.join(" • ")}</div>
   `;
 }
@@ -288,12 +304,11 @@ function renderCard(d,el){
 /* ================= SCAN ================= */
 async function runScan(){
   status.innerText=isAuto?"Refreshing...":"Scanning...";
-
   const t=await fetchJSON(`${API}/fapi/v1/ticker/24hr`);
   const usdt=t.filter(x=>x.symbol.endsWith("USDT")&&!BLACKSET.has(x.symbol));
 
-  const g=usdt.sort((a,b)=>b.priceChangePercent-a.priceChangePercent).slice(0,30);
-  const r=usdt.sort((a,b)=>a.priceChangePercent-b.priceChangePercent).slice(0,30);
+  const g=[...usdt].sort((a,b)=>b.priceChangePercent-a.priceChangePercent).slice(0,30);
+  const r=[...usdt].sort((a,b)=>a.priceChangePercent-b.priceChangePercent).slice(0,30);
 
   const total=g.length+r.length; let done=0;
 
