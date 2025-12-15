@@ -198,85 +198,103 @@ function atr(h,l,c,p=14){
   return t.slice(-p).reduce((a,b)=>a+b,0)/p;
 }
 
+
 /* ================= ANALYSIS ================= */
-async function analyze(sym,bear,dd){
-  const k=await fetchJSON(`${API}/fapi/v1/klines?symbol=${sym}&interval=15m&limit=120`);
+async function analyze(sym, bear, dd){
+  const k = await fetchJSON(`${API}/fapi/v1/klines?symbol=${sym}&interval=15m&limit=120`);
   await sleep(DELAY);
 
-  const c=k.map(x=>+x[4]);
-  const h=k.map(x=>+x[2]);
-  const l=k.map(x=>+x[3]);
-  const v=k.map(x=>+x[5]);
-  const last=k[k.length-1];
+  const c = k.map(x=>+x[4]);
+  const h = k.map(x=>+x[2]);
+  const l = k.map(x=>+x[3]);
+  const v = k.map(x=>+x[5]);
+  const last = k[k.length-1];
 
   /* === Dominant 24h Volume === */
-  let dominantVol=0, dominantBull=true;
-  for(let i=k.length-96;i<k.length;i++){
-    if(v[i]>dominantVol){
-      dominantVol=v[i];
-      dominantBull=k[i][4]>k[i][1];
+  let dominantVol = 0, dominantBull = true;
+  for(let i = k.length - 96; i < k.length; i++){
+    if(v[i] > dominantVol){
+      dominantVol = v[i];
+      dominantBull = k[i][4] > k[i][1];
     }
   }
 
-  const avgV=v.slice(-40).reduce((a,b)=>a+b,0)/40;
-  const eNow=ema(c.slice(-60),50), ePrev=ema(c.slice(-65,-5),50);
-  const rNow=rsi(c), rPrev=rsi(c.slice(0,-1));
-  const aNow=atr(h,l,c), aPrev=atr(h.slice(0,-1),l.slice(0,-1),c.slice(0,-1));
+  const avgV = v.slice(-40).reduce((a,b)=>a+b,0)/40;
+  const eNow = ema(c.slice(-60),50);
+  const ePrev = ema(c.slice(-65,-5),50);
+  const rNow = rsi(c);
+  const rPrev = rsi(c.slice(0,-1));
+  const aNow = atr(h,l,c);
+  const aPrev = atr(h.slice(0,-1),l.slice(0,-1),c.slice(0,-1));
 
-  const body=Math.abs(last[4]-last[1]);
-  const range=last[2]-last[3];
-  const bodyR=range?body/range:0;
+  const body = Math.abs(last[4]-last[1]);
+  const range = last[2]-last[3];
+  const bodyR = range ? body / range : 0;
 
-  let s=0, rs=[];
+  let s = 0, rs = [];
 
+  /* === STRUCTURE SCORING (9 factors) === */
   if(!bear){
-    if(last[4]>eNow){s++;rs.push("Above EMA50")}
-    if(rNow>50){s++;rs.push("RSI > 50")}
-    if(last[5]>avgV){s++;rs.push("Volume")}
-  }else{
-    if(last[4]<eNow){s++;rs.push("Below EMA50")}
-    if(rNow<50){s++;rs.push("RSI < 50")}
-    if(last[5]>avgV){s++;rs.push("Sell Volume")}
+    if(last[4] > eNow){ s++; rs.push("Above EMA50"); }
+    if(eNow > ePrev){ s++; rs.push("EMA Rising"); }
+    if(rNow > 50){ s++; rs.push("RSI > 50"); }
+    if(rNow > rPrev){ s++; rs.push("RSI Rising"); }
+    if(last[5] > avgV){ s++; rs.push("Volume Expansion"); }
+    if(bodyR > 0.55){ s++; rs.push("Strong Bull Candle"); }
+    if(aNow > aPrev){ s++; rs.push("Volatility Expansion"); }
+    if(dd > -2){ s++; rs.push("Holding Highs"); }
+  } else {
+    if(last[4] < eNow){ s++; rs.push("Below EMA50"); }
+    if(eNow < ePrev){ s++; rs.push("EMA Falling"); }
+    if(rNow < 50){ s++; rs.push("RSI < 50"); }
+    if(rNow < rPrev){ s++; rs.push("RSI Falling"); }
+    if(last[5] > avgV){ s++; rs.push("Sell Volume"); }
+    if(bodyR > 0.55){ s++; rs.push("Strong Bear Candle"); }
+    if(aNow > aPrev){ s++; rs.push("Volatility Expansion"); }
+    if(dd < -2){ s++; rs.push("Acceptance Below High"); }
   }
 
-  s=Math.min(MAX_SCORE,s);
-  const baseProb=Math.round(s/MAX_SCORE*100);
+  const baseProb = Math.round((s / MAX_SCORE) * 100);
 
-  let finalProb=baseProb;
-  let volumeAlign="neutral";
+  /* === VOLUME ALIGNMENT (confidence only) === */
+  let finalProb = baseProb;
+  let volumeAlign = "neutral";
 
-  if(!bear && dominantBull){
-    finalProb=Math.round(baseProb*1.10);
-    volumeAlign="confirm";
-  }else if(bear && !dominantBull){
-    finalProb=Math.round(baseProb*1.10);
-    volumeAlign="confirm";
-  }else if(!bear && !dominantBull){
-    finalProb=Math.round(baseProb*0.85);
-    volumeAlign="contradict";
-  }else if(bear && dominantBull){
-    finalProb=Math.round(baseProb*0.85);
-    volumeAlign="contradict";
+  if((!bear && dominantBull) || (bear && !dominantBull)){
+    finalProb += 10;
+    volumeAlign = "confirm";
+  } else {
+    finalProb -= 5;   // 🔑 small penalty only
+    volumeAlign = "contradict";
   }
 
-  finalProb=Math.max(0,Math.min(100,finalProb));
+  finalProb = Math.max(0, Math.min(100, finalProb));
 
-  const bias=finalProb>=80?(bear?"Strong Bear":"Strong Bull"):
-             finalProb>=60?(bear?"Weak Bear":"Weak Bull"):
-             finalProb>=40?"Neutral":(bear?"Weak Bull":"Weak Bear");
+  /* === CORRECT BIAS MAPPING === */
+  let bias = "Neutral";
+  if(!bear){
+    if(finalProb >= 75) bias = "Strong Bull";
+    else if(finalProb >= 55) bias = "Weak Bull";
+  } else {
+    if(finalProb >= 75) bias = "Strong Bear";
+    else if(finalProb >= 55) bias = "Weak Bear";
+  }
 
   return {
     sym,
-    prob:finalProb,
+    prob: finalProb,
     baseProb,
     bias,
     volumeAlign,
-    reasons:rs,
-    drawdown:dd,
+    reasons: rs,
+    drawdown: dd,
     dominantVol,
     dominantBull
   };
 }
+  
+
+  
 
 /* ================= RENDER ================= */
 function renderCard(d, el){
