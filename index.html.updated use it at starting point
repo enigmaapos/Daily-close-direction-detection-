@@ -79,18 +79,13 @@ button.secondary{
   <div class="progress-bar">
     <div class="progress-fill" id="progressFill"></div>
   </div>
-  <div class="muted" id="progressText">0%</div>
+  <div class="muted" id="progressText"></div>
 </div>
 
 <div class="row">
-  <button class="primary" onclick="runScan()">Run Scan</button>
+  <button class="primary" onclick="manualScan()">Run Scan</button>
   <button class="secondary" onclick="toggleAuto()">Auto Refresh</button>
   <div class="muted" id="timestamp"></div>
-</div>
-
-<div class="row">
-  <input id="symbolSearch" placeholder="Search symbol (BTCUSDT)" />
-  <button class="secondary" onclick="runSearch()">Analyze</button>
 </div>
 
 <h2>🟢 Top 30 GREEN</h2>
@@ -98,9 +93,6 @@ button.secondary{
 
 <h2>🔴 Top 30 RED</h2>
 <div class="grid" id="redGrid"></div>
-
-<h2>🔍 Manual Analysis</h2>
-<div class="grid" id="searchGrid"></div>
 
 <audio id="alertSound">
   <source src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg">
@@ -110,10 +102,8 @@ button.secondary{
 /* ================= DOM ================= */
 const greenGrid = document.getElementById("greenGrid");
 const redGrid   = document.getElementById("redGrid");
-const searchGrid= document.getElementById("searchGrid");
 const status    = document.getElementById("status");
 const timestamp = document.getElementById("timestamp");
-const symbolSearch = document.getElementById("symbolSearch");
 const alertSound = document.getElementById("alertSound");
 const progressFill = document.getElementById("progressFill");
 const progressText = document.getElementById("progressText");
@@ -121,7 +111,7 @@ const refreshTimer = document.getElementById("refreshTimer");
 
 /* ================= CONFIG ================= */
 const API = "https://fapi.binance.com";
-const DELAY = 300;
+const DELAY = 250;
 const AUTO_INTERVAL = 5 * 60 * 1000;
 const MAX_SCORE = 10;
 
@@ -131,14 +121,14 @@ const BLACKSET = new Set([
  "OMNIUSDT","SLERFUSDT","STMXUSDT","UXLINKUSDT","BSWUSDT",
  "NEIROETHUSDT","VIDTUSDT","TROYUSDT","BAKEUSDT","MEMEFIUSDT",
  "NULSUSDT","HIFIUSDT","LEVERUSDT","XEMUSDT","STRAXUSDT",
- "COMBOUSDT","AI16ZUSDT","MILKUSDT","TOKENUSDT","SXPUSDT",
- "MYROUSDT","1000XUSDT","DARUSDT","PORT3USDT","SKATEUSDT",
- "AIAUSDT","AMBUSDT","FLMUSDT","PERPUSDT","OBOLUSDT"
+ "COMBOUSDT","AI16ZUSDT","MILKUSDT","TOKENUSDT","SXPUSDT"
 ]);
 
-/* ================= AUTO REFRESH ================= */
+/* ================= STATE ================= */
 let autoEnabled=false, autoTimer=null, countdownTimer=null, nextRefreshAt=0;
+let isAuto=false;
 
+/* ================= AUTO REFRESH ================= */
 function startCountdown(){
   clearInterval(countdownTimer);
   countdownTimer=setInterval(()=>{
@@ -155,14 +145,28 @@ function toggleAuto(){
   clearInterval(autoTimer); clearInterval(countdownTimer);
 
   if(autoEnabled){
+    isAuto=true;
     runScan();
     nextRefreshAt=Date.now()+AUTO_INTERVAL;
     autoTimer=setInterval(()=>{
+      isAuto=true;
       runScan();
       nextRefreshAt=Date.now()+AUTO_INTERVAL;
     },AUTO_INTERVAL);
     startCountdown();
-  }else refreshTimer.innerText="Auto refresh: OFF";
+  }else{
+    isAuto=false;
+    refreshTimer.innerText="Auto refresh: OFF";
+  }
+}
+
+function manualScan(){
+  isAuto=false;
+  greenGrid.innerHTML="";
+  redGrid.innerHTML="";
+  progressFill.style.width="0%";
+  progressText.innerText="";
+  runScan();
 }
 
 /* ================= HELPERS ================= */
@@ -233,63 +237,58 @@ async function analyze(sym,bear,dd){
   return {sym,prob:p,bias,reasons:rs,drawdown:dd};
 }
 
-/* ================= MAIN ================= */
+/* ================= RENDER ================= */
+function renderCard(d,el){
+  let card=document.getElementById(d.sym);
+  const pc=d.change>=0?"bull":"bear";
+  const ps=d.change>=0?"+":"";
+  const bc=d.bias.includes("Bull")?"bull":d.bias.includes("Bear")?"bear":"neutral";
+  const dc=d.drawdown>=-1?"bull":d.drawdown<=-4?"bear":"neutral";
+
+  if(!card){
+    card=document.createElement("div");
+    card.className="card";
+    card.id=d.sym;
+    el.appendChild(card);
+  }
+
+  card.innerHTML=`
+    <b>${d.sym}</b>
+    <div class="prob ${bc}">${d.bias} — ${d.prob}%</div>
+    <div class="muted ${pc}">24h Change: ${ps}${d.change.toFixed(2)}%</div>
+    <div class="muted ${dc}">24h Drawdown: ${d.drawdown.toFixed(2)}%</div>
+    <div class="muted">${d.reasons.join(" • ")}</div>
+  `;
+}
+
+/* ================= SCAN ================= */
 async function runScan(){
-  greenGrid.innerHTML=""; redGrid.innerHTML="";
-  status.innerText="Scanning...";
-  progressFill.style.width="0%"; progressText.innerText="0%";
+  status.innerText=isAuto?"Refreshing...":"Scanning...";
 
   const t=await fetchJSON(`${API}/fapi/v1/ticker/24hr`);
   const usdt=t.filter(x=>x.symbol.endsWith("USDT")&&!BLACKSET.has(x.symbol));
   const g=usdt.sort((a,b)=>b.priceChangePercent-a.priceChangePercent).slice(0,30);
   const r=usdt.sort((a,b)=>a.priceChangePercent-b.priceChangePercent).slice(0,30);
   const total=g.length+r.length; let done=0;
-  const step=()=>{done++;const p=Math.round(done/total*100);
-    progressFill.style.width=p+"%";progressText.innerText=`${p}% (${done}/${total})`;};
 
   for(const x of g){
     const dd=(x.lastPrice-x.highPrice)/x.highPrice*100;
     const res=await analyze(x.symbol,false,dd);
     res.change=+x.priceChangePercent;
     if(res.prob>=80) alertSound.play();
-    renderCard(res,greenGrid); step();
+    renderCard(res,greenGrid);
+    done++; progressFill.style.width=Math.round(done/total*100)+"%";
   }
   for(const x of r){
     const dd=(x.lastPrice-x.highPrice)/x.highPrice*100;
     const res=await analyze(x.symbol,true,dd);
     res.change=+x.priceChangePercent;
-    renderCard(res,redGrid); step();
+    renderCard(res,redGrid);
+    done++; progressFill.style.width=Math.round(done/total*100)+"%";
   }
 
   timestamp.innerText=new Date().toLocaleString();
   status.innerText="Completed";
-}
-
-async function runSearch(){
-  const s=symbolSearch.value.trim().toUpperCase();
-  if(!s.endsWith("USDT")||BLACKSET.has(s))return;
-  searchGrid.innerHTML="";
-  const t=await fetchJSON(`${API}/fapi/v1/ticker/24hr?symbol=${s}`);
-  const dd=(t.lastPrice-t.highPrice)/t.highPrice*100;
-  const r=await analyze(s,t.priceChangePercent<0,dd);
-  r.change=+t.priceChangePercent;
-  renderCard(r,searchGrid);
-}
-
-/* ================= UI ================= */
-function renderCard(d,el){
-  const pc=d.change>=0?"bull":"bear";
-  const ps=d.change>=0?"+":"";
-  const bc=d.bias.includes("Bull")?"bull":d.bias.includes("Bear")?"bear":"neutral";
-  const dc=d.drawdown>=-1?"bull":d.drawdown<=-4?"bear":"neutral";
-  el.innerHTML+=`
-  <div class="card">
-    <b>${d.sym}</b>
-    <div class="prob ${bc}">${d.bias} — ${d.prob}%</div>
-    <div class="muted ${pc}">24h Change: ${ps}${d.change.toFixed(2)}%</div>
-    <div class="muted ${dc}">24h Drawdown: ${d.drawdown.toFixed(2)}%</div>
-    <div class="muted">${d.reasons.join(" • ")}</div>
-  </div>`;
 }
 </script>
 </body>
