@@ -51,6 +51,23 @@ button.secondary{
 .bear{color:#fb7185}
 .neutral{color:#facc15}
 .prob{font-weight:700}
+
+/* progress bar */
+.progress-wrap{
+  margin:8px 0 14px;
+}
+.progress-bar{
+  height:10px;
+  background:#172033;
+  border-radius:6px;
+  overflow:hidden;
+}
+.progress-fill{
+  height:100%;
+  width:0%;
+  background:#22c55e;
+  transition:width 0.2s linear;
+}
 </style>
 </head>
 
@@ -58,6 +75,13 @@ button.secondary{
 
 <h1>📊 15m Bull / Bear Probability — Pro Scanner</h1>
 <div class="muted" id="status">Idle</div>
+
+<div class="progress-wrap">
+  <div class="progress-bar">
+    <div class="progress-fill" id="progressFill"></div>
+  </div>
+  <div class="muted" id="progressText">0%</div>
+</div>
 
 <div class="row">
   <button class="primary" onclick="runScan()">Run Scan</button>
@@ -93,6 +117,9 @@ const status    = document.getElementById("status");
 const timestamp = document.getElementById("timestamp");
 const symbolSearch = document.getElementById("symbolSearch");
 const alertSound = document.getElementById("alertSound");
+
+const progressFill = document.getElementById("progressFill");
+const progressText = document.getElementById("progressText");
 
 /* ================= CONFIG ================= */
 
@@ -246,44 +273,48 @@ async function analyze(sym,bear=false,drawdown=null){
 /* ================= MAIN ================= */
 
 async function runScan(){
-  greenGrid.innerHTML=""; redGrid.innerHTML="";
+  greenGrid.innerHTML="";
+  redGrid.innerHTML="";
   status.innerText="Scanning...";
+
+  progressFill.style.width="0%";
+  progressText.innerText="0%";
 
   const t = await fetchJSON(`${API}/fapi/v1/ticker/24hr`);
   const usdt = t.filter(x=>x.symbol.endsWith("USDT")&&!BLACKSET.has(x.symbol));
 
-  for(const x of usdt.sort((a,b)=>b.priceChangePercent-a.priceChangePercent).slice(0,30)){
-    const dd=((+x.lastPrice-+x.highPrice)/+x.highPrice)*100;
-    const r = await analyze(x.symbol,false,dd);
-    if(r.prob>=80) alertSound.play();
-    renderCard(r,greenGrid);
+  const green = usdt.sort((a,b)=>b.priceChangePercent-a.priceChangePercent).slice(0,30);
+  const red   = usdt.sort((a,b)=>a.priceChangePercent-b.priceChangePercent).slice(0,30);
+
+  const total = green.length + red.length;
+  let done = 0;
+
+  async function step(){
+    done++;
+    const pct = Math.round((done/total)*100);
+    progressFill.style.width = pct+"%";
+    progressText.innerText = `${pct}% (${done}/${total})`;
   }
 
-  for(const x of usdt.sort((a,b)=>a.priceChangePercent-b.priceChangePercent).slice(0,30)){
+  for(const x of green){
+    const dd=((+x.lastPrice-+x.highPrice)/+x.highPrice)*100;
+    const r = await analyze(x.symbol,false,dd);
+    r.change = +x.priceChangePercent;
+    if(r.prob>=80) alertSound.play();
+    renderCard(r,greenGrid);
+    await step();
+  }
+
+  for(const x of red){
     const dd=((+x.lastPrice-+x.highPrice)/+x.highPrice)*100;
     const r = await analyze(x.symbol,true,dd);
+    r.change = +x.priceChangePercent;
     renderCard(r,redGrid);
+    await step();
   }
 
   timestamp.innerText=new Date().toLocaleString();
   status.innerText="Completed";
-}
-
-async function runSearch(){
-  const sym=symbolSearch.value.trim().toUpperCase();
-  if(!sym.endsWith("USDT")||BLACKSET.has(sym)) return;
-  searchGrid.innerHTML="";
-
-  const t=await fetchJSON(`${API}/fapi/v1/ticker/24hr?symbol=${sym}`);
-  const dd=((+t.lastPrice-+t.highPrice)/+t.highPrice)*100;
-  const bear=+t.priceChangePercent<0;
-  const r=await analyze(sym,bear,dd);
-  renderCard(r,searchGrid);
-}
-
-function toggleAuto(){
-  runScan();
-  setInterval(runScan,AUTO_INTERVAL);
 }
 
 /* ================= UI ================= */
@@ -297,11 +328,17 @@ function renderCard(d, el){
   if(d.drawdown>=-1) ddClass="bull";
   else if(d.drawdown<=-4) ddClass="bear";
 
+  let chClass = d.change>=0 ? "bull" : "bear";
+  let chSign = d.change>=0 ? "+" : "";
+
   el.innerHTML+=`
   <div class="card">
     <b>${d.sym}</b>
     <div class="prob ${probClass}">
       ${d.bias} — ${d.prob}%
+    </div>
+    <div class="muted ${chClass}">
+      24h Change: ${chSign}${d.change.toFixed(2)}%
     </div>
     <div class="muted ${ddClass}">
       24h Drawdown: ${d.drawdown.toFixed(2)}%
