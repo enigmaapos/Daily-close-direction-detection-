@@ -1,4 +1,7 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"/><title>15m Strong Bull Probability — Pro Scanner</title><meta name="viewport" content="width=device-width,initial-scale=1"/><style>
+<!doctype html><html lang="en"><head><meta charset="utf-8"/>
+<title>15m Strong Bull / Bear Probability — Pro Scanner</title>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<style>
 body{font-family:Inter,system-ui,Arial;background:#0f1720;color:#e6eef8;margin:16px}
 h1{font-size:18px;margin-bottom:6px}
 h2{font-size:16px;margin-top:14px}
@@ -12,8 +15,9 @@ button.secondary{background:#334155;border:0;cursor:pointer}
 .bull{color:#22c55e}.bear{color:#fb7185}.neutral{color:#facc15}.prob{font-weight:700}
 </style></head><body>
 
-<h1>📊 15m Strong Bull Probability — Pro Scanner</h1>
+<h1>📊 15m Strong Bull / Bear Probability — Pro Scanner</h1>
 <div class="muted" id="status">Idle</div>
+
 <div style="height:6px;background:#0b1220;border-radius:6px;overflow:hidden">
   <div id="pb" style="height:100%;width:0%;background:#22c55e;transition:width .2s"></div>
 </div>
@@ -24,26 +28,39 @@ button.secondary{background:#334155;border:0;cursor:pointer}
 <div class="muted" id="timestamp"></div>
 </div>
 
-<div class="row">
-<input id="symbolSearch" placeholder="Search symbol (BTCUSDT)"/>
-<button class="secondary" onclick="runSearch()">Analyze</button>
-</div>
+<h2>🟢 Strong Bull / Weak Bear (>20%)</h2>
+<div class="grid" id="greenGrid"></div>
 
-<h2>🟢 Strong Bull / Weak Bear (Top Green)</h2><div class="grid" id="greenGrid"></div>
-<h2>🔴 Strong Bear / Weak Bull (Top Red)</h2><div class="grid" id="redGrid"></div>
-<h2>🔍 Manual Analysis</h2><div class="grid" id="searchGrid"></div>
+<h2>🔴 Strong Bear / Weak Bull (>20%)</h2>
+<div class="grid" id="redGrid"></div>
 
-<audio id="alertSound"><source src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg"></audio>
+<audio id="alertSound">
+  <source src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg">
+</audio>
 
 <script>
-const g=document.getElementById("greenGrid"),r=document.getElementById("redGrid"),s=document.getElementById("searchGrid"),
-st=document.getElementById("status"),ts=document.getElementById("timestamp"),q=document.getElementById("symbolSearch"),
-a=document.getElementById("alertSound"),pb=document.getElementById("pb");
-const ci=new Map(),lu=new Map();let at=null,pcur=0,ptotal=0;
-const API="https://fapi.binance.com",DELAY=300,AUTO=3e5;
-const BL=new Set(["ALPACAUSDT","BNXUSDT","ALPHAUSDT","OCEANUSDT","DGBUSDT","AGIXUSDT","LINAUSDT","LOKAUSDT","KEYUSDT","MDTUSDT","LOOMUSDT","RENUSDT","OMNIUSDT","SLERFUSDT","STMXUSDT","UXLINKUSDT","BSWUSDT","NEIROETHUSDT","VIDTUSDT","TROYUSDT","BAKEUSDT","MEMEFIUSDT","NULSUSDT","HIFIUSDT","LEVERUSDT","XEMUSDT","STRAXUSDT","COMBOUSDT","AI16ZUSDT","MILKUSDT","TOKENUSDT","SXPUSDT","MYROUSDT","1000XUSDT","DARUSDT","PORT3USDT","SKATEUSDT","AIAUSDT","AMBUSDT","FLMUSDT","PERPUSDT","OBOLUSDT"]);
-const sl=m=>new Promise(r=>setTimeout(r,m)),now=()=>new Date().toLocaleTimeString();
-const fj=async u=>(await fetch(u)).json();
+const g=document.getElementById("greenGrid"),
+      r=document.getElementById("redGrid"),
+      st=document.getElementById("status"),
+      ts=document.getElementById("timestamp"),
+      pb=document.getElementById("pb"),
+      a=document.getElementById("alertSound");
+
+let pcur=0,ptotal=0,auto=null;
+const API="https://fapi.binance.com",DELAY=300,AUTO=300000;
+
+const BLACKLIST=new Set([
+"ALPACAUSDT","BNXUSDT","ALPHAUSDT","OCEANUSDT","DGBUSDT","AGIXUSDT","LINAUSDT",
+"LOKAUSDT","KEYUSDT","MDTUSDT","LOOMUSDT","RENUSDT","OMNIUSDT","SLERFUSDT",
+"STMXUSDT","UXLINKUSDT","BSWUSDT","NEIROETHUSDT","VIDTUSDT","TROYUSDT",
+"BAKEUSDT","MEMEFIUSDT","NULSUSDT","HIFIUSDT","LEVERUSDT","XEMUSDT",
+"STRAXUSDT","COMBOUSDT","AI16ZUSDT","MILKUSDT","TOKENUSDT","SXPUSDT",
+"MYROUSDT","1000XUSDT","DARUSDT","PORT3USDT","SKATEUSDT","AIAUSDT",
+"AMBUSDT","FLMUSDT","PERPUSDT","OBOLUSDT"
+]);
+
+const sleep=m=>new Promise(r=>setTimeout(r,m));
+const fetchJSON=async u=>(await fetch(u)).json();
 const ema=(v,p)=>{let k=2/(p+1),e=v[0];for(let i=1;i<v.length;i++)e=v[i]*k+e*(1-k);return e};
 const rsi=(c,p=14)=>{let g=0,l=0;for(let i=1;i<=p;i++){let d=c[i]-c[i-1];d>0?g+=d:l-=d}
 let rs=g/(l||1),r=100-(100/(1+rs));
@@ -51,51 +68,65 @@ for(let i=p+1;i<c.length;i++){let d=c[i]-c[i-1];
 d>0?(g=(g*(p-1)+d)/p,l=(l*(p-1))/p):(g=(g*(p-1))/p,l=(l*(p-1)-d)/p);
 rs=g/(l||1);r=100-(100/(1+rs))}return r};
 
-const upd=()=>pb.style.width=Math.min(100,Math.round(pcur/ptotal*100))+"%";
-
-async function analyze(sym,bear=false,dd=null){
-const k=await fj(`${API}/fapi/v1/klines?symbol=${sym}&interval=15m&limit=120`);await sl(DELAY);
+async function analyze(sym,bear,dd){
+const k=await fetchJSON(`${API}/fapi/v1/klines?symbol=${sym}&interval=15m&limit=120`);
+await sleep(DELAY);
 const c=k.map(x=>+x[4]),v=k.map(x=>+x[5]),l=k[k.length-1];
 let s=0,av=v.slice(-40).reduce((a,b)=>a+b,0)/40,e=ema(c.slice(-60),50),ri=rsi(c);
 if(!bear){l[4]>e&&s++;l[4]>k[k.length-2][4]&&s++;ri>50&&s++;l[5]>av&&s++}
 else{l[4]<e&&s++;l[4]<k[k.length-2][4]&&s++;ri<50&&s++;l[5]>av&&s++}
-if(dd!=null){if(!bear){dd>=-1&&s++;dd<=-7&&(s-=2);dd<=-4&&(s--)}else{dd<=-1&&s++;dd>-1&&(s--)}}
+if(!bear){dd>=-1&&s++;dd<=-7&&(s-=2);dd<=-4&&(s--)}
+else{dd<=-1&&s++;dd>-1&&(s--)}
 s=Math.max(0,Math.min(5,s));
-return{sym,prob:s*20,bias:s>=4?(bear?"Strong Bear":"Strong Bull"):s==3?(bear?"Weak Bear":"Weak Bull"):s==2?"Neutral":(bear?"Weak Bull":"Weak Bear")}
+return{
+sym,prob:s*20,
+bias:s>=4?(bear?"Strong Bear":"Strong Bull"):
+s==3?(bear?"Weak Bear":"Weak Bull"):
+s==2?"Neutral":(bear?"Weak Bull":"Weak Bear"),
+drawdown:dd
+};
+}
+
+function updatePB(){pb.style.width=Math.min(100,(pcur/ptotal*100))+"%"}
+
+function render(x,el){
+const pc=x.bias.includes("Bull")?"bull":x.bias.includes("Bear")?"bear":"neutral";
+const dc=x.drawdown>=-1?"bull":x.drawdown<=-4?"bear":"neutral";
+el.innerHTML+=`
+<div class="card">
+<b>${x.sym}</b>
+<div class="prob ${pc}">${x.bias} — ${x.prob}%</div>
+<div class="muted ${dc}">24h Drawdown: ${x.drawdown.toFixed(2)}%</div>
+</div>`;
 }
 
 async function runScan(){
 st.innerText="Scanning...";pb.style.width="0%";pcur=0;
-const t=await fj(`${API}/fapi/v1/ticker/24hr`);
-const u=t.filter(x=>x.symbol.endsWith("USDT")&&!BL.has(x.symbol));
+g.innerHTML="";r.innerHTML="";
+const t=await fetchJSON(`${API}/fapi/v1/ticker/24hr`);
+const list=t.filter(x=>x.symbol.endsWith("USDT")&&!BLACKLIST.has(x.symbol));
 ptotal=60;
 
-for(const x of u.sort((a,b)=>b.priceChangePercent-a.priceChangePercent).slice(0,40)){
-const dd=(x.lastPrice-x.highPrice)/x.highPrice*100,r1=await analyze(x.symbol,false,dd);r1.drawdown=dd;
-if(r1.bias==="Strong Bull"||r1.bias==="Weak Bear"){render(r1,g)}
-pcur++;upd()
+for(const x of list.sort((a,b)=>b.priceChangePercent-a.priceChangePercent).slice(0,40)){
+const dd=(x.lastPrice-x.highPrice)/x.highPrice*100;
+const res=await analyze(x.symbol,false,dd);
+if(res.bias==="Strong Bull"||(res.bias==="Weak Bear"&&res.prob>20))render(res,g);
+pcur++;updatePB()
 }
 
-for(const x of u.sort((a,b)=>a.priceChangePercent-b.priceChangePercent).slice(0,20)){
-const dd=(x.lastPrice-x.highPrice)/x.highPrice*100,r2=await analyze(x.symbol,true,dd);r2.drawdown=dd;
-if(r2.bias==="Strong Bear"||r2.bias==="Weak Bull"){render(r2,r)}
-pcur++;upd()
+for(const x of list.sort((a,b)=>a.priceChangePercent-b.priceChangePercent).slice(0,20)){
+const dd=(x.lastPrice-x.highPrice)/x.highPrice*100;
+const res=await analyze(x.symbol,true,dd);
+if(res.bias==="Strong Bear"||(res.bias==="Weak Bull"&&res.prob>20))render(res,r);
+pcur++;updatePB()
 }
 
-ts.innerText="Last scan: "+new Date().toLocaleString();st.innerText="Completed"
+ts.innerText="Last scan: "+new Date().toLocaleString();
+st.innerText="Completed";
 }
 
-function toggleAuto(){if(at){clearInterval(at);at=null;st.innerText="Auto refresh stopped";return}
-runScan();at=setInterval(runScan,AUTO);st.innerText="Auto refresh running"}
-
-function render(d,el){
-let c=ci.get(d.sym);lu.set(d.sym,now());
-let pc=d.bias.includes("Bull")?"bull":d.bias.includes("Bear")?"bear":"neutral";
-let dc=d.drawdown>=-1?"bull":d.drawdown<=-4?"bear":"neutral";
-if(!c){c=document.createElement("div");c.className="card";ci.set(d.sym,c)}
-c.parentNode!==el&&el.appendChild(c);
-c.innerHTML=`<b>${d.sym}</b><div class="prob ${pc}">${d.bias} — ${d.prob}%</div>
-<div class="muted ${dc}">24h Drawdown: ${d.drawdown.toFixed(2)}%</div>
-<div class="muted">Updated: ${lu.get(d.sym)}</div>`
+function toggleAuto(){
+if(auto){clearInterval(auto);auto=null;st.innerText="Auto refresh stopped";return}
+runScan();auto=setInterval(runScan,AUTO);st.innerText="Auto refresh running";
 }
 </script></body></html>
