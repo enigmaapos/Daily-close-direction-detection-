@@ -134,6 +134,7 @@ const BLACKSET = new Set([
 /* ================= STATE ================= */
 let autoEnabled=false, autoTimer=null, countdownTimer=null, nextRefreshAt=0;
 let isAuto=false;
+  let scanRunning = false;
 
 /* ================= AUTO REFRESH ================= */
 function startCountdown(){
@@ -339,14 +340,20 @@ function renderCard(d, el){
 
 /* ================= SCAN ================= */
 async function runScan(){
-  status.innerText=isAuto?"Refreshing...":"Scanning...";
+  if(scanRunning) return;
+  scanRunning = true;
+
+  progressFill.style.width = "0%";
+  status.innerText = isAuto ? "Auto refreshing..." : "Scanning...";
+
   const t=await fetchJSON(`${API}/fapi/v1/ticker/24hr`);
   const usdt=t.filter(x=>x.symbol.endsWith("USDT")&&!BLACKSET.has(x.symbol));
 
   const g=[...usdt].sort((a,b)=>b.priceChangePercent-a.priceChangePercent).slice(0,30);
   const r=[...usdt].sort((a,b)=>a.priceChangePercent-b.priceChangePercent).slice(0,30);
 
-  const total=g.length+r.length; let done=0;
+  const total=g.length+r.length;
+  let done=0;
 
   for(const x of g){
     const dd=(x.lastPrice-x.highPrice)/x.highPrice*100;
@@ -354,7 +361,8 @@ async function runScan(){
     res.change=+x.priceChangePercent;
     if(res.prob>=80) alertSound.play();
     renderCard(res,greenGrid);
-    done++; progressFill.style.width=Math.round(done/total*100)+"%";
+    done++;
+    progressFill.style.width=Math.round(done/total*100)+"%";
   }
 
   for(const x of r){
@@ -362,12 +370,14 @@ async function runScan(){
     const res=await analyze(x.symbol,true,dd);
     res.change=+x.priceChangePercent;
     renderCard(res,redGrid);
-    done++; progressFill.style.width=Math.round(done/total*100)+"%";
+    done++;
+    progressFill.style.width=Math.round(done/total*100)+"%";
   }
 
   timestamp.innerText=new Date().toLocaleString();
   status.innerText="Completed";
-}
+  scanRunning = false;   // ✅ unlock
+      }
 
 /* ================= MANUAL SEARCH ================= */
 async function runSearch(){
