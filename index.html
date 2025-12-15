@@ -41,12 +41,27 @@ button.primary{background:#22c55e;border:0;color:#042e16;font-weight:700;cursor:
 <div class="grid" id="redGrid"></div>
 
 <script>
-const API="https://fapi.binance.com",DELAY=300,AUTO=3e5;
-const BL=new Set(["ALPACAUSDT","BNXUSDT","ALPHAUSDT","OCEANUSDT","DGBUSDT","AGIXUSDT","LINAUSDT","LOKAUSDT","KEYUSDT","MDTUSDT","LOOMUSDT","RENUSDT","OMNIUSDT","SLERFUSDT","STMXUSDT","UXLINKUSDT","BSWUSDT","NEIROETHUSDT","VIDTUSDT","TROYUSDT","BAKEUSDT","MEMEFIUSDT","NULSUSDT","HIFIUSDT","LEVERUSDT","XEMUSDT","STRAXUSDT","COMBOUSDT","AI16ZUSDT","MILKUSDT","TOKENUSDT","SXPUSDT","MYROUSDT","1000XUSDT","DARUSDT"]);
+/* ===== DOM (FIXED) ===== */
+const gG=document.getElementById("greenGrid"),
+      rG=document.getElementById("redGrid"),
+      st=document.getElementById("status"),
+      ts=document.getElementById("timestamp"),
+      pb=document.getElementById("pb");
 
-const gG=greenGrid,rG=redGrid,st=status,ts=timestamp,pb=document.getElementById("pb");
+/* ===== CONFIG ===== */
+const API="https://fapi.binance.com",DELAY=300,AUTO=3e5;
+const BL=new Set(["ALPACAUSDT","BNXUSDT","ALPHAUSDT","OCEANUSDT","DGBUSDT","AGIXUSDT",
+  "LINAUSDT","LOKAUSDT","KEYUSDT","MDTUSDT","LOOMUSDT","RENUSDT",
+  "OMNIUSDT","SLERFUSDT","STMXUSDT","UXLINKUSDT","BSWUSDT",
+  "NEIROETHUSDT","VIDTUSDT","TROYUSDT","BAKEUSDT","MEMEFIUSDT",
+  "NULSUSDT","HIFIUSDT","LEVERUSDT","XEMUSDT","STRAXUSDT",
+  "COMBOUSDT","AI16ZUSDT","MILKUSDT","TOKENUSDT","SXPUSDT",
+  "MYROUSDT","1000XUSDT","DARUSDT","PORT3USDT","SKATEUSDT",
+  "AIAUSDT","AMBUSDT","FLMUSDT","PERPUSDT","OBOLUSDT"]);
+
 let cards=new Map(),auto=null,done=0;
 
+/* ===== HELPERS ===== */
 const f=()=>({SB:fSB.checked,WB:fWB.checked,SR:fSR.checked,WR:fWR.checked});
 const sl=m=>new Promise(r=>setTimeout(r,m));
 const fj=async u=>(await fetch(u)).json();
@@ -58,6 +73,7 @@ for(let i=p+1;i<c.length;i++){let d=c[i]-c[i-1];
 d>0?(g=(g*(p-1)+d)/p,l=(l*(p-1))/p):(g=(g*(p-1))/p,l=(l*(p-1)-d)/p);
 rs=g/(l||1);r=100-(100/(1+rs))}return r};
 
+/* ===== ANALYSIS ===== */
 async function analyze(sym,bear,dd){
 const k=await fj(`${API}/fapi/v1/klines?symbol=${sym}&interval=15m&limit=120`);await sl(DELAY);
 const c=k.map(x=>+x[4]),v=k.map(x=>+x[5]),l=k.at(-1);
@@ -67,10 +83,13 @@ else{l[4]<e&&s++;l[4]<k.at(-2)[4]&&s++;ri<50&&s++;l[5]>av&&s++}
 if(!bear){dd>=-1&&s++;dd<=-7&&(s-=2);dd<=-4&&(s--)}
 else{dd<=-1&&s++;dd>-1&&(s--)}
 s=Math.max(0,Math.min(5,s));
-const p=s*20;
-return{sym,prob:p,dd,bias:s>=4?(bear?"Strong Bear":"Strong Bull"):s===3?(bear?"Weak Bear":"Weak Bull"):s===2?"Neutral":(bear?"Weak Bull":"Weak Bear")}
+return{sym,prob:s*20,dd,
+bias:s>=4?(bear?"Strong Bear":"Strong Bull"):
+s===3?(bear?"Weak Bear":"Weak Bull"):
+s===2?"Neutral":(bear?"Weak Bull":"Weak Bear")}
 }
 
+/* ===== FILTER ===== */
 function pass(d){
 const x=f();
 if(d.bias==="Strong Bull"&&x.SB)return true;
@@ -80,6 +99,7 @@ if(d.bias==="Weak Bear"&&d.prob>=20&&x.WR)return true;
 return false;
 }
 
+/* ===== RENDER ===== */
 function render(d,el){
 if(!pass(d))return;
 let c=cards.get(d.sym);
@@ -92,6 +112,7 @@ c.innerHTML=`<b>${d.sym}</b>
 <div class="muted">Updated: ${now()}</div>`;
 }
 
+/* ===== MAIN ===== */
 async function runScan(){
 gG.innerHTML="";rG.innerHTML="";cards.clear();
 done=0;pb.style.width="0%";st.innerText="Scanning...";
@@ -101,13 +122,14 @@ const total=60;
 
 for(const x of u.sort((a,b)=>b.priceChangePercent-a.priceChangePercent).slice(0,30)){
 render(await analyze(x.symbol,false,(x.lastPrice-x.highPrice)/x.highPrice*100),gG);
-pb.style.width=`${(++done/total)*100}%`
+pb.style.width=`${(++done/total)*100}%`;
 }
 for(const x of u.sort((a,b)=>a.priceChangePercent-b.priceChangePercent).slice(0,30)){
 render(await analyze(x.symbol,true,(x.lastPrice-x.highPrice)/x.highPrice*100),rG);
-pb.style.width=`${(++done/total)*100}%`
+pb.style.width=`${(++done/total)*100}%`;
 }
-ts.innerText=new Date().toLocaleString();st.innerText="Completed";
+ts.innerText=new Date().toLocaleString();
+st.innerText="Completed";
 }
 
 function toggleAuto(){
