@@ -123,59 +123,6 @@ const DELAY = 200;
 const AUTO_INTERVAL = 5 * 60 * 1000;
 const MAX_SCORE = 10;
 
-const BLACKSET = new Set([
- "ALPACAUSDT","BNXUSDT","ALPHAUSDT","OCEANUSDT","DGBUSDT","AGIXUSDT",
- "LINAUSDT","LOKAUSDT","KEYUSDT","MDTUSDT","LOOMUSDT","RENUSDT",
- "OMNIUSDT","SLERFUSDT","STMXUSDT","UXLINKUSDT","BSWUSDT",
- "NEIROETHUSDT","VIDTUSDT","TROYUSDT","BAKEUSDT","MEMEFIUSDT",
- "NULSUSDT","HIFIUSDT","LEVERUSDT","XEMUSDT","STRAXUSDT",
- "COMBOUSDT","AI16ZUSDT","MILKUSDT","TOKENUSDT","SXPUSDT"
-]);
-
-/* ================= STATE ================= */
-let autoEnabled=false, autoTimer=null, countdownTimer=null, nextRefreshAt=0;
-let isAuto=false;
-
-/* ================= AUTO REFRESH ================= */
-function startCountdown(){
-  clearInterval(countdownTimer);
-  countdownTimer=setInterval(()=>{
-    const d=nextRefreshAt-Date.now();
-    if(d<=0){refreshTimer.innerText="Refreshing now...";return;}
-    const m=Math.floor(d/60000);
-    const s=Math.floor((d%60000)/1000);
-    refreshTimer.innerText=`Next refresh in: ${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
-  },1000);
-}
-
-function toggleAuto(){
-  autoEnabled=!autoEnabled;
-  clearInterval(autoTimer); clearInterval(countdownTimer);
-  if(autoEnabled){
-    isAuto=true;
-    runScan();
-    nextRefreshAt=Date.now()+AUTO_INTERVAL;
-    autoTimer=setInterval(()=>{
-      isAuto=true;
-      runScan();
-      nextRefreshAt=Date.now()+AUTO_INTERVAL;
-    },AUTO_INTERVAL);
-    startCountdown();
-  }else{
-    isAuto=false;
-    refreshTimer.innerText="Auto refresh: OFF";
-  }
-}
-
-function manualScan(){
-  isAuto=false;
-  greenGrid.innerHTML="";
-  redGrid.innerHTML="";
-  searchGrid.innerHTML="";
-  progressFill.style.width="0%";
-  runScan();
-}
-
 /* ================= HELPERS ================= */
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const fetchJSON=async u=>(await fetch(u)).json();
@@ -209,14 +156,12 @@ async function analyze(sym,bear,dd){
   const v=k.map(x=>+x[5]);
   const last=k[k.length-1];
 
-  /* === Dominant 24h Volume (15m candle) === */
-  let dominantVol = 0;
-  let dominantBull = true;
-
+  /* === Dominant 24h Volume Candle === */
+  let dominantVol=0, dominantBull=true;
   for(let i=k.length-96;i<k.length;i++){
-    if(v[i] > dominantVol){
-      dominantVol = v[i];
-      dominantBull = k[i][4] > k[i][1];
+    if(v[i]>dominantVol){
+      dominantVol=v[i];
+      dominantBull=k[i][4]>k[i][1];
     }
   }
 
@@ -229,120 +174,91 @@ async function analyze(sym,bear,dd){
   const range=last[2]-last[3];
   const bodyR=range?body/range:0;
 
-  const hi=Math.max(...h.slice(-20));
-  const lo=Math.min(...l.slice(-20));
-  const pos=(last[4]-lo)/(hi-lo||1);
-
-  let s=0, rs=[];
-
+  let s=0;
   if(!bear){
-    if(last[4]>eNow){s++;rs.push("Above EMA50")}
-    if(last[4]>c[c.length-2]){s++;rs.push("Acceptance")}
-    if(rNow>50){s++;rs.push("RSI > 50")}
-    if(last[5]>avgV){s++;rs.push("Volume")}
-    if(dd>=-1){s++;rs.push("Strong Acceptance")}
+    if(last[4]>eNow)s++;
+    if(rNow>50)s++;
+    if(last[5]>avgV)s++;
+    if(eNow>ePrev)s++;
   }else{
-    if(last[4]<eNow){s++;rs.push("Below EMA50")}
-    if(last[4]<c[c.length-2]){s++;rs.push("Rejection")}
-    if(rNow<50){s++;rs.push("RSI < 50")}
-    if(last[5]>avgV){s++;rs.push("Sell Volume")}
-    if(dd<=-1){s++;rs.push("Sell Pressure")}
+    if(last[4]<eNow)s++;
+    if(rNow<50)s++;
+    if(last[5]>avgV)s++;
+    if(eNow<ePrev)s++;
   }
 
-  if(!bear&&eNow>ePrev){s++;rs.push("EMA Rising")}
-  if(bear&&eNow<ePrev){s++;rs.push("EMA Falling")}
-  if(!bear&&rNow>rPrev){s++;rs.push("RSI Rising")}
-  if(bear&&rNow<rPrev){s++;rs.push("RSI Falling")}
-  if(bodyR>0.6){s++;rs.push("Strong Candle")}
-  if(aNow>aPrev){s++;rs.push("Volatility")}
+  s=Math.min(MAX_SCORE,s);
+  let baseProb=Math.round(s/MAX_SCORE*100);
+  let finalProb=baseProb;
+  let volumeAlign="neutral";
 
-  s=Math.max(0,Math.min(MAX_SCORE,s));
-  const p=Math.round(s/MAX_SCORE*100);
-  const bias=p>=80?(bear?"Strong Bear":"Strong Bull"):
-             p>=60?(bear?"Weak Bear":"Weak Bull"):
-             p>=40?"Neutral":(bear?"Weak Bull":"Weak Bear");
+  if(!bear && dominantBull){
+    finalProb=Math.round(baseProb*1.10);
+    volumeAlign="confirm";
+  }else if(bear && !dominantBull){
+    finalProb=Math.round(baseProb*1.10);
+    volumeAlign="confirm";
+  }else if(!bear && !dominantBull){
+    finalProb=Math.round(baseProb*0.85);
+    volumeAlign="contradict";
+  }else if(bear && dominantBull){
+    finalProb=Math.round(baseProb*0.85);
+    volumeAlign="contradict";
+  }
 
-  return {
-    sym,
-    prob:p,
-    bias,
-    reasons:rs,
-    drawdown:dd,
-    dominantVol,
-    dominantBull
-  };
+  finalProb=Math.max(0,Math.min(100,finalProb));
+
+  const bias=finalProb>=80?(bear?"Strong Bear":"Strong Bull"):
+             finalProb>=60?(bear?"Weak Bear":"Weak Bull"):
+             finalProb>=40?"Neutral":(bear?"Weak Bull":"Weak Bear");
+
+  return {sym,prob:finalProb,baseProb,bias,volumeAlign,dominantVol,dominantBull,drawdown:dd};
 }
 
 /* ================= RENDER ================= */
 function renderCard(d,el){
-  let card=document.getElementById(el.id+"-"+d.sym);
-  if(!card){
-    card=document.createElement("div");
-    card.className="card";
-    card.id=el.id+"-"+d.sym;
-    el.appendChild(card);
-  }
-
+  const card=document.createElement("div");
+  card.className="card";
   card.innerHTML=`
     <b>${d.sym}</b>
     <div class="prob ${d.bias.includes("Bull")?"bull":d.bias.includes("Bear")?"bear":"neutral"}">
-      ${d.bias} — ${d.prob}%
+      ${d.bias} — ${d.prob}% (base ${d.baseProb}%)
     </div>
-    <div class="muted ${d.change>=0?"bull":"bear"}">
-      24h Change: ${d.change.toFixed(2)}%
-    </div>
-    <div class="muted ${d.drawdown>=-1?"bull":d.drawdown<=-4?"bear":"neutral"}">
-      24h Drawdown: ${d.drawdown.toFixed(2)}%
-    </div>
-    <div class="muted ${d.dominantBull ? "bull" : "bear"}">
+    <div class="muted ${d.dominantBull?"bull":"bear"}">
       24h Dominant Vol: ${Number(d.dominantVol).toLocaleString()}
     </div>
-    <div class="muted">${d.reasons.join(" • ")}</div>
+    <div class="muted ${
+      d.volumeAlign==="confirm"?"bull":
+      d.volumeAlign==="contradict"?"bear":"neutral"
+    }">
+      ${
+        d.volumeAlign==="confirm"
+        ?"Volume confirms bias (Continuation likely)"
+        :d.volumeAlign==="contradict"
+        ?"Volume contradicts bias (Trap / Absorption risk)"
+        :"Volume neutral"
+      }
+    </div>
   `;
+  el.appendChild(card);
 }
 
 /* ================= SCAN ================= */
 async function runScan(){
-  status.innerText=isAuto?"Refreshing...":"Scanning...";
+  greenGrid.innerHTML=""; redGrid.innerHTML="";
   const t=await fetchJSON(`${API}/fapi/v1/ticker/24hr`);
-  const usdt=t.filter(x=>x.symbol.endsWith("USDT")&&!BLACKSET.has(x.symbol));
-
+  const usdt=t.filter(x=>x.symbol.endsWith("USDT"));
   const g=[...usdt].sort((a,b)=>b.priceChangePercent-a.priceChangePercent).slice(0,30);
   const r=[...usdt].sort((a,b)=>a.priceChangePercent-b.priceChangePercent).slice(0,30);
 
-  const total=g.length+r.length; let done=0;
-
   for(const x of g){
-    const dd=(x.lastPrice-x.highPrice)/x.highPrice*100;
-    const res=await analyze(x.symbol,false,dd);
-    res.change=+x.priceChangePercent;
-    if(res.prob>=80) alertSound.play();
+    const res=await analyze(x.symbol,false,(x.lastPrice-x.highPrice)/x.highPrice*100);
     renderCard(res,greenGrid);
-    done++; progressFill.style.width=Math.round(done/total*100)+"%";
   }
-
   for(const x of r){
-    const dd=(x.lastPrice-x.highPrice)/x.highPrice*100;
-    const res=await analyze(x.symbol,true,dd);
-    res.change=+x.priceChangePercent;
+    const res=await analyze(x.symbol,true,(x.lastPrice-x.highPrice)/x.highPrice*100);
     renderCard(res,redGrid);
-    done++; progressFill.style.width=Math.round(done/total*100)+"%";
   }
-
-  timestamp.innerText=new Date().toLocaleString();
-  status.innerText="Completed";
-}
-
-/* ================= MANUAL SEARCH ================= */
-async function runSearch(){
-  const sym=symbolSearch.value.trim().toUpperCase();
-  if(!sym.endsWith("USDT")||BLACKSET.has(sym))return;
-  searchGrid.innerHTML="";
-  const t=await fetchJSON(`${API}/fapi/v1/ticker/24hr?symbol=${sym}`);
-  const dd=(t.lastPrice-t.highPrice)/t.highPrice*100;
-  const r=await analyze(sym,t.priceChangePercent<0,dd);
-  r.change=+t.priceChangePercent;
-  renderCard(r,searchGrid);
 }
 </script>
 </body>
