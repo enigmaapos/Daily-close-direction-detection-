@@ -69,10 +69,10 @@ button.secondary{
   <button class="secondary" onclick="runSearch()">Analyze</button>
 </div>
 
-<h2>🟢 STRONG BULL ONLY (15m)</h2>
+<h2>🟢 Top 30 GREEN — Weak Bear Only</h2>
 <div class="grid" id="greenGrid"></div>
 
-<h2>🔴 Strong / Weak Bear (Context)</h2>
+<h2>🔴 Top 30 RED — Weak Bull Only</h2>
 <div class="grid" id="redGrid"></div>
 
 <h2>🔍 Manual Analysis (All Results)</h2>
@@ -95,7 +95,7 @@ const alertSound = document.getElementById("alertSound");
 
 /* ================= STATE ================= */
 
-const cardIndex = new Map(); // symbol -> card element
+const cardIndex = new Map();
 let autoTimer = null;
 
 /* ================= CONFIG ================= */
@@ -205,25 +205,36 @@ async function analyze(sym, bear=false, drawdown=null){
 
 async function runScan(){
   status.innerText="Scanning...";
+  greenGrid.innerHTML="";
+  redGrid.innerHTML="";
 
   const t = await fetchJSON(`${API}/fapi/v1/ticker/24hr`);
   const usdt = t.filter(x=>x.symbol.endsWith("USDT")&&!BLACKSET.has(x.symbol));
 
-  for(const x of usdt.sort((a,b)=>b.priceChangePercent-a.priceChangePercent).slice(0,40)){
+  /* 🟢 TOP 30 GREEN → Weak Bear ONLY */
+  for(const x of usdt
+    .sort((a,b)=>b.priceChangePercent-a.priceChangePercent)
+    .slice(0,30)
+  ){
     const dd=((+x.lastPrice-+x.highPrice)/+x.highPrice)*100;
     const r=await analyze(x.symbol,false,dd);
     r.drawdown=dd;
-    if(r.bias==="Strong Bull"){
-      if(r.prob>=80) alertSound.play();
+    if(r.bias==="Weak Bear"){
       renderCard(r,greenGrid);
     }
   }
 
-  for(const x of usdt.sort((a,b)=>a.priceChangePercent-b.priceChangePercent).slice(0,20)){
+  /* 🔴 TOP 30 RED → Weak Bull ONLY */
+  for(const x of usdt
+    .sort((a,b)=>a.priceChangePercent-b.priceChangePercent)
+    .slice(0,30)
+  ){
     const dd=((+x.lastPrice-+x.highPrice)/+x.highPrice)*100;
     const r=await analyze(x.symbol,true,dd);
     r.drawdown=dd;
-    renderCard(r,redGrid);
+    if(r.bias==="Weak Bull"){
+      renderCard(r,redGrid);
+    }
   }
 
   timestamp.innerText=new Date().toLocaleString();
