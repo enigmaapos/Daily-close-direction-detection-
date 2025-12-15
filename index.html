@@ -201,17 +201,68 @@ function atr(h,l,c,p=14){
   return t.slice(-p).reduce((a,b)=>a+b,0)/p;
 }
 
-  /* === 15m SWING DETECTION === */
-function findSwings(h, l){
+  /* === IMPROVED 15m SWING DETECTION (CONFIRMED) === */
+function findSwings(h, l, c, v){
   const supports = [];
   const resistances = [];
 
-  for(let i = 2; i < h.length - 2; i++){
-    if(l[i] < l[i-1] && l[i] < l[i+1]){
-      supports.push(l[i]);
+  // parameters (tunable but safe defaults)
+  const LOOKBACK = 2;          // candles on each side
+  const CONFIRM = 2;           // candles to confirm reaction
+  const VOL_MULT = 1.2;        // volume must be above average
+
+  const avgVol = v.slice(-40).reduce((a,b)=>a+b,0) / 40;
+
+  for(let i = LOOKBACK; i < h.length - CONFIRM; i++){
+
+    /* === SWING LOW (SUPPORT) === */
+    let isSwingLow = true;
+    for(let j = 1; j <= LOOKBACK; j++){
+      if(l[i] >= l[i-j] || l[i] >= l[i+j]){
+        isSwingLow = false;
+        break;
+      }
     }
-    if(h[i] > h[i-1] && h[i] > h[i+1]){
-      resistances.push(h[i]);
+
+    if(isSwingLow){
+      // confirmation: price must move away upward
+      let confirmed = true;
+      for(let k = 1; k <= CONFIRM; k++){
+        if(c[i+k] <= c[i]){
+          confirmed = false;
+          break;
+        }
+      }
+
+      // volume filter (defense)
+      if(confirmed && v[i] >= avgVol * VOL_MULT){
+        supports.push(l[i]);
+      }
+    }
+
+    /* === SWING HIGH (RESISTANCE) === */
+    let isSwingHigh = true;
+    for(let j = 1; j <= LOOKBACK; j++){
+      if(h[i] <= h[i-j] || h[i] <= h[i+j]){
+        isSwingHigh = false;
+        break;
+      }
+    }
+
+    if(isSwingHigh){
+      // confirmation: price must move away downward
+      let confirmed = true;
+      for(let k = 1; k <= CONFIRM; k++){
+        if(c[i+k] >= c[i]){
+          confirmed = false;
+          break;
+        }
+      }
+
+      // volume filter (supply)
+      if(confirmed && v[i] >= avgVol * VOL_MULT){
+        resistances.push(h[i]);
+      }
     }
   }
 
@@ -305,7 +356,7 @@ async function analyze(sym, bear, dd, dChange){
   }
 
   /* === SUPPORT / RESISTANCE LEVELS (15m) === */
-  const swings = findSwings(h, l);
+  const swings = findSwings(h, l, c, v);
   const supportLevels = swings.supports;
   const resistanceLevels = swings.resistances;
 
