@@ -123,6 +123,7 @@ const refreshTimer = document.getElementById("refreshTimer");
 const API = "https://fapi.binance.com";
 const DELAY = 300;
 const AUTO_INTERVAL = 5 * 60 * 1000;
+const MAX_SCORE = 10;
 
 const BLACKSET = new Set([
  "ALPACAUSDT","BNXUSDT","ALPHAUSDT","OCEANUSDT","DGBUSDT","AGIXUSDT",
@@ -135,232 +136,161 @@ const BLACKSET = new Set([
  "AIAUSDT","AMBUSDT","FLMUSDT","PERPUSDT","OBOLUSDT"
 ]);
 
-/* ================= AUTO REFRESH TIMER ================= */
-let autoEnabled = false;
-let autoTimer = null;
-let countdownTimer = null;
-let nextRefreshAt = 0;
+/* ================= AUTO REFRESH ================= */
+let autoEnabled=false, autoTimer=null, countdownTimer=null, nextRefreshAt=0;
 
 function startCountdown(){
   clearInterval(countdownTimer);
-  countdownTimer = setInterval(()=>{
-    const diff = nextRefreshAt - Date.now();
-    if(diff <= 0){
-      refreshTimer.innerText = "Refreshing now...";
-      return;
-    }
-    const m = Math.floor(diff/60000);
-    const s = Math.floor((diff%60000)/1000);
-    refreshTimer.innerText =
-      `Next refresh in: ${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
+  countdownTimer=setInterval(()=>{
+    const d=nextRefreshAt-Date.now();
+    if(d<=0){refreshTimer.innerText="Refreshing now...";return;}
+    const m=Math.floor(d/60000);
+    const s=Math.floor((d%60000)/1000);
+    refreshTimer.innerText=`Next refresh in: ${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
   },1000);
 }
 
 function toggleAuto(){
-  autoEnabled = !autoEnabled;
+  autoEnabled=!autoEnabled;
+  clearInterval(autoTimer); clearInterval(countdownTimer);
 
   if(autoEnabled){
     runScan();
-    nextRefreshAt = Date.now() + AUTO_INTERVAL;
-
-    autoTimer = setInterval(()=>{
+    nextRefreshAt=Date.now()+AUTO_INTERVAL;
+    autoTimer=setInterval(()=>{
       runScan();
-      nextRefreshAt = Date.now() + AUTO_INTERVAL;
-    }, AUTO_INTERVAL);
-
+      nextRefreshAt=Date.now()+AUTO_INTERVAL;
+    },AUTO_INTERVAL);
     startCountdown();
-  }else{
-    clearInterval(autoTimer);
-    clearInterval(countdownTimer);
-    refreshTimer.innerText = "Auto refresh: OFF";
-  }
-  }
+  }else refreshTimer.innerText="Auto refresh: OFF";
+}
 
 /* ================= HELPERS ================= */
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const fetchJSON=async u=>(await fetch(u)).json();
 
-const sleep = ms => new Promise(r=>setTimeout(r,ms));
-
-async function fetchJSON(url){
-  const r = await fetch(url);
-  if(!r.ok) throw new Error("Fetch failed");
-  return r.json();
-}
-
-function ema(vals,p){
-  const k = 2/(p+1);
-  let e = vals[0];
-  for(let i=1;i<vals.length;i++) e = vals[i]*k + e*(1-k);
-  return e;
-}
-
+function ema(v,p){const k=2/(p+1);let e=v[0];for(let i=1;i<v.length;i++)e=v[i]*k+e*(1-k);return e;}
 function rsi(c,p=14){
   let g=0,l=0;
-  for(let i=1;i<=p;i++){
-    const d=c[i]-c[i-1];
-    d>0?g+=d:l-=d;
-  }
+  for(let i=1;i<=p;i++){const d=c[i]-c[i-1];d>0?g+=d:l-=d;}
   let rs=g/(l||1), r=100-(100/(1+rs));
   for(let i=p+1;i<c.length;i++){
     const d=c[i]-c[i-1];
     if(d>0){g=(g*(p-1)+d)/p;l=(l*(p-1))/p;}
     else{g=(g*(p-1))/p;l=(l*(p-1)-d)/p;}
     rs=g/(l||1); r=100-(100/(1+rs));
-  }
-  return r;
+  } return r;
 }
-
 function atr(h,l,c,p=14){
-  let trs=[];
-  for(let i=1;i<c.length;i++){
-    trs.push(Math.max(
-      h[i]-l[i],
-      Math.abs(h[i]-c[i-1]),
-      Math.abs(l[i]-c[i-1])
-    ));
-  }
-  return trs.slice(-p).reduce((a,b)=>a+b,0)/p;
+  let t=[];for(let i=1;i<c.length;i++)
+  t.push(Math.max(h[i]-l[i],Math.abs(h[i]-c[i-1]),Math.abs(l[i]-c[i-1])));
+  return t.slice(-p).reduce((a,b)=>a+b,0)/p;
 }
 
-/* ================= ANALYSIS (15m ONLY) ================= */
-
-async function analyze(sym,bear=false,drawdown=null){
-  const k15 = await fetchJSON(`${API}/fapi/v1/klines?symbol=${sym}&interval=15m&limit=120`);
+/* ================= ANALYSIS ================= */
+async function analyze(sym,bear,dd){
+  const k=await fetchJSON(`${API}/fapi/v1/klines?symbol=${sym}&interval=15m&limit=120`);
   await sleep(DELAY);
-
-  const c = k15.map(k=>+k[4]);
-  const o = k15.map(k=>+k[1]);
-  const h = k15.map(k=>+k[2]);
-  const l = k15.map(k=>+k[3]);
-  const v = k15.map(k=>+k[5]);
-  const last = k15[k15.length-1];
-
-  const avgVol = v.slice(-40).reduce((a,b)=>a+b,0)/40;
-
-  const emaNow  = ema(c.slice(-60),50);
-  const emaPrev = ema(c.slice(-65,-5),50);
-  const emaSlope = emaNow - emaPrev;
-
-  const rNow  = rsi(c);
-  const rPrev = rsi(c.slice(0,-1));
-
-  const atrNow  = atr(h,l,c);
-  const atrPrev = atr(h.slice(0,-1),l.slice(0,-1),c.slice(0,-1));
-
-  const body = Math.abs(last[4]-last[1]);
-  const range = last[2]-last[3];
-  const bodyRatio = range ? body/range : 0;
-
-  const high20 = Math.max(...h.slice(-20));
-  const low20  = Math.min(...l.slice(-20));
-  const rangePos = (last[4]-low20)/(high20-low20||1);
+  const c=k.map(x=>+x[4]), h=k.map(x=>+x[2]), l=k.map(x=>+x[3]), v=k.map(x=>+x[5]);
+  const last=k[k.length-1];
+  const avgV=v.slice(-40).reduce((a,b)=>a+b,0)/40;
+  const eNow=ema(c.slice(-60),50), ePrev=ema(c.slice(-65,-5),50);
+  const rNow=rsi(c), rPrev=rsi(c.slice(0,-1));
+  const aNow=atr(h,l,c), aPrev=atr(h.slice(0,-1),l.slice(0,-1),c.slice(0,-1));
+  const body=Math.abs(last[4]-last[1]), range=last[2]-last[3];
+  const bodyR=range?body/range:0;
+  const hi=Math.max(...h.slice(-20)), lo=Math.min(...l.slice(-20));
+  const pos=(last[4]-lo)/(hi-lo||1);
 
   let s=0, rs=[];
-
-  /* === CORE MOMENTUM === */
   if(!bear){
-    if(last[4] > emaNow){s++;rs.push("Above EMA50");}
-    if(last[4] > c[c.length-2]){s++;rs.push("Acceptance");}
-    if(rNow > 50){s++;rs.push("RSI > 50");}
-    if(last[5] > avgVol){s++;rs.push("Volume Confirmed");}
+    if(last[4]>eNow){s++;rs.push("Above EMA50")}
+    if(last[4]>c[c.length-2]){s++;rs.push("Acceptance")}
+    if(rNow>50){s++;rs.push("RSI > 50")}
+    if(last[5]>avgV){s++;rs.push("Volume")}
+    if(dd>=-1){s++;rs.push("Strong Acceptance")}
   }else{
-    if(last[4] < emaNow){s++;rs.push("Below EMA50");}
-    if(last[4] < c[c.length-2]){s++;rs.push("Rejection");}
-    if(rNow < 50){s++;rs.push("RSI < 50");}
-    if(last[5] > avgVol){s++;rs.push("Sell Volume");}
+    if(last[4]<eNow){s++;rs.push("Below EMA50")}
+    if(last[4]<c[c.length-2]){s++;rs.push("Rejection")}
+    if(rNow<50){s++;rs.push("RSI < 50")}
+    if(last[5]>avgV){s++;rs.push("Sell Volume")}
+    if(dd<=-1){s++;rs.push("Sell Pressure")}
   }
+  if(!bear&&eNow>ePrev){s++;rs.push("EMA Rising")}
+  if(bear&&eNow<ePrev){s++;rs.push("EMA Falling")}
+  if(!bear&&rNow>rPrev){s++;rs.push("RSI Rising")}
+  if(bear&&rNow<rPrev){s++;rs.push("RSI Falling")}
+  if(bodyR>0.6){s++;rs.push("Strong Candle")}
+  if(aNow>aPrev){s++;rs.push("Volatility")}
+  if(!bear&&pos>0.3&&pos<0.8){s++;rs.push("Healthy Range")}
+  if(bear&&pos<0.7&&pos>0.2){s++;rs.push("Bear Range")}
 
-  /* === DRAWNDOWN CONTEXT === */
-  if(typeof drawdown==="number"){
-    if(!bear){
-      if(drawdown >= -1){s++;rs.push("Strong Acceptance");}
-      else if(drawdown <= -7){s-=2;rs.push("Distribution Risk");}
-      else if(drawdown <= -4){s--;rs.push("Weak Pullback");}
-    }else{
-      if(drawdown <= -1){s++;rs.push("Sell Pressure");}
-      else{s--;rs.push("Bear Rejection");}
-    }
-  }
-
-  /* === ADVANCED 15m CONFIRMATIONS === */
-  if(!bear && emaSlope>0){s++;rs.push("EMA Rising");}
-  if(bear && emaSlope<0){s++;rs.push("EMA Falling");}
-
-  if(!bear && rNow>rPrev){s++;rs.push("RSI Rising");}
-  if(bear && rNow<rPrev){s++;rs.push("RSI Falling");}
-
-  if(bodyRatio>0.6){s++;rs.push("Strong Candle Close");}
-
-  if(atrNow>atrPrev){s++;rs.push("Volatility Expanding");}
-
-  if(!bear && rangePos>0.3 && rangePos<0.8){s++;rs.push("Healthy Range");}
-  if(bear && rangePos<0.7 && rangePos>0.2){s++;rs.push("Bear Range");}
-
-  s = Math.max(0,Math.min(MAX_SCORE,s));
-  const p = Math.round((s/MAX_SCORE)*100);
-
-  const bias =
-    p>=80?(bear?"Strong Bear":"Strong Bull"):
-    p>=60?(bear?"Weak Bear":"Weak Bull"):
-    p>=40?"Neutral":
-    (bear?"Weak Bull":"Weak Bear");
-
-  return {sym,prob:p,bias,reasons:rs,drawdown};
+  s=Math.max(0,Math.min(MAX_SCORE,s));
+  const p=Math.round(s/MAX_SCORE*100);
+  const bias=p>=80?(bear?"Strong Bear":"Strong Bull"):
+             p>=60?(bear?"Weak Bear":"Weak Bull"):
+             p>=40?"Neutral":(bear?"Weak Bull":"Weak Bear");
+  return {sym,prob:p,bias,reasons:rs,drawdown:dd};
 }
 
 /* ================= MAIN ================= */
-
-    async function runScan(){
-  greenGrid.innerHTML="";
-  redGrid.innerHTML="";
+async function runScan(){
+  greenGrid.innerHTML=""; redGrid.innerHTML="";
   status.innerText="Scanning...";
+  progressFill.style.width="0%"; progressText.innerText="0%";
 
-  progressFill.style.width="0%";
-  progressText.innerText="0%";
+  const t=await fetchJSON(`${API}/fapi/v1/ticker/24hr`);
+  const usdt=t.filter(x=>x.symbol.endsWith("USDT")&&!BLACKSET.has(x.symbol));
+  const g=usdt.sort((a,b)=>b.priceChangePercent-a.priceChangePercent).slice(0,30);
+  const r=usdt.sort((a,b)=>a.priceChangePercent-b.priceChangePercent).slice(0,30);
+  const total=g.length+r.length; let done=0;
+  const step=()=>{done++;const p=Math.round(done/total*100);
+    progressFill.style.width=p+"%";progressText.innerText=`${p}% (${done}/${total})`;};
 
-  const t = await fetch(`${API}/fapi/v1/ticker/24hr`).then(r=>r.json());
-  const usdt = t.filter(x=>x.symbol.endsWith("USDT"));
-
-  const green = usdt.sort((a,b)=>b.priceChangePercent-a.priceChangePercent).slice(0,30);
-  const red   = usdt.sort((a,b)=>a.priceChangePercent-b.priceChangePercent).slice(0,30);
-
-  const total = green.length + red.length;
-  let done = 0;
-
-  const step = ()=>{
-    done++;
-    const pct = Math.round(done/total*100);
-    progressFill.style.width=pct+"%";
-    progressText.innerText=`${pct}% (${done}/${total})`;
-  };
-
-  for(const x of green){
-    await sleep(DELAY);
-    renderCard(x.symbol,x.priceChangePercent,greenGrid);
-    step();
+  for(const x of g){
+    const dd=(x.lastPrice-x.highPrice)/x.highPrice*100;
+    const res=await analyze(x.symbol,false,dd);
+    res.change=+x.priceChangePercent;
+    if(res.prob>=80) alertSound.play();
+    renderCard(res,greenGrid); step();
   }
-  for(const x of red){
-    await sleep(DELAY);
-    renderCard(x.symbol,x.priceChangePercent,redGrid);
-    step();
+  for(const x of r){
+    const dd=(x.lastPrice-x.highPrice)/x.highPrice*100;
+    const res=await analyze(x.symbol,true,dd);
+    res.change=+x.priceChangePercent;
+    renderCard(res,redGrid); step();
   }
 
   timestamp.innerText=new Date().toLocaleString();
   status.innerText="Completed";
 }
 
-function renderCard(sym,chg,el){
-  const cls = chg>=0?"bull":"bear";
-  const sign = chg>=0?"+":"";
-  el.innerHTML+=`
-  <div class="card">
-    <b>${sym}</b>
-    <div class="muted ${cls}">
-      24h Change: ${sign}${(+chg).toFixed(2)}%
-    </div>
-  </div>`;
+async function runSearch(){
+  const s=symbolSearch.value.trim().toUpperCase();
+  if(!s.endsWith("USDT")||BLACKSET.has(s))return;
+  searchGrid.innerHTML="";
+  const t=await fetchJSON(`${API}/fapi/v1/ticker/24hr?symbol=${s}`);
+  const dd=(t.lastPrice-t.highPrice)/t.highPrice*100;
+  const r=await analyze(s,t.priceChangePercent<0,dd);
+  r.change=+t.priceChangePercent;
+  renderCard(r,searchGrid);
 }
 
-const sleep = ms => new Promise(r=>setTimeout(r,ms));
+/* ================= UI ================= */
+function renderCard(d,el){
+  const pc=d.change>=0?"bull":"bear";
+  const ps=d.change>=0?"+":"";
+  const bc=d.bias.includes("Bull")?"bull":d.bias.includes("Bear")?"bear":"neutral";
+  const dc=d.drawdown>=-1?"bull":d.drawdown<=-4?"bear":"neutral";
+  el.innerHTML+=`
+  <div class="card">
+    <b>${d.sym}</b>
+    <div class="prob ${bc}">${d.bias} — ${d.prob}%</div>
+    <div class="muted ${pc}">24h Change: ${ps}${d.change.toFixed(2)}%</div>
+    <div class="muted ${dc}">24h Drawdown: ${d.drawdown.toFixed(2)}%</div>
+    <div class="muted">${d.reasons.join(" • ")}</div>
+  </div>`;
+}
 </script>
 </body>
 </html>
