@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"/>
-<title>1D Bull / Bear Probability — Pro Scanner</title>
+<title>15m Bull / Bear Probability — Pro Scanner</title>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 
 <style>
@@ -55,12 +55,12 @@ button.secondary{
 </head>
 <body>
 
-<h1>📊 Daily Bull / Bear Probability — Pro Scanner</h1>
+<h1>📊 15m Bull / Bear Probability — Pro Scanner</h1>
 <div class="muted" id="status">Idle</div>
 
 <div class="row">
   <button class="primary" onclick="runScan()">Run Scan</button>
-  <button class="secondary" onclick="toggleAuto()">Auto Refresh Top Movers</button>
+  <button class="secondary" onclick="toggleAuto()">Auto Refresh</button>
   <div class="muted" id="timestamp"></div>
 </div>
 
@@ -70,16 +70,13 @@ button.secondary{
   <button class="secondary" onclick="toggleSearchAuto()">Auto Refresh Search</button>
 </div>
 
-<h2>⭐ Favorites</h2>
-<div class="grid" id="favoritesGrid"></div>
-
-<h2>🟢 Top 30 GREEN (Bullish Bias)</h2>
+<h2>🟢 Top 30 GREEN</h2>
 <div class="grid" id="greenGrid"></div>
 
-<h2>🔴 Top 30 RED (Bearish Bias)</h2>
+<h2>🔴 Top 30 RED</h2>
 <div class="grid" id="redGrid"></div>
 
-<h2>🔍 Manual Symbol Analysis</h2>
+<h2>🔍 Manual Analysis</h2>
 <div class="grid" id="searchGrid"></div>
 
 <audio id="alertSound">
@@ -87,31 +84,31 @@ button.secondary{
 </audio>
 
 <script>
+/* ================= DOM ================= */
+
+const greenGrid = document.getElementById("greenGrid");
+const redGrid = document.getElementById("redGrid");
+const searchGrid = document.getElementById("searchGrid");
+const status = document.getElementById("status");
+const timestamp = document.getElementById("timestamp");
+const symbolSearch = document.getElementById("symbolSearch");
+const alertSound = document.getElementById("alertSound");
+
 /* ================= CONFIG ================= */
 
-const API = 'https://fapi.binance.com';
+const API = "https://fapi.binance.com";
 const DELAY = 300;
 const AUTO_INTERVAL = 5 * 60 * 1000;
 
-const BLACKLIST = [
+const BLACKSET = new Set([
   "ALPACAUSDT","BNXUSDT","ALPHAUSDT","OCEANUSDT","DGBUSDT","AGIXUSDT",
   "LINAUSDT","LOKAUSDT","KEYUSDT","MDTUSDT","LOOMUSDT","RENUSDT",
   "OMNIUSDT","SLERFUSDT","STMXUSDT","UXLINKUSDT","BSWUSDT",
   "NEIROETHUSDT","VIDTUSDT","TROYUSDT","BAKEUSDT","MEMEFIUSDT",
   "NULSUSDT","HIFIUSDT","LEVERUSDT","XEMUSDT","STRAXUSDT",
   "COMBOUSDT","AI16ZUSDT","MILKUSDT","TOKENUSDT","SXPUSDT",
-  "MYROUSDT","1000XUSDT","DARUSDT","PORT3USDT","SKATEUSDT",
-  "AIAUSDT","AMBUSDT","FLMUSDT","PERPUSDT","OBOLUSDT"
-];
-const BLACKSET = new Set(BLACKLIST);
-
-/* ================= STATE ================= */
-
-let autoTimer=null, searchAutoTimer=null;
-let pinnedSymbol=null, alertPlayed=false;
-let favorites = JSON.parse(localStorage.getItem("favorites")||"[]");
-let dailyOpenCache={};
-let lastTopGreen=[], lastTopRed=[];
+  "MYROUSDT","1000XUSDT","DARUSDT"
+]);
 
 /* ================= HELPERS ================= */
 
@@ -124,14 +121,18 @@ async function fetchJSON(url){
 }
 
 function ema(vals,p){
-  const k=2/(p+1); let e=vals[0];
-  for(let i=1;i<vals.length;i++) e=vals[i]*k+e*(1-k);
+  const k = 2/(p+1);
+  let e = vals[0];
+  for(let i=1;i<vals.length;i++) e = vals[i]*k + e*(1-k);
   return e;
 }
 
 function rsi(c,p=14){
   let g=0,l=0;
-  for(let i=1;i<=p;i++){const d=c[i]-c[i-1]; d>0?g+=d:l-=d;}
+  for(let i=1;i<=p;i++){
+    const d=c[i]-c[i-1];
+    d>0?g+=d:l-=d;
+  }
   let rs=g/(l||1), r=100-(100/(1+rs));
   for(let i=p+1;i<c.length;i++){
     const d=c[i]-c[i-1];
@@ -142,151 +143,133 @@ function rsi(c,p=14){
   return r;
 }
 
-async function getDailyOpen(sym){
-  if(dailyOpenCache[sym]) return dailyOpenCache[sym];
-  const d = await fetchJSON(`${API}/fapi/v1/klines?symbol=${sym}&interval=1d&limit=1`);
-  dailyOpenCache[sym]=+d[0][1];
-  await sleep(DELAY);
-  return dailyOpenCache[sym];
-}
+/* ================= ANALYSIS (15m) ================= */
 
-/* ================= ANALYSIS ================= */
-
-async function analyze(sym,bear=false){
-  const k4=await fetchJSON(`${API}/fapi/v1/klines?symbol=${sym}&interval=4h&limit=60`);
+async function analyze(sym, bear=false, drawdown=null){
+  const k15 = await fetchJSON(
+    `${API}/fapi/v1/klines?symbol=${sym}&interval=15m&limit=120`
+  );
   await sleep(DELAY);
-  const dailyOpen=await getDailyOpen(sym);
-  const c=k4.map(k=>+k[4]), v=k4.map(k=>+k[5]);
-  const last=k4[k4.length-1];
-  const avgVol=v.slice(-20).reduce((a,b)=>a+b,0)/20;
-  const emaHTF=ema(c.slice(-40),20), r=rsi(c);
+
+  const c = k15.map(k=>+k[4]);
+  const v = k15.map(k=>+k[5]);
+  const last = k15[k15.length-1];
+
+  const avgVol = v.slice(-40).reduce((a,b)=>a+b,0)/40;
+  const emaTF = ema(c.slice(-60),50);
+  const r = rsi(c);
 
   let s=0, rs=[];
+
   if(!bear){
-    if(+last[4]>dailyOpen){s++;rs.push("Above Daily Open");}
-    if(+last[4]>emaHTF){s++;rs.push("Above HTF EMA");}
-    if(+last[4]>+k4[k4.length-2][4]){s++;rs.push("Acceptance Up");}
-    if(r>50){s++;rs.push("RSI > 50");}
-    if(+last[5]>avgVol){s++;rs.push("Volume Confirmed");}
-  }else{
-    if(+last[4]<dailyOpen){s++;rs.push("Below Daily Open");}
-    if(+last[4]<emaHTF){s++;rs.push("Below HTF EMA");}
-    if(+last[4]<+k4[k4.length-2][4]){s++;rs.push("Acceptance Down");}
-    if(r<50){s++;rs.push("RSI < 50");}
-    if(+last[5]>avgVol){s++;rs.push("Sell Volume");}
+    if(+last[4] > emaTF){s++;rs.push("Above 15m EMA");}
+    if(+last[4] > +k15[k15.length-2][4]){s++;rs.push("15m Acceptance");}
+    if(r > 50){s++;rs.push("RSI > 50");}
+    if(+last[5] > avgVol){s++;rs.push("Volume Confirmed");}
+  } else {
+    if(+last[4] < emaTF){s++;rs.push("Below 15m EMA");}
+    if(+last[4] < +k15[k15.length-2][4]){s++;rs.push("15m Rejection");}
+    if(r < 50){s++;rs.push("RSI < 50");}
+    if(+last[5] > avgVol){s++;rs.push("Sell Volume");}
   }
 
-  const p=s*20;
-  const bias=s>=4?(bear?"Strong Bear":"Strong Bull"):
-             s===3?(bear?"Weak Bear":"Weak Bull"):
-             s===2?"Neutral":
-             (bear?"Weak Bull":"Weak Bear");
+  /* ===== Drawdown into Probability ===== */
+  if(typeof drawdown === "number"){
+    if(!bear){
+      if(drawdown >= -1){s++;rs.push("Strong Acceptance");}
+      else if(drawdown <= -7){s-=2;rs.push("Distribution Risk");}
+      else if(drawdown <= -4){s--;rs.push("Weak Pullback");}
+    }else{
+      if(drawdown <= -1){s++;rs.push("Strong Sell Pressure");}
+      else{s--;rs.push("Bear Rejection");}
+    }
+  }
+
+  s = Math.max(0, Math.min(5, s));
+  const p = s * 20;
+
+  const bias =
+    s>=4?(bear?"Strong Bear":"Strong Bull"):
+    s===3?(bear?"Weak Bear":"Weak Bull"):
+    s===2?"Neutral":
+    (bear?"Weak Bull":"Weak Bear");
 
   return {sym,prob:p,bias,reasons:rs};
-}
-
-/* ================= UI HELPERS ================= */
-
-function renderCard(d,el,extra=""){
-  const cls=d.bias.includes("Bull")?"bull":d.bias.includes("Bear")?"bear":"neutral";
-  el.innerHTML+=`
-  <div class="card">
-    <b>${d.sym}</b>
-    <div class="prob ${cls}">${d.bias} — ${d.prob}%</div>
-    <div class="muted">${d.reasons.join(" • ")}</div>
-    ${extra}
-  </div>`;
-}
-
-function renderFavorites(){
-  const el=document.getElementById("favoritesGrid");
-  el.innerHTML="";
-  favorites.forEach(s=>{
-    el.innerHTML+=`
-      <div class="card">
-        ⭐ <b>${s}</b>
-        <button class="secondary" onclick="runSearch('${s}')">Analyze</button>
-      </div>`;
-  });
-}
-
-function toggleFavorite(sym){
-  favorites=favorites.includes(sym)?favorites.filter(x=>x!==sym):[...favorites,sym];
-  localStorage.setItem("favorites",JSON.stringify(favorites));
-  renderFavorites();
 }
 
 /* ================= MAIN ================= */
 
 async function runScan(){
-  alertPlayed=false;
-  document.getElementById("greenGrid").innerHTML="";
-  document.getElementById("redGrid").innerHTML="";
-  document.getElementById("status").innerText="Scanning top movers...";
-
+  greenGrid.innerHTML=""; redGrid.innerHTML="";
+  status.innerText="Scanning...";
   const t=await fetchJSON(`${API}/fapi/v1/ticker/24hr`);
   const usdt=t.filter(x=>x.symbol.endsWith("USDT")&&!BLACKSET.has(x.symbol));
-  const green=[...usdt].sort((a,b)=>b.priceChangePercent-a.priceChangePercent).slice(0,30);
-  const red=[...usdt].sort((a,b)=>a.priceChangePercent-b.priceChangePercent).slice(0,30);
 
-  lastTopGreen=green.map(x=>x.symbol);
-  lastTopRed=red.map(x=>x.symbol);
-
-  for(const x of green){
-    const r=await analyze(x.symbol,false);
-    if(r.prob>=80&&!alertPlayed){alertSound.play();alertPlayed=true;}
-    renderCard(r,document.getElementById("greenGrid"));
+  for(const x of usdt.sort((a,b)=>b.priceChangePercent-a.priceChangePercent).slice(0,30)){
+    const dd=((+x.lastPrice-+x.highPrice)/+x.highPrice)*100;
+    const r=await analyze(x.symbol,false,dd);
+    r.drawdown=dd;
+    if(r.prob>=80) alertSound.play();
+    renderCard(r,greenGrid);
   }
 
-  for(const x of red){
-    const r=await analyze(x.symbol,true);
-    if(r.prob>=80&&!alertPlayed){alertSound.play();alertPlayed=true;}
-    renderCard(r,document.getElementById("redGrid"));
+  for(const x of usdt.sort((a,b)=>a.priceChangePercent-b.priceChangePercent).slice(0,30)){
+    const dd=((+x.lastPrice-+x.highPrice)/+x.highPrice)*100;
+    const r=await analyze(x.symbol,true,dd);
+    r.drawdown=dd;
+    renderCard(r,redGrid);
   }
 
-  document.getElementById("timestamp").innerText="Updated: "+new Date().toLocaleString();
-  document.getElementById("status").innerText="Completed";
+  timestamp.innerText=new Date().toLocaleString();
+  status.innerText="Completed";
 }
 
-async function runSearch(symOverride=null){
-  const sym=(symOverride||symbolSearch.value).trim().toUpperCase();
-  const el=document.getElementById("searchGrid");
-  el.innerHTML="";
+async function runSearch(){
+  const sym=symbolSearch.value.trim().toUpperCase();
   if(!sym.endsWith("USDT")||BLACKSET.has(sym)) return;
+  searchGrid.innerHTML="";
 
-  pinnedSymbol=sym;
   const t=await fetchJSON(`${API}/fapi/v1/ticker/24hr?symbol=${sym}`);
-  const bear=Number(t.priceChangePercent)<0;
-  const r=await analyze(sym,bear);
-
-  let ctx="Outside Top Movers";
-  if(lastTopGreen.includes(sym)) ctx="Top 30 Gainer";
-  if(lastTopRed.includes(sym)) ctx="Top 30 Loser";
-
-  renderCard(r,el,`
-    <div class="muted">Context: ${ctx}</div>
-    <button class="secondary" onclick="toggleFavorite('${sym}')">⭐ Favorite</button>
-  `);
+  const dd=((+t.lastPrice-+t.highPrice)/+t.highPrice)*100;
+  const bear=+t.priceChangePercent<0;
+  const r=await analyze(sym,bear,dd);
+  r.drawdown=dd;
+  renderCard(r,searchGrid);
 }
 
 function toggleAuto(){
-  if(autoTimer){clearInterval(autoTimer);autoTimer=null;}
-  else{runScan();autoTimer=setInterval(runScan,AUTO_INTERVAL);}
+  runScan();
+  setInterval(runScan,AUTO_INTERVAL);
 }
 
-function toggleSearchAuto(){
-  if(searchAutoTimer){clearInterval(searchAutoTimer);searchAutoTimer=null;}
-  else{
-    if(!pinnedSymbol) return alert("Search & pin a symbol first");
-    runSearch(pinnedSymbol);
-    searchAutoTimer=setInterval(()=>runSearch(pinnedSymbol),60000);
-  }
+/* ================= UI ================= */
+
+function renderCard(d, el){
+
+  /* ===== Probability color ===== */
+  let probClass = "neutral";
+  if(d.bias.includes("Bull")) probClass = "bull";
+  if(d.bias.includes("Bear")) probClass = "bear";
+
+  /* ===== Drawdown color ===== */
+  let ddClass = "neutral";
+  if(d.drawdown >= -1) ddClass = "bull";
+  else if(d.drawdown <= -4) ddClass = "bear";
+
+  el.innerHTML += `
+  <div class="card">
+    <b>${d.sym}</b>
+    <div class="prob ${probClass}">
+      ${d.bias} — ${d.prob}%
+    </div>
+    <div class="muted ${ddClass}">
+      24h Drawdown: ${d.drawdown.toFixed(2)}%
+    </div>
+    <div class="muted">
+      ${d.reasons.join(" • ")}
+    </div>
+  </div>`;
 }
-
-/* ================= INIT ================= */
-
-renderFavorites();
-symbolSearch.addEventListener("keydown",e=>{if(e.key==="Enter")runSearch();});
 </script>
 </body>
 </html>
