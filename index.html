@@ -284,6 +284,7 @@ async function analyze(sym, bear, dd, dChange){
   const l = k.map(x=>+x[3]);
   const v = k.map(x=>+x[5]);
   const last = k[k.length-1];
+  const lastPrice = +last[4];
 
   /* === Dominant 24h Volume === */
   let dominantVol = 0, dominantBull = true;
@@ -299,19 +300,19 @@ async function analyze(sym, bear, dd, dChange){
   const e50  = ema(c.slice(-60),50);
   const e50p = ema(c.slice(-65,-5),50);
   const e200 = ema(c.slice(-220),200);
-  const ema200Dist = ((last[4]-e200)/e200)*100;
+  const ema200Dist = ((lastPrice-e200)/e200)*100;
 
   const rNow  = rsi(c);
   const rPrev = rsi(c.slice(0,-1));
   const aNow  = atr(h,l,c);
   const aPrev = atr(h.slice(0,-1),l.slice(0,-1),c.slice(0,-1));
-  const bodyR = Math.abs(last[4]-last[1])/(last[2]-last[3]||1);
+  const bodyR = Math.abs(lastPrice-last[1])/(last[2]-last[3]||1);
 
   /* === STRUCTURE SCORE === */
   let s = 0, rs = [];
 
   if(!bear){
-    if(last[4] > e50){ s++; rs.push("Above EMA50"); }
+    if(lastPrice > e50){ s++; rs.push("Above EMA50"); }
     if(e50 > e50p){ s++; rs.push("EMA Rising"); }
     if(rNow > 50){ s++; rs.push("RSI > 50"); }
     if(rNow > rPrev){ s++; rs.push("RSI Rising"); }
@@ -320,7 +321,7 @@ async function analyze(sym, bear, dd, dChange){
     if(aNow > aPrev){ s++; rs.push("Volatility Expansion"); }
     if(dd > -2){ s++; rs.push("Holding Highs"); }
   }else{
-    if(last[4] < e50){ s++; rs.push("Below EMA50"); }
+    if(lastPrice < e50){ s++; rs.push("Below EMA50"); }
     if(e50 < e50p){ s++; rs.push("EMA Falling"); }
     if(rNow < 50){ s++; rs.push("RSI < 50"); }
     if(rNow < rPrev){ s++; rs.push("RSI Falling"); }
@@ -333,32 +334,35 @@ async function analyze(sym, bear, dd, dChange){
   s = Math.min(MAX_SCORE, s);
   const baseProb = Math.round((s / MAX_SCORE) * 100);
 
-  /* === ADJUSTMENTS === */
+  /* === PROBABILITY ADJUSTMENT === */
   let finalProb = baseProb;
-  let volumeAlign = "neutral";
-
-  if((!bear && dominantBull) || (bear && !dominantBull)){
-    finalProb += 10; volumeAlign = "confirm";
-  }else{
-    finalProb -= 5; volumeAlign = "contradict";
-  }
+  if((!bear && dominantBull) || (bear && !dominantBull)) finalProb += 10;
+  else finalProb -= 5;
 
   finalProb = Math.max(0, Math.min(100, finalProb));
 
   /* === BIAS === */
-  let bias="Neutral";
+  let bias = "Neutral";
   if(!bear){
-    if(finalProb>=75) bias="Strong Bull";
-    else if(finalProb>=55) bias="Weak Bull";
+    if(finalProb >= 75) bias = "Strong Bull";
+    else if(finalProb >= 55) bias = "Weak Bull";
   }else{
-    if(finalProb>=75) bias="Strong Bear";
-    else if(finalProb>=55) bias="Weak Bear";
+    if(finalProb >= 75) bias = "Strong Bear";
+    else if(finalProb >= 55) bias = "Weak Bear";
   }
 
-  /* === SUPPORT / RESISTANCE LEVELS (15m) === */
+  /* === 15m SUPPORT / RESISTANCE LEVELS === */
   const swings = findSwings(h, l, c, v);
   const supportLevels = swings.supports;
   const resistanceLevels = swings.resistances;
+
+  /* === DISTANCE TO LEVELS (%) === */
+  const supportDistances = supportLevels.map(
+    lvl => ((lastPrice - lvl) / lastPrice) * 100
+  );
+  const resistanceDistances = resistanceLevels.map(
+    lvl => ((lvl - lastPrice) / lastPrice) * 100
+  );
 
   /* === INTERPRETATION === */
   let levelType, levelStrength, levelText;
@@ -403,9 +407,11 @@ async function analyze(sym, bear, dd, dChange){
     levelStrength,
     levelText,
     supportLevels,
-    resistanceLevels
+    resistanceLevels,
+    supportDistances,
+    resistanceDistances
   };
-    }
+}
 
 
   /* ================= RENDER ================= */
@@ -451,7 +457,11 @@ function renderCard(d, el){
       <div class="muted bull">
         🟢 Support Levels (15m)
         <br>• S1: <b>${d.supportLevels[0].toFixed(4)}</b>
-        ${d.supportLevels[1]?`<br>• S2: <b>${d.supportLevels[1].toFixed(4)}</b>`:``}
+        <span class="muted">(${d.supportDistances[0].toFixed(2)}%)</span>
+        ${d.supportLevels[1]?`
+        <br>• S2: <b>${d.supportLevels[1].toFixed(4)}</b>
+        <span class="muted">(${d.supportDistances[1].toFixed(2)}%)</span>
+        `:``}
       </div>` : ``
     }
 
@@ -460,7 +470,11 @@ function renderCard(d, el){
       <div class="muted bear">
         🔴 Resistance Levels (15m)
         <br>• R1: <b>${d.resistanceLevels[0].toFixed(4)}</b>
-        ${d.resistanceLevels[1]?`<br>• R2: <b>${d.resistanceLevels[1].toFixed(4)}</b>`:``}
+        <span class="muted">(${d.resistanceDistances[0].toFixed(2)}%)</span>
+        ${d.resistanceLevels[1]?`
+        <br>• R2: <b>${d.resistanceLevels[1].toFixed(4)}</b>
+        <span class="muted">(${d.resistanceDistances[1].toFixed(2)}%)</span>
+        `:``}
       </div>` : ``
     }
 
@@ -468,7 +482,8 @@ function renderCard(d, el){
       ${d.reasons.join(" • ")}
     </div>
   `;
-    }
+}
+
   
   
 
