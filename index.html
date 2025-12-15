@@ -107,23 +107,23 @@ button.secondary{
 
 <script>
 /* ================= DOM ================= */
-const greenGrid=document.getElementById("greenGrid");
-const redGrid=document.getElementById("redGrid");
-const searchGrid=document.getElementById("searchGrid");
-const status=document.getElementById("status");
-const timestamp=document.getElementById("timestamp");
-const symbolSearch=document.getElementById("symbolSearch");
-const alertSound=document.getElementById("alertSound");
-const progressFill=document.getElementById("progressFill");
-const refreshTimer=document.getElementById("refreshTimer");
+const greenGrid = document.getElementById("greenGrid");
+const redGrid   = document.getElementById("redGrid");
+const searchGrid= document.getElementById("searchGrid");
+const status    = document.getElementById("status");
+const timestamp = document.getElementById("timestamp");
+const symbolSearch = document.getElementById("symbolSearch");
+const alertSound = document.getElementById("alertSound");
+const progressFill = document.getElementById("progressFill");
+const refreshTimer = document.getElementById("refreshTimer");
 
 /* ================= CONFIG ================= */
-const API="https://fapi.binance.com";
-const DELAY=200;
-const AUTO_INTERVAL=5*60*1000;
-const MAX_SCORE=10;
+const API = "https://fapi.binance.com";
+const DELAY = 200;
+const AUTO_INTERVAL = 5 * 60 * 1000;
+const MAX_SCORE = 10;
 
-const BLACKSET=new Set([
+const BLACKSET = new Set([
  "ALPACAUSDT","BNXUSDT","ALPHAUSDT","OCEANUSDT","DGBUSDT","AGIXUSDT",
  "LINAUSDT","LOKAUSDT","KEYUSDT","MDTUSDT","LOOMUSDT","RENUSDT",
  "OMNIUSDT","SLERFUSDT","STMXUSDT","UXLINKUSDT","BSWUSDT",
@@ -151,7 +151,6 @@ function startCountdown(){
 function toggleAuto(){
   autoEnabled=!autoEnabled;
   clearInterval(autoTimer); clearInterval(countdownTimer);
-
   if(autoEnabled){
     isAuto=true;
     runScan();
@@ -170,6 +169,10 @@ function toggleAuto(){
 
 function manualScan(){
   isAuto=false;
+  greenGrid.innerHTML="";
+  redGrid.innerHTML="";
+  searchGrid.innerHTML="";
+  progressFill.style.width="0%";
   runScan();
 }
 
@@ -189,6 +192,11 @@ function rsi(c,p=14){
     rs=g/(l||1); r=100-(100/(1+rs));
   } return r;
 }
+function atr(h,l,c,p=14){
+  let t=[];for(let i=1;i<c.length;i++)
+  t.push(Math.max(h[i]-l[i],Math.abs(h[i]-c[i-1]),Math.abs(l[i]-c[i-1])));
+  return t.slice(-p).reduce((a,b)=>a+b,0)/p;
+}
 
 /* ================= ANALYSIS ================= */
 async function analyze(sym,bear,dd){
@@ -201,21 +209,52 @@ async function analyze(sym,bear,dd){
   const v=k.map(x=>+x[5]);
   const last=k[k.length-1];
 
-  /* === dominant 24h volume candle === */
-  const last96=k.slice(-96);
-  let dom=last96[0];
-  for(const x of last96){ if(+x[5]>+dom[5]) dom=x; }
-  const dominantVol=+dom[5];
-  const dominantBull=+dom[4]>=+dom[1];
+  /* === Dominant 24h Volume (15m candle) === */
+  let dominantVol = 0;
+  let dominantBull = true;
+
+  for(let i=k.length-96;i<k.length;i++){
+    if(v[i] > dominantVol){
+      dominantVol = v[i];
+      dominantBull = k[i][4] > k[i][1];
+    }
+  }
+
+  const avgV=v.slice(-40).reduce((a,b)=>a+b,0)/40;
+  const eNow=ema(c.slice(-60),50), ePrev=ema(c.slice(-65,-5),50);
+  const rNow=rsi(c), rPrev=rsi(c.slice(0,-1));
+  const aNow=atr(h,l,c), aPrev=atr(h.slice(0,-1),l.slice(0,-1),c.slice(0,-1));
+
+  const body=Math.abs(last[4]-last[1]);
+  const range=last[2]-last[3];
+  const bodyR=range?body/range:0;
+
+  const hi=Math.max(...h.slice(-20));
+  const lo=Math.min(...l.slice(-20));
+  const pos=(last[4]-lo)/(hi-lo||1);
 
   let s=0, rs=[];
+
   if(!bear){
-    if(last[4]>ema(c.slice(-60),50)){s++;rs.push("Above EMA50")}
-    if(rsi(c)>50){s++;rs.push("RSI > 50")}
+    if(last[4]>eNow){s++;rs.push("Above EMA50")}
+    if(last[4]>c[c.length-2]){s++;rs.push("Acceptance")}
+    if(rNow>50){s++;rs.push("RSI > 50")}
+    if(last[5]>avgV){s++;rs.push("Volume")}
+    if(dd>=-1){s++;rs.push("Strong Acceptance")}
   }else{
-    if(last[4]<ema(c.slice(-60),50)){s++;rs.push("Below EMA50")}
-    if(rsi(c)<50){s++;rs.push("RSI < 50")}
+    if(last[4]<eNow){s++;rs.push("Below EMA50")}
+    if(last[4]<c[c.length-2]){s++;rs.push("Rejection")}
+    if(rNow<50){s++;rs.push("RSI < 50")}
+    if(last[5]>avgV){s++;rs.push("Sell Volume")}
+    if(dd<=-1){s++;rs.push("Sell Pressure")}
   }
+
+  if(!bear&&eNow>ePrev){s++;rs.push("EMA Rising")}
+  if(bear&&eNow<ePrev){s++;rs.push("EMA Falling")}
+  if(!bear&&rNow>rPrev){s++;rs.push("RSI Rising")}
+  if(bear&&rNow<rPrev){s++;rs.push("RSI Falling")}
+  if(bodyR>0.6){s++;rs.push("Strong Candle")}
+  if(aNow>aPrev){s++;rs.push("Volatility")}
 
   s=Math.max(0,Math.min(MAX_SCORE,s));
   const p=Math.round(s/MAX_SCORE*100);
@@ -223,7 +262,15 @@ async function analyze(sym,bear,dd){
              p>=60?(bear?"Weak Bear":"Weak Bull"):
              p>=40?"Neutral":(bear?"Weak Bull":"Weak Bear");
 
-  return {sym,prob:p,bias,drawdown:dd,dominantVol,dominantBull};
+  return {
+    sym,
+    prob:p,
+    bias,
+    reasons:rs,
+    drawdown:dd,
+    dominantVol,
+    dominantBull
+  };
 }
 
 /* ================= RENDER ================= */
@@ -236,15 +283,21 @@ function renderCard(d,el){
     el.appendChild(card);
   }
 
-  const dvClass=d.dominantBull?"bull":"bear";
-  const bc=d.bias.includes("Bull")?"bull":d.bias.includes("Bear")?"bear":"neutral";
-
   card.innerHTML=`
     <b>${d.sym}</b>
-    <div class="prob ${bc}">${d.bias} — ${d.prob}%</div>
-    <div class="muted ${dvClass}">
-      24h Dominant Vol: ${d.dominantVol.toLocaleString()}
+    <div class="prob ${d.bias.includes("Bull")?"bull":d.bias.includes("Bear")?"bear":"neutral"}">
+      ${d.bias} — ${d.prob}%
     </div>
+    <div class="muted ${d.change>=0?"bull":"bear"}">
+      24h Change: ${d.change.toFixed(2)}%
+    </div>
+    <div class="muted ${d.drawdown>=-1?"bull":d.drawdown<=-4?"bear":"neutral"}">
+      24h Drawdown: ${d.drawdown.toFixed(2)}%
+    </div>
+    <div class="muted ${d.dominantBull ? "bull" : "bear"}">
+      24h Dominant Vol: ${Number(d.dominantVol).toLocaleString()}
+    </div>
+    <div class="muted">${d.reasons.join(" • ")}</div>
   `;
 }
 
@@ -254,33 +307,42 @@ async function runScan(){
   const t=await fetchJSON(`${API}/fapi/v1/ticker/24hr`);
   const usdt=t.filter(x=>x.symbol.endsWith("USDT")&&!BLACKSET.has(x.symbol));
 
-  const g=usdt.sort((a,b)=>b.priceChangePercent-a.priceChangePercent).slice(0,30);
-  const r=usdt.sort((a,b)=>a.priceChangePercent-b.priceChangePercent).slice(0,30);
+  const g=[...usdt].sort((a,b)=>b.priceChangePercent-a.priceChangePercent).slice(0,30);
+  const r=[...usdt].sort((a,b)=>a.priceChangePercent-b.priceChangePercent).slice(0,30);
 
-  let done=0,total=g.length+r.length;
+  const total=g.length+r.length; let done=0;
+
   for(const x of g){
     const dd=(x.lastPrice-x.highPrice)/x.highPrice*100;
-    renderCard(await analyze(x.symbol,false,dd),greenGrid);
-    progressFill.style.width=++done/total*100+"%";
+    const res=await analyze(x.symbol,false,dd);
+    res.change=+x.priceChangePercent;
+    if(res.prob>=80) alertSound.play();
+    renderCard(res,greenGrid);
+    done++; progressFill.style.width=Math.round(done/total*100)+"%";
   }
+
   for(const x of r){
     const dd=(x.lastPrice-x.highPrice)/x.highPrice*100;
-    renderCard(await analyze(x.symbol,true,dd),redGrid);
-    progressFill.style.width=++done/total*100+"%";
+    const res=await analyze(x.symbol,true,dd);
+    res.change=+x.priceChangePercent;
+    renderCard(res,redGrid);
+    done++; progressFill.style.width=Math.round(done/total*100)+"%";
   }
 
   timestamp.innerText=new Date().toLocaleString();
   status.innerText="Completed";
 }
 
-/* ================= SEARCH ================= */
+/* ================= MANUAL SEARCH ================= */
 async function runSearch(){
   const sym=symbolSearch.value.trim().toUpperCase();
   if(!sym.endsWith("USDT")||BLACKSET.has(sym))return;
   searchGrid.innerHTML="";
   const t=await fetchJSON(`${API}/fapi/v1/ticker/24hr?symbol=${sym}`);
   const dd=(t.lastPrice-t.highPrice)/t.highPrice*100;
-  renderCard(await analyze(sym,t.priceChangePercent<0,dd),searchGrid);
+  const r=await analyze(sym,t.priceChangePercent<0,dd);
+  r.change=+t.priceChangePercent;
+  renderCard(r,searchGrid);
 }
 </script>
 </body>
