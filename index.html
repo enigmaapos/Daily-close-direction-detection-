@@ -52,7 +52,6 @@ button.secondary{
 .neutral{color:#facc15}
 .prob{font-weight:700}
 
-/* progress bar */
 .progress-wrap{margin:8px 0 10px}
 .progress-bar{
   height:10px;
@@ -123,6 +122,59 @@ const DELAY = 200;
 const AUTO_INTERVAL = 5 * 60 * 1000;
 const MAX_SCORE = 10;
 
+const BLACKSET = new Set([
+ "ALPACAUSDT","BNXUSDT","ALPHAUSDT","OCEANUSDT","DGBUSDT","AGIXUSDT",
+ "LINAUSDT","LOKAUSDT","KEYUSDT","MDTUSDT","LOOMUSDT","RENUSDT",
+ "OMNIUSDT","SLERFUSDT","STMXUSDT","UXLINKUSDT","BSWUSDT",
+ "NEIROETHUSDT","VIDTUSDT","TROYUSDT","BAKEUSDT","MEMEFIUSDT",
+ "NULSUSDT","HIFIUSDT","LEVERUSDT","XEMUSDT","STRAXUSDT",
+ "COMBOUSDT","AI16ZUSDT","MILKUSDT","TOKENUSDT","SXPUSDT"
+]);
+
+/* ================= STATE ================= */
+let autoEnabled=false, autoTimer=null, countdownTimer=null, nextRefreshAt=0;
+let isAuto=false;
+
+/* ================= AUTO REFRESH ================= */
+function startCountdown(){
+  clearInterval(countdownTimer);
+  countdownTimer=setInterval(()=>{
+    const d=nextRefreshAt-Date.now();
+    if(d<=0){refreshTimer.innerText="Refreshing now...";return;}
+    const m=Math.floor(d/60000);
+    const s=Math.floor((d%60000)/1000);
+    refreshTimer.innerText=`Next refresh in: ${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
+  },1000);
+}
+
+function toggleAuto(){
+  autoEnabled=!autoEnabled;
+  clearInterval(autoTimer); clearInterval(countdownTimer);
+  if(autoEnabled){
+    isAuto=true;
+    runScan();
+    nextRefreshAt=Date.now()+AUTO_INTERVAL;
+    autoTimer=setInterval(()=>{
+      isAuto=true;
+      runScan();
+      nextRefreshAt=Date.now()+AUTO_INTERVAL;
+    },AUTO_INTERVAL);
+    startCountdown();
+  }else{
+    isAuto=false;
+    refreshTimer.innerText="Auto refresh: OFF";
+  }
+}
+
+function manualScan(){
+  isAuto=false;
+  greenGrid.innerHTML="";
+  redGrid.innerHTML="";
+  searchGrid.innerHTML="";
+  progressFill.style.width="0%";
+  runScan();
+}
+
 /* ================= HELPERS ================= */
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const fetchJSON=async u=>(await fetch(u)).json();
@@ -156,7 +208,7 @@ async function analyze(sym,bear,dd){
   const v=k.map(x=>+x[5]);
   const last=k[k.length-1];
 
-  /* === Dominant 24h Volume Candle === */
+  /* === Dominant 24h Volume === */
   let dominantVol=0, dominantBull=true;
   for(let i=k.length-96;i<k.length;i++){
     if(v[i]>dominantVol){
@@ -174,21 +226,21 @@ async function analyze(sym,bear,dd){
   const range=last[2]-last[3];
   const bodyR=range?body/range:0;
 
-  let s=0;
+  let s=0, rs=[];
+
   if(!bear){
-    if(last[4]>eNow)s++;
-    if(rNow>50)s++;
-    if(last[5]>avgV)s++;
-    if(eNow>ePrev)s++;
+    if(last[4]>eNow){s++;rs.push("Above EMA50")}
+    if(rNow>50){s++;rs.push("RSI > 50")}
+    if(last[5]>avgV){s++;rs.push("Volume")}
   }else{
-    if(last[4]<eNow)s++;
-    if(rNow<50)s++;
-    if(last[5]>avgV)s++;
-    if(eNow<ePrev)s++;
+    if(last[4]<eNow){s++;rs.push("Below EMA50")}
+    if(rNow<50){s++;rs.push("RSI < 50")}
+    if(last[5]>avgV){s++;rs.push("Sell Volume")}
   }
 
   s=Math.min(MAX_SCORE,s);
-  let baseProb=Math.round(s/MAX_SCORE*100);
+  const baseProb=Math.round(s/MAX_SCORE*100);
+
   let finalProb=baseProb;
   let volumeAlign="neutral";
 
@@ -212,13 +264,29 @@ async function analyze(sym,bear,dd){
              finalProb>=60?(bear?"Weak Bear":"Weak Bull"):
              finalProb>=40?"Neutral":(bear?"Weak Bull":"Weak Bear");
 
-  return {sym,prob:finalProb,baseProb,bias,volumeAlign,dominantVol,dominantBull,drawdown:dd};
+  return {
+    sym,
+    prob:finalProb,
+    baseProb,
+    bias,
+    volumeAlign,
+    reasons:rs,
+    drawdown:dd,
+    dominantVol,
+    dominantBull
+  };
 }
 
 /* ================= RENDER ================= */
 function renderCard(d,el){
-  const card=document.createElement("div");
-  card.className="card";
+  let card=document.getElementById(el.id+"-"+d.sym);
+  if(!card){
+    card=document.createElement("div");
+    card.className="card";
+    card.id=el.id+"-"+d.sym;
+    el.appendChild(card);
+  }
+
   card.innerHTML=`
     <b>${d.sym}</b>
     <div class="prob ${d.bias.includes("Bull")?"bull":d.bias.includes("Bear")?"bear":"neutral"}">
@@ -233,32 +301,56 @@ function renderCard(d,el){
     }">
       ${
         d.volumeAlign==="confirm"
-        ?"Volume confirms bias (Continuation likely)"
-        :d.volumeAlign==="contradict"
-        ?"Volume contradicts bias (Trap / Absorption risk)"
-        :"Volume neutral"
+          ?"Volume confirms bias (Continuation likely)"
+          :"Volume contradicts bias (Trap / Absorption risk)"
       }
     </div>
+    <div class="muted">${d.reasons.join(" • ")}</div>
   `;
-  el.appendChild(card);
 }
 
 /* ================= SCAN ================= */
 async function runScan(){
-  greenGrid.innerHTML=""; redGrid.innerHTML="";
+  status.innerText=isAuto?"Refreshing...":"Scanning...";
   const t=await fetchJSON(`${API}/fapi/v1/ticker/24hr`);
-  const usdt=t.filter(x=>x.symbol.endsWith("USDT"));
+  const usdt=t.filter(x=>x.symbol.endsWith("USDT")&&!BLACKSET.has(x.symbol));
+
   const g=[...usdt].sort((a,b)=>b.priceChangePercent-a.priceChangePercent).slice(0,30);
   const r=[...usdt].sort((a,b)=>a.priceChangePercent-b.priceChangePercent).slice(0,30);
 
+  const total=g.length+r.length; let done=0;
+
   for(const x of g){
-    const res=await analyze(x.symbol,false,(x.lastPrice-x.highPrice)/x.highPrice*100);
+    const dd=(x.lastPrice-x.highPrice)/x.highPrice*100;
+    const res=await analyze(x.symbol,false,dd);
+    res.change=+x.priceChangePercent;
+    if(res.prob>=80) alertSound.play();
     renderCard(res,greenGrid);
+    done++; progressFill.style.width=Math.round(done/total*100)+"%";
   }
+
   for(const x of r){
-    const res=await analyze(x.symbol,true,(x.lastPrice-x.highPrice)/x.highPrice*100);
+    const dd=(x.lastPrice-x.highPrice)/x.highPrice*100;
+    const res=await analyze(x.symbol,true,dd);
+    res.change=+x.priceChangePercent;
     renderCard(res,redGrid);
+    done++; progressFill.style.width=Math.round(done/total*100)+"%";
   }
+
+  timestamp.innerText=new Date().toLocaleString();
+  status.innerText="Completed";
+}
+
+/* ================= MANUAL SEARCH ================= */
+async function runSearch(){
+  const sym=symbolSearch.value.trim().toUpperCase();
+  if(!sym.endsWith("USDT")||BLACKSET.has(sym))return;
+  searchGrid.innerHTML="";
+  const t=await fetchJSON(`${API}/fapi/v1/ticker/24hr?symbol=${sym}`);
+  const dd=(t.lastPrice-t.highPrice)/t.highPrice*100;
+  const r=await analyze(sym,t.priceChangePercent<0,dd);
+  r.change=+t.priceChangePercent;
+  renderCard(r,searchGrid);
 }
 </script>
 </body>
