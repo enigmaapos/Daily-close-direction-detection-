@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>15m Bull / Bear Probability — Pro Scanner</title>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+
+<style>
+body{
+  font-family:Inter,system-ui,Arial;
+  background:#0f1720;
+  color:#e6eef8;
+  margin:16px;
+}
+h1{font-size:18px;margin-bottom:6px}
+h2{font-size:16px;margin-top:14px}
+.muted{color:#9fb3cc;font-size:13px}
+button,input{
+  padding:8px 12px;
+  border-radius:6px;
+  border:1px solid #334155;
+  background:#0b1220;
+  color:#e6eef8;
+}
+button.primary{
+  background:#22c55e;
+  border:0;
+  color:#042e16;
+  font-weight:700;
+  cursor:pointer;
+}
+button.secondary{
+  background:#334155;
+  border:0;
+  cursor:pointer;
+}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(280px,1fr));
+  gap:12px;
+  margin-top:10px;
+}
+.card{
+  background:#0b1220;
+  border:1px solid #172033;
+  border-radius:10px;
+  padding:12px;
+}
+.bull{color:#22c55e}
+.bear{color:#fb7185}
+.neutral{color:#facc15}
+.prob{font-weight:700}
+
+/* progress bar */
+.progress-wrap{margin:8px 0 10px}
+.progress-bar{
+  height:10px;
+  background:#172033;
+  border-radius:6px;
+  overflow:hidden;
+}
+.progress-fill{
+  height:100%;
+  width:0%;
+  background:#22c55e;
+  transition:width .2s linear;
+}
+</style>
+</head>
+
+<body>
+
+<h1>📊 15m Bull / Bear Probability — Pro Scanner</h1>
+<div class="muted" id="status">Idle</div>
+<div class="muted" id="refreshTimer">Auto refresh: OFF</div>
+
+<div class="progress-wrap">
+  <div class="progress-bar">
+    <div class="progress-fill" id="progressFill"></div>
+  </div>
+  <div class="muted" id="progressText"></div>
+</div>
+
+<div class="row">
+  <button class="primary" onclick="manualScan()">Run Scan</button>
+  <button class="secondary" onclick="toggleAuto()">Auto Refresh</button>
+  <div class="muted" id="timestamp"></div>
+</div>
+
+<div class="row">
+  <input id="symbolSearch" placeholder="Search symbol (BTCUSDT)" />
+  <button class="secondary" onclick="runSearch()">Analyze</button>
+</div>
+
+<h2>🟢 Top 30 GREEN</h2>
+<div class="grid" id="greenGrid"></div>
+
+<h2>🔴 Top 30 RED</h2>
+<div class="grid" id="redGrid"></div>
+
+<h2>🔍 Manual Analysis</h2>
+<div class="grid" id="searchGrid"></div>
+
+<audio id="alertSound">
+  <source src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg">
+</audio>
+
+<script>
+/* ================= DOM ================= */
+const greenGrid = document.getElementById("greenGrid");
+const redGrid   = document.getElementById("redGrid");
+const searchGrid= document.getElementById("searchGrid");
+const status    = document.getElementById("status");
+const timestamp = document.getElementById("timestamp");
+const symbolSearch = document.getElementById("symbolSearch");
+const alertSound = document.getElementById("alertSound");
+const progressFill = document.getElementById("progressFill");
+const progressText = document.getElementById("progressText");
+const refreshTimer = document.getElementById("refreshTimer");
+
+/* ================= CONFIG ================= */
+const API = "https://fapi.binance.com";
+const DELAY = 250;
+const AUTO_INTERVAL = 5 * 60 * 1000;
+const MAX_SCORE = 10;
+
+const BLACKSET = new Set([
+  "ALPACAUSDT","BNXUSDT","ALPHAUSDT","OCEANUSDT","DGBUSDT","AGIXUSDT",
+  "LINAUSDT","LOKAUSDT","KEYUSDT","MDTUSDT","LOOMUSDT","RENUSDT",
+  "OMNIUSDT","SLERFUSDT","STMXUSDT","UXLINKUSDT","BSWUSDT",
+  "NEIROETHUSDT","VIDTUSDT","TROYUSDT","BAKEUSDT","MEMEFIUSDT",
+  "NULSUSDT","HIFIUSDT","LEVERUSDT","XEMUSDT","STRAXUSDT",
+  "COMBOUSDT","AI16ZUSDT","MILKUSDT","TOKENUSDT","SXPUSDT",
+  "MYROUSDT","1000XUSDT","DARUSDT","PORT3USDT","SKATEUSDT",
+  "AIAUSDT","AMBUSDT","FLMUSDT","PERPUSDT","OBOLUSDT"
+]);
+
+/* ================= STATE ================= */
+let autoEnabled=false, autoTimer=null, countdownTimer=null, nextRefreshAt=0;
+let isAuto=false;
+
+/* ================= AUTO REFRESH ================= */
+function startCountdown(){
+  clearInterval(countdownTimer);
+  countdownTimer=setInterval(()=>{
+    const d=nextRefreshAt-Date.now();
+    if(d<=0){refreshTimer.innerText="Refreshing now...";return;}
+    const m=Math.floor(d/60000);
+    const s=Math.floor((d%60000)/1000);
+    refreshTimer.innerText=`Next refresh in: ${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
+  },1000);
+}
+
+function toggleAuto(){
+  autoEnabled=!autoEnabled;
+  clearInterval(autoTimer); clearInterval(countdownTimer);
+
+  if(autoEnabled){
+    isAuto=true;
+    runScan();
+    nextRefreshAt=Date.now()+AUTO_INTERVAL;
+    autoTimer=setInterval(()=>{
+      isAuto=true;
+      runScan();
+      nextRefreshAt=Date.now()+AUTO_INTERVAL;
+    },AUTO_INTERVAL);
+    startCountdown();
+  }else{
+    isAuto=false;
+    refreshTimer.innerText="Auto refresh: OFF";
+  }
+}
+
+function manualScan(){
+  isAuto=false;
+  greenGrid.innerHTML="";
+  redGrid.innerHTML="";
+  searchGrid.innerHTML="";
+  progressFill.style.width="0%";
+  progressText.innerText="";
+  runScan();
+}
+
+/* ================= HELPERS ================= */
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const fetchJSON=async u=>(await fetch(u)).json();
+
+function ema(v,p){const k=2/(p+1);let e=v[0];for(let i=1;i<v.length;i++)e=v[i]*k+e*(1-k);return e;}
+function rsi(c,p=14){
+  let g=0,l=0;
+  for(let i=1;i<=p;i++){const d=c[i]-c[i-1];d>0?g+=d:l-=d;}
+  let rs=g/(l||1), r=100-(100/(1+rs));
+  for(let i=p+1;i<c.length;i++){
+    const d=c[i]-c[i-1];
+    if(d>0){g=(g*(p-1)+d)/p;l=(l*(p-1))/p;}
+    else{g=(g*(p-1))/p;l=(l*(p-1)-d)/p;}
+    rs=g/(l||1); r=100-(100/(1+rs));
+  } return r;
+}
+function atr(h,l,c,p=14){
+  let t=[];for(let i=1;i<c.length;i++)
+  t.push(Math.max(h[i]-l[i],Math.abs(h[i]-c[i-1]),Math.abs(l[i]-c[i-1])));
+  return t.slice(-p).reduce((a,b)=>a+b,0)/p;
+}
+
+/* ================= ANALYSIS ================= */
+async function analyze(sym,bear,dd){
+  const k=await fetchJSON(`${API}/fapi/v1/klines?symbol=${sym}&interval=15m&limit=120`);
+  await sleep(DELAY);
+  const c=k.map(x=>+x[4]), h=k.map(x=>+x[2]), l=k.map(x=>+x[3]), v=k.map(x=>+x[5]);
+  const last=k[k.length-1];
+  const avgV=v.slice(-40).reduce((a,b)=>a+b,0)/40;
+  const eNow=ema(c.slice(-60),50), ePrev=ema(c.slice(-65,-5),50);
+  const rNow=rsi(c), rPrev=rsi(c.slice(0,-1));
+  const aNow=atr(h,l,c), aPrev=atr(h.slice(0,-1),l.slice(0,-1),c.slice(0,-1));
+  const body=Math.abs(last[4]-last[1]), range=last[2]-last[3];
+  const bodyR=range?body/range:0;
+  const hi=Math.max(...h.slice(-20)), lo=Math.min(...l.slice(-20));
+  const pos=(last[4]-lo)/(hi-lo||1);
+
+  let s=0, rs=[];
+  if(!bear){
+    if(last[4]>eNow){s++;rs.push("Above EMA50")}
+    if(last[4]>c[c.length-2]){s++;rs.push("Acceptance")}
+    if(rNow>50){s++;rs.push("RSI > 50")}
+    if(last[5]>avgV){s++;rs.push("Volume")}
+    if(dd>=-1){s++;rs.push("Strong Acceptance")}
+  }else{
+    if(last[4]<eNow){s++;rs.push("Below EMA50")}
+    if(last[4]<c[c.length-2]){s++;rs.push("Rejection")}
+    if(rNow<50){s++;rs.push("RSI < 50")}
+    if(last[5]>avgV){s++;rs.push("Sell Volume")}
+    if(dd<=-1){s++;rs.push("Sell Pressure")}
+  }
+  if(!bear&&eNow>ePrev){s++;rs.push("EMA Rising")}
+  if(bear&&eNow<ePrev){s++;rs.push("EMA Falling")}
+  if(!bear&&rNow>rPrev){s++;rs.push("RSI Rising")}
+  if(bear&&rNow<rPrev){s++;rs.push("RSI Falling")}
+  if(bodyR>0.6){s++;rs.push("Strong Candle")}
+  if(aNow>aPrev){s++;rs.push("Volatility")}
+  if(!bear&&pos>0.3&&pos<0.8){s++;rs.push("Healthy Range")}
+  if(bear&&pos<0.7&&pos>0.2){s++;rs.push("Bear Range")}
+
+  s=Math.max(0,Math.min(MAX_SCORE,s));
+  const p=Math.round(s/MAX_SCORE*100);
+  const bias=p>=80?(bear?"Strong Bear":"Strong Bull"):
+             p>=60?(bear?"Weak Bear":"Weak Bull"):
+             p>=40?"Neutral":(bear?"Weak Bull":"Weak Bear");
+  return {sym,prob:p,bias,reasons:rs,drawdown:dd};
+}
+
+/* ================= RENDER ================= */
+function renderCard(d,el){
+  let card=document.getElementById(el.id+"-"+d.sym);
+  const pc=d.change>=0?"bull":"bear";
+  const ps=d.change>=0?"+":"";
+  const bc=d.bias.includes("Bull")?"bull":d.bias.includes("Bear")?"bear":"neutral";
+  const dc=d.drawdown>=-1?"bull":d.drawdown<=-4?"bear":"neutral";
+
+  if(!card){
+    card=document.createElement("div");
+    card.className="card";
+    card.id=el.id+"-"+d.sym;
+    el.appendChild(card);
+  }
+
+  card.innerHTML=`
+    <b>${d.sym}</b>
+    <div class="prob ${bc}">${d.bias} — ${d.prob}%</div>
+    <div class="muted ${pc}">24h Change: ${ps}${d.change.toFixed(2)}%</div>
+    <div class="muted ${dc}">24h Drawdown: ${d.drawdown.toFixed(2)}%</div>
+    <div class="muted">${d.reasons.join(" • ")}</div>
+  `;
+}
+
+/* ================= SCAN ================= */
+async function runScan(){
+  status.innerText=isAuto?"Refreshing...":"Scanning...";
+
+  const t=await fetchJSON(`${API}/fapi/v1/ticker/24hr`);
+  const usdt=t.filter(x=>x.symbol.endsWith("USDT")&&!BLACKSET.has(x.symbol));
+  const g=usdt.sort((a,b)=>b.priceChangePercent-a.priceChangePercent).slice(0,30);
+  const r=usdt.sort((a,b)=>a.priceChangePercent-b.priceChangePercent).slice(0,30);
+  const total=g.length+r.length; let done=0;
+
+  for(const x of g){
+    const dd=(x.lastPrice-x.highPrice)/x.highPrice*100;
+    const res=await analyze(x.symbol,false,dd);
+    res.change=+x.priceChangePercent;
+    if(res.prob>=80) alertSound.play();
+    renderCard(res,greenGrid);
+    done++; progressFill.style.width=Math.round(done/total*100)+"%";
+  }
+  for(const x of r){
+    const dd=(x.lastPrice-x.highPrice)/x.highPrice*100;
+    const res=await analyze(x.symbol,true,dd);
+    res.change=+x.priceChangePercent;
+    renderCard(res,redGrid);
+    done++; progressFill.style.width=Math.round(done/total*100)+"%";
+  }
+
+  timestamp.innerText=new Date().toLocaleString();
+  status.innerText="Completed";
+}
+
+/* ================= MANUAL SEARCH ================= */
+async function runSearch(){
+  const sym=symbolSearch.value.trim().toUpperCase();
+  if(!sym.endsWith("USDT")||BLACKSET.has(sym))return;
+  searchGrid.innerHTML="";
+  const t=await fetchJSON(`${API}/fapi/v1/ticker/24hr?symbol=${sym}`);
+  const dd=(t.lastPrice-t.highPrice)/t.highPrice*100;
+  const r=await analyze(sym,t.priceChangePercent<0,dd);
+  r.change=+t.priceChangePercent;
+  renderCard(r,searchGrid);
+}
+</script>
+</body>
+</html>
