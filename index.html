@@ -1,5 +1,5 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"/>
-<title>15m Strong Bull / Bear Probability — Pro Scanner</title>
+<title>15m Bull / Bear Probability — Pro Scanner</title>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <style>
 body{font-family:Inter,system-ui,Arial;background:#0f1720;color:#e6eef8;margin:16px}
@@ -18,49 +18,23 @@ button.secondary{background:#334155;border:0;cursor:pointer}
 <h1>📊 15m Strong Bull / Bear Probability — Pro Scanner</h1>
 <div class="muted" id="status">Idle</div>
 
-<div style="height:6px;background:#0b1220;border-radius:6px;overflow:hidden">
-  <div id="pb" style="height:100%;width:0%;background:#22c55e;transition:width .2s"></div>
-</div>
-
 <div class="row">
 <button class="primary" onclick="runScan()">Run Scan</button>
 <button class="secondary" onclick="toggleAuto()">Auto Refresh</button>
-<div class="muted" id="timestamp"></div>
+<div class="muted" id="ts"></div>
 </div>
 
-<h2>🟢 Strong Bull / Weak Bear (>20%)</h2>
-<div class="grid" id="greenGrid"></div>
-
-<h2>🔴 Strong Bear / Weak Bull (>20%)</h2>
-<div class="grid" id="redGrid"></div>
-
-<audio id="alertSound">
-  <source src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg">
-</audio>
+<h2>🟢 Strong Bull / Weak Bear (≥20%)</h2><div class="grid" id="g"></div>
+<h2>🔴 Strong Bear / Weak Bull (≥20%)</h2><div class="grid" id="r"></div>
 
 <script>
-const g=document.getElementById("greenGrid"),
-      r=document.getElementById("redGrid"),
-      st=document.getElementById("status"),
-      ts=document.getElementById("timestamp"),
-      pb=document.getElementById("pb"),
-      a=document.getElementById("alertSound");
-
-let pcur=0,ptotal=0,auto=null;
-const API="https://fapi.binance.com",DELAY=300,AUTO=300000;
-
-const BLACKLIST=new Set([
-"ALPACAUSDT","BNXUSDT","ALPHAUSDT","OCEANUSDT","DGBUSDT","AGIXUSDT","LINAUSDT",
-"LOKAUSDT","KEYUSDT","MDTUSDT","LOOMUSDT","RENUSDT","OMNIUSDT","SLERFUSDT",
-"STMXUSDT","UXLINKUSDT","BSWUSDT","NEIROETHUSDT","VIDTUSDT","TROYUSDT",
-"BAKEUSDT","MEMEFIUSDT","NULSUSDT","HIFIUSDT","LEVERUSDT","XEMUSDT",
-"STRAXUSDT","COMBOUSDT","AI16ZUSDT","MILKUSDT","TOKENUSDT","SXPUSDT",
-"MYROUSDT","1000XUSDT","DARUSDT","PORT3USDT","SKATEUSDT","AIAUSDT",
-"AMBUSDT","FLMUSDT","PERPUSDT","OBOLUSDT"
-]);
-
-const sleep=m=>new Promise(r=>setTimeout(r,m));
-const fetchJSON=async u=>(await fetch(u)).json();
+const g=document.getElementById("g"),r=document.getElementById("r"),
+st=document.getElementById("status"),ts=document.getElementById("ts");
+let auto=null;
+const API="https://fapi.binance.com",D=300,AUTO=3e5;
+const BL=new Set(["ALPACAUSDT","BNXUSDT","ALPHAUSDT","OCEANUSDT","DGBUSDT","AGIXUSDT","LINAUSDT","LOKAUSDT","KEYUSDT","MDTUSDT","LOOMUSDT","RENUSDT","OMNIUSDT","SLERFUSDT","STMXUSDT","UXLINKUSDT","BSWUSDT","NEIROETHUSDT","VIDTUSDT","TROYUSDT","BAKEUSDT","MEMEFIUSDT","NULSUSDT","HIFIUSDT","LEVERUSDT","XEMUSDT","STRAXUSDT","COMBOUSDT","AI16ZUSDT","MILKUSDT","TOKENUSDT","SXPUSDT","MYROUSDT","1000XUSDT","DARUSDT","PORT3USDT","SKATEUSDT","AIAUSDT","AMBUSDT","FLMUSDT","PERPUSDT","OBOLUSDT"]);
+const sl=m=>new Promise(r=>setTimeout(r,m));
+const fj=async u=>(await fetch(u)).json();
 const ema=(v,p)=>{let k=2/(p+1),e=v[0];for(let i=1;i<v.length;i++)e=v[i]*k+e*(1-k);return e};
 const rsi=(c,p=14)=>{let g=0,l=0;for(let i=1;i<=p;i++){let d=c[i]-c[i-1];d>0?g+=d:l-=d}
 let rs=g/(l||1),r=100-(100/(1+rs));
@@ -69,8 +43,7 @@ d>0?(g=(g*(p-1)+d)/p,l=(l*(p-1))/p):(g=(g*(p-1))/p,l=(l*(p-1)-d)/p);
 rs=g/(l||1);r=100-(100/(1+rs))}return r};
 
 async function analyze(sym,bear,dd){
-const k=await fetchJSON(`${API}/fapi/v1/klines?symbol=${sym}&interval=15m&limit=120`);
-await sleep(DELAY);
+const k=await fj(`${API}/fapi/v1/klines?symbol=${sym}&interval=15m&limit=120`);await sl(D);
 const c=k.map(x=>+x[4]),v=k.map(x=>+x[5]),l=k[k.length-1];
 let s=0,av=v.slice(-40).reduce((a,b)=>a+b,0)/40,e=ema(c.slice(-60),50),ri=rsi(c);
 if(!bear){l[4]>e&&s++;l[4]>k[k.length-2][4]&&s++;ri>50&&s++;l[5]>av&&s++}
@@ -78,55 +51,30 @@ else{l[4]<e&&s++;l[4]<k[k.length-2][4]&&s++;ri<50&&s++;l[5]>av&&s++}
 if(!bear){dd>=-1&&s++;dd<=-7&&(s-=2);dd<=-4&&(s--)}
 else{dd<=-1&&s++;dd>-1&&(s--)}
 s=Math.max(0,Math.min(5,s));
-return{
-sym,prob:s*20,
-bias:s>=4?(bear?"Strong Bear":"Strong Bull"):
-s==3?(bear?"Weak Bear":"Weak Bull"):
-s==2?"Neutral":(bear?"Weak Bull":"Weak Bear"),
-drawdown:dd
-};
+return{sym,prob:s*20,bias:s>=4?(bear?"Strong Bear":"Strong Bull"):s==3?(bear?"Weak Bear":"Weak Bull"):s==2?"Neutral":(bear?"Weak Bull":"Weak Bear"),dd}
 }
 
-function updatePB(){pb.style.width=Math.min(100,(pcur/ptotal*100))+"%"}
-
-function render(x,el){
-const pc=x.bias.includes("Bull")?"bull":x.bias.includes("Bear")?"bear":"neutral";
-const dc=x.drawdown>=-1?"bull":x.drawdown<=-4?"bear":"neutral";
-el.innerHTML+=`
-<div class="card">
-<b>${x.sym}</b>
-<div class="prob ${pc}">${x.bias} — ${x.prob}%</div>
-<div class="muted ${dc}">24h Drawdown: ${x.drawdown.toFixed(2)}%</div>
-</div>`;
-}
+const card=x=>`<div class="card"><b>${x.sym}</b><div class="prob ${x.bias.includes("Bull")?"bull":"bear"}">${x.bias} — ${x.prob}%</div><div class="muted">24h DD: ${x.dd.toFixed(2)}%</div></div>`;
 
 async function runScan(){
-st.innerText="Scanning...";pb.style.width="0%";pcur=0;
-g.innerHTML="";r.innerHTML="";
-const t=await fetchJSON(`${API}/fapi/v1/ticker/24hr`);
-const list=t.filter(x=>x.symbol.endsWith("USDT")&&!BLACKLIST.has(x.symbol));
-ptotal=60;
+st.innerText="Scanning...";g.innerHTML="";r.innerHTML="";
+const t=await fj(`${API}/fapi/v1/ticker/24hr`);
+const u=t.filter(x=>x.symbol.endsWith("USDT")&&!BL.has(x.symbol));
 
-for(const x of list.sort((a,b)=>b.priceChangePercent-a.priceChangePercent).slice(0,40)){
-const dd=(x.lastPrice-x.highPrice)/x.highPrice*100;
-const res=await analyze(x.symbol,false,dd);
-if(res.bias==="Strong Bull"||(res.bias==="Weak Bear"&&res.prob>20))render(res,g);
-pcur++;updatePB()
+for(const x of u.sort((a,b)=>b.priceChangePercent-a.priceChangePercent).slice(0,40)){
+const dd=(x.lastPrice-x.highPrice)/x.highPrice*100,res=await analyze(x.symbol,false,dd);
+if(res.bias==="Strong Bull"||(res.bias==="Weak Bear"&&res.prob>=20))g.innerHTML+=card(res)
 }
 
-for(const x of list.sort((a,b)=>a.priceChangePercent-b.priceChangePercent).slice(0,20)){
-const dd=(x.lastPrice-x.highPrice)/x.highPrice*100;
-const res=await analyze(x.symbol,true,dd);
-if(res.bias==="Strong Bear"||(res.bias==="Weak Bull"&&res.prob>20))render(res,r);
-pcur++;updatePB()
+for(const x of u.sort((a,b)=>a.priceChangePercent-b.priceChangePercent).slice(0,20)){
+const dd=(x.lastPrice-x.highPrice)/x.highPrice*100,res=await analyze(x.symbol,true,dd);
+if(res.bias==="Strong Bear"||(res.bias==="Weak Bull"&&res.prob>=20))r.innerHTML+=card(res)
 }
 
-ts.innerText="Last scan: "+new Date().toLocaleString();
-st.innerText="Completed";
+ts.innerText=new Date().toLocaleString();st.innerText="Completed"
 }
 
-function toggleAuto(){
-if(auto){clearInterval(auto);auto=null;st.innerText="Auto refresh stopped";return}
-runScan();auto=setInterval(runScan,AUTO);st.innerText="Auto refresh running";
-}
+function toggleAuto(){if(auto){clearInterval(auto);auto=null;st.innerText="Auto stopped";return}
+a
+runScan();auto=setInterval(runScan,AUTO);st.innerText="Auto running"}
 </script></body></html>
