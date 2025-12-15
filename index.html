@@ -244,13 +244,30 @@ function toggleAuto(){
 
 /* ================= UI ================= */
 
-function renderCard(d,el){
-  el.innerHTML+=`
+function renderCard(d, el){
+
+  /* ===== Probability color ===== */
+  let probClass = "neutral";
+  if(d.bias.includes("Bull")) probClass = "bull";
+  if(d.bias.includes("Bear")) probClass = "bear";
+
+  /* ===== Drawdown color ===== */
+  let ddClass = "neutral";
+  if(d.drawdown >= -1) ddClass = "bull";
+  else if(d.drawdown <= -4) ddClass = "bear";
+
+  el.innerHTML += `
   <div class="card">
     <b>${d.sym}</b>
-    <div class="prob">${d.bias} — ${d.prob}%</div>
-    <div class="muted">24h Drawdown: ${d.drawdown.toFixed(2)}%</div>
-    <div class="muted">${d.reasons.join(" • ")}</div>
+    <div class="prob ${probClass}">
+      ${d.bias} — ${d.prob}%
+    </div>
+    <div class="muted ${ddClass}">
+      24h Drawdown: ${d.drawdown.toFixed(2)}%
+    </div>
+    <div class="muted">
+      ${d.reasons.join(" • ")}
+    </div>
   </div>`;
 }
 </script>
