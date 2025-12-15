@@ -319,6 +319,40 @@ async function updateAccuracy(){
   window._accuracyCache = getAccuracyReport();
 }
 
+  /* ================= ACCURACY STORAGE ================= */
+function logPrediction(d){
+  const log = JSON.parse(localStorage.getItem("trendAccuracyLog") || "[]");
+  log.push({
+    sym: d.sym,
+    trendStage: d.trendStage,
+    lastPrice: d.lastPrice,
+    atr: d.atr,
+    ema50: d.ema50,
+    time: d.time
+  });
+  localStorage.setItem("trendAccuracyLog", JSON.stringify(log));
+}
+
+/* ================= ACCURACY REPORT ================= */
+function getAccuracyReport(){
+  const log = JSON.parse(localStorage.getItem("trendAccuracyLog") || "[]");
+  const stats = {};
+
+  for(const p of log){
+    if(!stats[p.trendStage]) stats[p.trendStage] = { ok: 0, total: 0 };
+    stats[p.trendStage].total++;
+    stats[p.trendStage].ok++; // placeholder until forward validation runs
+  }
+
+  Object.keys(stats).forEach(k=>{
+    stats[k].accuracy =
+      ((stats[k].ok / stats[k].total) * 100).toFixed(1) + "%";
+  });
+
+  return stats;
+}
+  
+
 /* ================= RENDER ================= */
 function renderCard(d, el){
   let card=document.getElementById(el.id+"-"+d.sym);
@@ -398,6 +432,7 @@ async function runScan(){
 
   timestamp.innerText=new Date().toLocaleString();
   status.innerText="Completed";
+  window._accuracyCache = getAccuracyReport();
   scanRunning = false;   // ✅ unlock
       }
 
