@@ -199,10 +199,9 @@ function atr(h,l,c,p=14){
 }
 
 
-
 /* ================= ANALYSIS ================= */
-async function analyze(sym, bear, dd){
-  const k = await fetchJSON(`${API}/fapi/v1/klines?symbol=${sym}&interval=15m&limit=120`);
+async function analyze(sym, bear, dd, dChange){
+  const k = await fetchJSON(`${API}/fapi/v1/klines?symbol=${sym}&interval=15m&limit=240`);
   await sleep(DELAY);
 
   const c = k.map(x => +x[4]);
@@ -241,7 +240,7 @@ async function analyze(sym, bear, dd){
   const range = last[2] - last[3];
   const bodyR = range ? body / range : 0;
 
-  /* === STRUCTURE SCORING (8–10 factors) === */
+  /* === STRUCTURE SCORING (8–10 FACTORS) === */
   let s = 0;
   let rs = [];
 
@@ -268,46 +267,61 @@ async function analyze(sym, bear, dd){
   s = Math.max(0, Math.min(MAX_SCORE, s));
   const baseProb = Math.round((s / MAX_SCORE) * 100);
 
-  /* === VOLUME CONFIDENCE ADJUSTMENT === */
+  /* === VOLUME CONFIRMATION ADJUSTMENT === */
   let finalProb = baseProb;
   let volumeAlign = "neutral";
 
   if((!bear && dominantBull) || (bear && !dominantBull)){
     finalProb += 10;
     volumeAlign = "confirm";
+    rs.push("Volume Confirms Bias");
   }else{
     finalProb -= 5;
     volumeAlign = "contradict";
+    rs.push("Volume Contradicts Bias");
   }
 
-  /* === EMA200 REGIME & EXHAUSTION ADJUSTMENT === */
+  /* === EMA200 REGIME / EXHAUSTION === */
   if(!bear){
     if(ema200Dist > 0 && ema200Dist < 8){
-      finalProb += 5;
-      rs.push("Healthy EMA200 Regime");
+      finalProb += 5; rs.push("Healthy EMA200 Regime");
     }else if(ema200Dist > 12){
-      finalProb -= 7;
-      rs.push("EMA200 Exhaustion Risk");
+      finalProb -= 7; rs.push("EMA200 Exhaustion Risk");
     }else if(ema200Dist < 0){
-      finalProb -= 10;
-      rs.push("Below EMA200 (Bull Risk)");
+      finalProb -= 10; rs.push("Below EMA200 (Bull Risk)");
     }
   }else{
     if(ema200Dist < 0 && ema200Dist > -8){
-      finalProb += 5;
-      rs.push("Healthy EMA200 Bear Regime");
+      finalProb += 5; rs.push("Healthy EMA200 Bear Regime");
     }else if(ema200Dist < -12){
-      finalProb -= 7;
-      rs.push("EMA200 Capitulation Risk");
+      finalProb -= 7; rs.push("EMA200 Capitulation Risk");
     }else if(ema200Dist > 0){
-      finalProb -= 10;
-      rs.push("Above EMA200 (Bear Risk)");
+      finalProb -= 10; rs.push("Above EMA200 (Bear Risk)");
+    }
+  }
+
+  /* === 24H PRICE CHANGE CONTEXT === */
+  if(!bear){
+    if(dChange > 1 && dChange < 6){
+      finalProb += 5; rs.push("Healthy 24h Bull Trend");
+    }else if(dChange > 12){
+      finalProb -= 8; rs.push("24h Overextension Risk");
+    }else if(dChange < 0){
+      finalProb -= 10; rs.push("24h Bull Weakness");
+    }
+  }else{
+    if(dChange < -1 && dChange > -6){
+      finalProb += 5; rs.push("Healthy 24h Bear Trend");
+    }else if(dChange < -12){
+      finalProb -= 8; rs.push("24h Capitulation Risk");
+    }else if(dChange > 0){
+      finalProb -= 10; rs.push("24h Bear Weakness");
     }
   }
 
   finalProb = Math.max(0, Math.min(100, finalProb));
 
-  /* === BIAS LABELING (CORRECT) === */
+  /* === FINAL BIAS (FIXED) === */
   let bias = "Neutral";
   if(!bear){
     if(finalProb >= 75) bias = "Strong Bull";
@@ -327,12 +341,12 @@ async function analyze(sym, bear, dd){
     drawdown: dd,
     dominantVol,
     dominantBull,
-    ema200Dist
+    ema200Dist,
+    change: dChange
   };
 }
-  
 
- /* ================= RENDER ================= */
+/* ================= RENDER ================= */
 function renderCard(d, el){
   let card = document.getElementById(el.id + "-" + d.sym);
   if(!card){
@@ -346,43 +360,10 @@ function renderCard(d, el){
     d.bias.includes("Bull") ? "bull" :
     d.bias.includes("Bear") ? "bear" : "neutral";
 
-  const changeColor = d.change >= 0 ? "bull" : "bear";
-
-  const drawdownColor =
-    d.drawdown >= -1 ? "bull" :
-    d.drawdown <= -4 ? "bear" : "neutral";
-
-  const volumeInterpretation =
+  const volumeText =
     d.volumeAlign === "confirm"
       ? "Volume confirms bias (Continuation likely)"
-      : d.volumeAlign === "contradict"
-      ? "Volume contradicts bias (Trap / Absorption risk)"
-      : "Volume neutral";
-
-  const volumeInterpretationColor =
-    d.volumeAlign === "confirm" ? "bull" :
-    d.volumeAlign === "contradict" ? "bear" : "neutral";
-
-  /* === EMA200 Distance Coloring === */
-  let ema200Color = "neutral";
-  let ema200Note  = "EMA200 neutral";
-
-  if(d.ema200Dist > 0 && d.ema200Dist < 8){
-    ema200Color = "bull";
-    ema200Note = "Healthy EMA200 regime";
-  }else if(d.ema200Dist >= 8 && d.ema200Dist < 12){
-    ema200Color = "neutral";
-    ema200Note = "Late trend (EMA200)";
-  }else if(d.ema200Dist >= 12){
-    ema200Color = "bear";
-    ema200Note = "EMA200 exhaustion risk";
-  }else if(d.ema200Dist < 0 && d.ema200Dist > -8){
-    ema200Color = "bear";
-    ema200Note = "Below EMA200";
-  }else if(d.ema200Dist <= -8){
-    ema200Color = "neutral";
-    ema200Note = "Deep below EMA200";
-  }
+      : "Volume contradicts bias (Trap / Absorption risk)";
 
   card.innerHTML = `
     <b>${d.sym}</b>
@@ -391,31 +372,31 @@ function renderCard(d, el){
       ${d.bias} — ${d.prob}% <span class="muted">(base ${d.baseProb}%)</span>
     </div>
 
-    <div class="muted ${changeColor}">
+    <div class="muted ${d.change>=0?"bull":"bear"}">
       24h Change: ${d.change.toFixed(2)}%
     </div>
 
-    <div class="muted ${drawdownColor}">
+    <div class="muted ${d.drawdown>=-1?"bull":d.drawdown<=-4?"bear":"neutral"}">
       24h Drawdown: ${d.drawdown.toFixed(2)}%
     </div>
 
-    <div class="muted ${ema200Color}">
-      EMA200 Distance: ${d.ema200Dist.toFixed(2)}% — ${ema200Note}
+    <div class="muted ${d.ema200Dist>=0?"bull":"bear"}">
+      EMA200 Distance: ${d.ema200Dist.toFixed(2)}%
     </div>
 
-    <div class="muted ${d.dominantBull ? "bull" : "bear"}">
-      24h Dominant Vol: ${Number(d.dominantVol).toLocaleString()}
+    <div class="muted ${d.dominantBull?"bull":"bear"}">
+      24h Dominant Volume: ${Number(d.dominantVol).toLocaleString()}
     </div>
 
-    <div class="muted ${volumeInterpretationColor}">
-      ${volumeInterpretation}
+    <div class="muted ${d.volumeAlign==="confirm"?"bull":"bear"}">
+      ${volumeText}
     </div>
 
     <div class="muted">
       ${d.reasons.join(" • ")}
     </div>
   `;
-      } 
+}
 
 
 /* ================= SCAN ================= */
