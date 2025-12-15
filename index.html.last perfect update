@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"/>
-<title>15m Bull / Bear Probability — Pro Scanner</title>
+<title>15m Strong Bull Probability — Pro Scanner</title>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 
 <style>
@@ -55,7 +55,7 @@ button.secondary{
 </head>
 <body>
 
-<h1>📊 15m Bull / Bear Probability — Pro Scanner</h1>
+<h1>📊 15m Strong Bull Probability — Pro Scanner</h1>
 <div class="muted" id="status">Idle</div>
 
 <div class="row">
@@ -67,16 +67,15 @@ button.secondary{
 <div class="row">
   <input id="symbolSearch" placeholder="Search symbol (BTCUSDT)" />
   <button class="secondary" onclick="runSearch()">Analyze</button>
-  <button class="secondary" onclick="toggleSearchAuto()">Auto Refresh Search</button>
 </div>
 
-<h2>🟢 Top 30 GREEN</h2>
+<h2>🟢 STRONG BULL ONLY (15m)</h2>
 <div class="grid" id="greenGrid"></div>
 
-<h2>🔴 Top 30 RED</h2>
+<h2>🔴 Strong / Weak Bear (Context)</h2>
 <div class="grid" id="redGrid"></div>
 
-<h2>🔍 Manual Analysis</h2>
+<h2>🔍 Manual Analysis (All Results)</h2>
 <div class="grid" id="searchGrid"></div>
 
 <audio id="alertSound">
@@ -94,6 +93,12 @@ const timestamp = document.getElementById("timestamp");
 const symbolSearch = document.getElementById("symbolSearch");
 const alertSound = document.getElementById("alertSound");
 
+/* ================= STATE ================= */
+
+const cardIndex = new Map();      // symbol -> card element
+const lastUpdateMap = new Map();  // symbol -> last refresh time
+let autoTimer = null;
+
 /* ================= CONFIG ================= */
 
 const API = "https://fapi.binance.com";
@@ -107,12 +112,17 @@ const BLACKSET = new Set([
   "NEIROETHUSDT","VIDTUSDT","TROYUSDT","BAKEUSDT","MEMEFIUSDT",
   "NULSUSDT","HIFIUSDT","LEVERUSDT","XEMUSDT","STRAXUSDT",
   "COMBOUSDT","AI16ZUSDT","MILKUSDT","TOKENUSDT","SXPUSDT",
-  "MYROUSDT","1000XUSDT","DARUSDT"
+  "MYROUSDT","1000XUSDT","DARUSDT","PORT3USDT","SKATEUSDT",
+  "AIAUSDT","AMBUSDT","FLMUSDT","PERPUSDT","OBOLUSDT"
 ]);
 
 /* ================= HELPERS ================= */
 
 const sleep = ms => new Promise(r=>setTimeout(r,ms));
+
+function timeNow(){
+  return new Date().toLocaleTimeString();
+}
 
 async function fetchJSON(url){
   const r = await fetch(url);
@@ -143,7 +153,7 @@ function rsi(c,p=14){
   return r;
 }
 
-/* ================= ANALYSIS (15m) ================= */
+/* ================= ANALYSIS ================= */
 
 async function analyze(sym, bear=false, drawdown=null){
   const k15 = await fetchJSON(
@@ -173,13 +183,12 @@ async function analyze(sym, bear=false, drawdown=null){
     if(+last[5] > avgVol){s++;rs.push("Sell Volume");}
   }
 
-  /* ===== Drawdown into Probability ===== */
   if(typeof drawdown === "number"){
     if(!bear){
       if(drawdown >= -1){s++;rs.push("Strong Acceptance");}
       else if(drawdown <= -7){s-=2;rs.push("Distribution Risk");}
       else if(drawdown <= -4){s--;rs.push("Weak Pullback");}
-    }else{
+    } else {
       if(drawdown <= -1){s++;rs.push("Strong Sell Pressure");}
       else{s--;rs.push("Bear Rejection");}
     }
@@ -200,27 +209,29 @@ async function analyze(sym, bear=false, drawdown=null){
 /* ================= MAIN ================= */
 
 async function runScan(){
-  greenGrid.innerHTML=""; redGrid.innerHTML="";
   status.innerText="Scanning...";
-  const t=await fetchJSON(`${API}/fapi/v1/ticker/24hr`);
-  const usdt=t.filter(x=>x.symbol.endsWith("USDT")&&!BLACKSET.has(x.symbol));
 
-  for(const x of usdt.sort((a,b)=>b.priceChangePercent-a.priceChangePercent).slice(0,30)){
+  const t = await fetchJSON(`${API}/fapi/v1/ticker/24hr`);
+  const usdt = t.filter(x=>x.symbol.endsWith("USDT")&&!BLACKSET.has(x.symbol));
+
+  for(const x of usdt.sort((a,b)=>b.priceChangePercent-a.priceChangePercent).slice(0,40)){
     const dd=((+x.lastPrice-+x.highPrice)/+x.highPrice)*100;
     const r=await analyze(x.symbol,false,dd);
     r.drawdown=dd;
-    if(r.prob>=80) alertSound.play();
-    renderCard(r,greenGrid);
+    if(r.bias==="Strong Bull"){
+      if(r.prob>=80) alertSound.play();
+      renderCard(r,greenGrid);
+    }
   }
 
-  for(const x of usdt.sort((a,b)=>a.priceChangePercent-b.priceChangePercent).slice(0,30)){
+  for(const x of usdt.sort((a,b)=>a.priceChangePercent-b.priceChangePercent).slice(0,20)){
     const dd=((+x.lastPrice-+x.highPrice)/+x.highPrice)*100;
     const r=await analyze(x.symbol,true,dd);
     r.drawdown=dd;
     renderCard(r,redGrid);
   }
 
-  timestamp.innerText=new Date().toLocaleString();
+  timestamp.innerText="Last scan: " + new Date().toLocaleString();
   status.innerText="Completed";
 }
 
@@ -228,7 +239,6 @@ async function runSearch(){
   const sym=symbolSearch.value.trim().toUpperCase();
   if(!sym.endsWith("USDT")||BLACKSET.has(sym)) return;
   searchGrid.innerHTML="";
-
   const t=await fetchJSON(`${API}/fapi/v1/ticker/24hr?symbol=${sym}`);
   const dd=((+t.lastPrice-+t.highPrice)/+t.highPrice)*100;
   const bear=+t.priceChangePercent<0;
@@ -238,26 +248,38 @@ async function runSearch(){
 }
 
 function toggleAuto(){
+  if(autoTimer){
+    clearInterval(autoTimer);
+    autoTimer=null;
+    status.innerText="Auto refresh stopped";
+    return;
+  }
   runScan();
-  setInterval(runScan,AUTO_INTERVAL);
+  autoTimer=setInterval(runScan,AUTO_INTERVAL);
+  status.innerText="Auto refresh running";
 }
 
 /* ================= UI ================= */
 
 function renderCard(d, el){
+  let card = cardIndex.get(d.sym);
+  lastUpdateMap.set(d.sym, timeNow());
 
-  /* ===== Probability color ===== */
-  let probClass = "neutral";
-  if(d.bias.includes("Bull")) probClass = "bull";
-  if(d.bias.includes("Bear")) probClass = "bear";
+  let probClass = d.bias.includes("Bull") ? "bull" :
+                  d.bias.includes("Bear") ? "bear" : "neutral";
 
-  /* ===== Drawdown color ===== */
-  let ddClass = "neutral";
-  if(d.drawdown >= -1) ddClass = "bull";
-  else if(d.drawdown <= -4) ddClass = "bear";
+  let ddClass = d.drawdown >= -1 ? "bull" :
+                d.drawdown <= -4 ? "bear" : "neutral";
 
-  el.innerHTML += `
-  <div class="card">
+  if(!card){
+    card=document.createElement("div");
+    card.className="card";
+    cardIndex.set(d.sym,card);
+  }
+
+  if(card.parentNode!==el) el.appendChild(card);
+
+  card.innerHTML=`
     <b>${d.sym}</b>
     <div class="prob ${probClass}">
       ${d.bias} — ${d.prob}%
@@ -266,9 +288,12 @@ function renderCard(d, el){
       24h Drawdown: ${d.drawdown.toFixed(2)}%
     </div>
     <div class="muted">
+      Updated: ${lastUpdateMap.get(d.sym)}
+    </div>
+    <div class="muted">
       ${d.reasons.join(" • ")}
     </div>
-  </div>`;
+  `;
 }
 </script>
 </body>
