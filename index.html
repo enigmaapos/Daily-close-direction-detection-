@@ -574,7 +574,6 @@ async function runSearch(){
   const sym = symbolSearch.value.trim().toUpperCase();
   if(!sym) return;
 
-  // auto-append USDT if user typed BTC instead of BTCUSDT
   const fullSym = sym.endsWith("USDT") ? sym : (sym + "USDT");
   if(BLACKSET.has(fullSym)) return;
 
@@ -586,22 +585,23 @@ async function runSearch(){
 
     const dChange = +t.priceChangePercent;
     const dd = ((+t.lastPrice - +t.highPrice) / +t.highPrice) * 100;
-
-    // "bear" is the direction context (24h down = bear context)
     const bear = dChange < 0;
 
-    // ✅ pass dChange into analyze (your analyze signature uses 4 params)
     const r = await analyze(fullSym, bear, dd, dChange);
-
-    // ensure these fields exist for render
     r.change = dChange;
 
-    renderCard(r, searchGrid);
+    // ✅ FORCE render even if structure is NOT weak
+    renderCard(r, searchGrid, true);
+
     status.innerText = `Done: ${fullSym}`;
   }catch(err){
     console.error(err);
-    status.innerText = `Error analyzing ${sym}: ${err.message || err}`;
-    searchGrid.innerHTML = `<div class="card"><b>${sym}</b><div class="muted bear">Failed to analyze. Check symbol or try again.</div></div>`;
+    status.innerText = `Error analyzing ${fullSym}`;
+    searchGrid.innerHTML = `
+      <div class="card">
+        <b>${fullSym}</b>
+        <div class="muted bear">Failed to analyze or no data.</div>
+      </div>`;
   }
 }
 </script>
