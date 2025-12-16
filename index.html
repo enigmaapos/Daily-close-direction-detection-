@@ -438,21 +438,44 @@ function renderCard(d, el){
     el.appendChild(card);
   }
 
+  /* === COLORS (FIXED SEMANTICS) === */
   const biasColor =
     d.bias.includes("Bull") ? "bull" :
     d.bias.includes("Bear") ? "bear" : "neutral";
 
-  const levelColor = "bear"; // weak levels are always risk
+  const levelColor =
+    isWeakResistance ? "bull" :   // 🟢 breakout risk
+    isWeakSupport    ? "bear" : "neutral";
+
+  /* === AI INTERPRETATION === */
+  let aiTitle = "";
+  let aiText  = "";
+
+  if(isWeakResistance){
+    aiTitle = "🚀 Breakout Watch";
+    aiText  =
+      "Resistance is weak. Sellers are failing to defend this level. " +
+      "If price breaks and holds above, expect continuation higher. " +
+      "Watch for this resistance to flip into STRONG SUPPORT.";
+  }
+
+  if(isWeakSupport){
+    aiTitle = "⚠️ Breakdown Watch";
+    aiText  =
+      "Support is weak. Buyers are failing to defend this level. " +
+      "If price breaks and holds below, expect continuation lower. " +
+      "Watch for this support to flip into STRONG RESISTANCE.";
+  }
 
   card.innerHTML = `
     <b>${d.sym}</b>
 
     <div class="prob ${biasColor}">
       ${d.bias} — ${d.prob}%
-      <span class="muted">(Trap Risk)</span>
+      <span class="muted">(Structure Risk)</span>
     </div>
 
-    <div class="muted ${d.dominantBull?"bull":"bear"}">
+    <div class="muted ${d.dominantBull ? "bull" : "bear"}">
       Dominant 24h Volume: ${Number(d.dominantVol).toLocaleString()}
     </div>
 
@@ -460,14 +483,15 @@ function renderCard(d, el){
       🧱 ${d.levelType}: <b>${d.levelStrength}</b>
     </div>
 
-    <div class="muted">
-      ${d.levelText}
+    <div class="muted ${levelColor}">
+      <b>${aiTitle}</b><br>
+      ${aiText}
     </div>
 
     ${
       isWeakSupport && d.supportLevels.length ? `
-      <div class="muted bull">
-        🟢 Weak Support Levels
+      <div class="muted bear">
+        🔴 Weak Support Level
         <br>• S1: <b>${d.supportLevels[0].toFixed(4)}</b>
         <span class="muted">(${d.supportDistances[0].toFixed(2)}%)</span>
       </div>` : ``
@@ -475,8 +499,8 @@ function renderCard(d, el){
 
     ${
       isWeakResistance && d.resistanceLevels.length ? `
-      <div class="muted bear">
-        🔴 Weak Resistance Levels
+      <div class="muted bull">
+        🟢 Weak Resistance Level
         <br>• R1: <b>${d.resistanceLevels[0].toFixed(4)}</b>
         <span class="muted">(${d.resistanceDistances[0].toFixed(2)}%)</span>
       </div>` : ``
@@ -486,8 +510,7 @@ function renderCard(d, el){
       ${d.reasons.join(" • ")}
     </div>
   `;
-    }
-
+}
   
   
 
