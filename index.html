@@ -582,6 +582,7 @@ async function runScan(){
   timestamp.innerText=new Date().toLocaleString();
   status.innerText="Completed";
   scanRunning = false;   // ✅ unlock
+   document.getElementById("scanBadge").style.display = "none";
       }
 
 /* ================= MANUAL SEARCH ================= */
