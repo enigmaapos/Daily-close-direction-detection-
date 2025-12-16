@@ -94,14 +94,28 @@ button.secondary{
   <button class="secondary" onclick="runSearch()">Analyze</button>
 </div>
 
+  <h2>🔍 Manual Analysis</h2>
+
+<div class="muted" style="margin-bottom:6px">
+  AI focuses only on <b>WEAK STRUCTURE ZONES</b>:
+</div>
+
+<div class="muted bull" style="margin-bottom:2px">
+  🟢 Weak Resistance → Possible breakout & continuation higher → Watch for <b>strong support</b> forming
+</div>
+
+<div class="muted bear" style="margin-bottom:8px">
+  🔴 Weak Support → Possible breakdown & continuation lower → Watch for <b>strong resistance</b> forming
+</div>
+
+<div class="grid" id="searchGrid"></div>
+
 <h2>🟢 Top 30 GREEN</h2>
 <div class="grid" id="greenGrid"></div>
 
 <h2>🔴 Top 30 RED</h2>
 <div class="grid" id="redGrid"></div>
 
-<h2>🔍 Manual Analysis</h2>
-<div class="grid" id="searchGrid"></div>
 
 <audio id="alertSound">
   <source src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg">
