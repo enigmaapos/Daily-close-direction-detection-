@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"/>
-<title>15m Bull / Bear Probability — Pro Scanner</title>
+<title>15m Bull / Bear Probability Daily Close Bias Scanner — Pro Scanner</title>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 
 <style>
@@ -70,7 +70,10 @@ button.secondary{
 
 <body>
 
-<h1>📊 15m Bull / Bear Probability — Pro Scanner</h1>
+<h1>📊 15m Structure → Daily Close Bias Scanner</h1>
+<div class="muted">
+  Uses 15m market structure to estimate <b>daily/session close direction</b>
+</div>
 <div class="muted" id="status">Idle</div>
 <div class="muted" id="refreshTimer">Auto refresh: OFF</div>
 
@@ -91,14 +94,28 @@ button.secondary{
   <button class="secondary" onclick="runSearch()">Analyze</button>
 </div>
 
+  <h2>🔍 Manual Analysis</h2>
+
+<div class="muted" style="margin-bottom:6px">
+  AI focuses only on <b>WEAK STRUCTURE ZONES</b>:
+</div>
+
+<div class="muted bull" style="margin-bottom:2px">
+  🟢 Weak Resistance → Possible breakout & continuation higher → Watch for <b>strong support</b> forming
+</div>
+
+<div class="muted bear" style="margin-bottom:8px">
+  🔴 Weak Support → Possible breakdown & continuation lower → Watch for <b>strong resistance</b> forming
+</div>
+
+<div class="grid" id="searchGrid"></div>
+
 <h2>🟢 Top 30 GREEN</h2>
 <div class="grid" id="greenGrid"></div>
 
 <h2>🔴 Top 30 RED</h2>
 <div class="grid" id="redGrid"></div>
 
-<h2>🔍 Manual Analysis</h2>
-<div class="grid" id="searchGrid"></div>
 
 <audio id="alertSound">
   <source src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg">
@@ -124,11 +141,13 @@ const MAX_SCORE = 10;
 
 const BLACKSET = new Set([
  "ALPACAUSDT","BNXUSDT","ALPHAUSDT","OCEANUSDT","DGBUSDT","AGIXUSDT",
- "LINAUSDT","LOKAUSDT","KEYUSDT","MDTUSDT","LOOMUSDT","RENUSDT",
- "OMNIUSDT","SLERFUSDT","STMXUSDT","UXLINKUSDT","BSWUSDT",
- "NEIROETHUSDT","VIDTUSDT","TROYUSDT","BAKEUSDT","MEMEFIUSDT",
- "NULSUSDT","HIFIUSDT","LEVERUSDT","XEMUSDT","STRAXUSDT",
- "COMBOUSDT","AI16ZUSDT","MILKUSDT","TOKENUSDT","SXPUSDT"
+  "LINAUSDT","LOKAUSDT","KEYUSDT","MDTUSDT","LOOMUSDT","RENUSDT",
+  "OMNIUSDT","SLERFUSDT","STMXUSDT","UXLINKUSDT","BSWUSDT",
+  "NEIROETHUSDT","VIDTUSDT","TROYUSDT","BAKEUSDT","MEMEFIUSDT",
+  "NULSUSDT","HIFIUSDT","LEVERUSDT","XEMUSDT","STRAXUSDT",
+  "COMBOUSDT","AI16ZUSDT","MILKUSDT","TOKENUSDT","SXPUSDT",
+  "MYROUSDT","1000XUSDT","DARUSDT","PORT3USDT","SKATEUSDT",
+  "AIAUSDT","AMBUSDT","FLMUSDT","PERPUSDT","OBOLUSDT"
 ]);
 
 /* ================= STATE ================= */
@@ -198,145 +217,320 @@ function atr(h,l,c,p=14){
   return t.slice(-p).reduce((a,b)=>a+b,0)/p;
 }
 
-/* ================= ANALYSIS ================= */
-async function analyze(sym,bear,dd){
-  const k=await fetchJSON(`${API}/fapi/v1/klines?symbol=${sym}&interval=15m&limit=120`);
-  await sleep(DELAY);
+  /* === IMPROVED 15m SWING DETECTION (CONFIRMED) === */
+function findSwings(h, l, c, v){
+  const supports = [];
+  const resistances = [];
 
-  const c=k.map(x=>+x[4]);
-  const h=k.map(x=>+x[2]);
-  const l=k.map(x=>+x[3]);
-  const v=k.map(x=>+x[5]);
-  const last=k[k.length-1];
+  // parameters (tunable but safe defaults)
+  const LOOKBACK = 2;          // candles on each side
+  const CONFIRM = 2;           // candles to confirm reaction
+  const VOL_MULT = 1.2;        // volume must be above average
 
-  /* === Dominant 24h Volume === */
-  let dominantVol=0, dominantBull=true;
-  for(let i=k.length-96;i<k.length;i++){
-    if(v[i]>dominantVol){
-      dominantVol=v[i];
-      dominantBull=k[i][4]>k[i][1];
+  const avgVol = v.slice(-40).reduce((a,b)=>a+b,0) / 40;
+
+  for(let i = LOOKBACK; i < h.length - CONFIRM; i++){
+
+    /* === SWING LOW (SUPPORT) === */
+    let isSwingLow = true;
+    for(let j = 1; j <= LOOKBACK; j++){
+      if(l[i] >= l[i-j] || l[i] >= l[i+j]){
+        isSwingLow = false;
+        break;
+      }
+    }
+
+    if(isSwingLow){
+      // confirmation: price must move away upward
+      let confirmed = true;
+      for(let k = 1; k <= CONFIRM; k++){
+        if(c[i+k] <= c[i]){
+          confirmed = false;
+          break;
+        }
+      }
+
+      // volume filter (defense)
+      if(confirmed && v[i] >= avgVol * VOL_MULT){
+        supports.push(l[i]);
+      }
+    }
+
+    /* === SWING HIGH (RESISTANCE) === */
+    let isSwingHigh = true;
+    for(let j = 1; j <= LOOKBACK; j++){
+      if(h[i] <= h[i-j] || h[i] <= h[i+j]){
+        isSwingHigh = false;
+        break;
+      }
+    }
+
+    if(isSwingHigh){
+      // confirmation: price must move away downward
+      let confirmed = true;
+      for(let k = 1; k <= CONFIRM; k++){
+        if(c[i+k] >= c[i]){
+          confirmed = false;
+          break;
+        }
+      }
+
+      // volume filter (supply)
+      if(confirmed && v[i] >= avgVol * VOL_MULT){
+        resistances.push(h[i]);
+      }
     }
   }
 
-  const avgV=v.slice(-40).reduce((a,b)=>a+b,0)/40;
-  const eNow=ema(c.slice(-60),50), ePrev=ema(c.slice(-65,-5),50);
-  const rNow=rsi(c), rPrev=rsi(c.slice(0,-1));
-  const aNow=atr(h,l,c), aPrev=atr(h.slice(0,-1),l.slice(0,-1),c.slice(0,-1));
-
-  const body=Math.abs(last[4]-last[1]);
-  const range=last[2]-last[3];
-  const bodyR=range?body/range:0;
-
-  let s=0, rs=[];
-
-  if(!bear){
-    if(last[4]>eNow){s++;rs.push("Above EMA50")}
-    if(rNow>50){s++;rs.push("RSI > 50")}
-    if(last[5]>avgV){s++;rs.push("Volume")}
-  }else{
-    if(last[4]<eNow){s++;rs.push("Below EMA50")}
-    if(rNow<50){s++;rs.push("RSI < 50")}
-    if(last[5]>avgV){s++;rs.push("Sell Volume")}
-  }
-
-  s=Math.min(MAX_SCORE,s);
-  const baseProb=Math.round(s/MAX_SCORE*100);
-
-  let finalProb=baseProb;
-  let volumeAlign="neutral";
-
-  if(!bear && dominantBull){
-    finalProb=Math.round(baseProb*1.10);
-    volumeAlign="confirm";
-  }else if(bear && !dominantBull){
-    finalProb=Math.round(baseProb*1.10);
-    volumeAlign="confirm";
-  }else if(!bear && !dominantBull){
-    finalProb=Math.round(baseProb*0.85);
-    volumeAlign="contradict";
-  }else if(bear && dominantBull){
-    finalProb=Math.round(baseProb*0.85);
-    volumeAlign="contradict";
-  }
-
-  finalProb=Math.max(0,Math.min(100,finalProb));
-
-  const bias=finalProb>=80?(bear?"Strong Bear":"Strong Bull"):
-             finalProb>=60?(bear?"Weak Bear":"Weak Bull"):
-             finalProb>=40?"Neutral":(bear?"Weak Bull":"Weak Bear");
-
   return {
-    sym,
-    prob:finalProb,
-    baseProb,
-    bias,
-    volumeAlign,
-    reasons:rs,
-    drawdown:dd,
-    dominantVol,
-    dominantBull
+    supports: supports.slice(-2).reverse(),       // S1, S2
+    resistances: resistances.slice(-2).reverse()  // R1, R2
   };
 }
 
-/* ================= RENDER ================= */
-function renderCard(d, el){
-  let card = document.getElementById(el.id + "-" + d.sym);
+
+  
+/* ================= ANALYSIS ================= */
+async function analyze(sym, bear, dd, dChange){
+  const k = await fetchJSON(`${API}/fapi/v1/klines?symbol=${sym}&interval=15m&limit=240`);
+  await sleep(DELAY);
+
+  const c = k.map(x=>+x[4]);
+  const h = k.map(x=>+x[2]);
+  const l = k.map(x=>+x[3]);
+  const v = k.map(x=>+x[5]);
+  const last = k[k.length-1];
+  const lastPrice = +last[4];
+
+  /* === Dominant 24h Volume === */
+  let dominantVol = 0, dominantBull = true;
+  for(let i=k.length-96;i<k.length;i++){
+    if(v[i] > dominantVol){
+      dominantVol = v[i];
+      dominantBull = k[i][4] > k[i][1];
+    }
+  }
+
+  /* === Indicators === */
+  const avgV = v.slice(-40).reduce((a,b)=>a+b,0)/40;
+  const e50  = ema(c.slice(-60),50);
+  const e50p = ema(c.slice(-65,-5),50);
+  const e200 = ema(c.slice(-220),200);
+  const ema200Dist = ((lastPrice-e200)/e200)*100;
+
+  const rNow  = rsi(c);
+  const rPrev = rsi(c.slice(0,-1));
+  const aNow  = atr(h,l,c);
+  const aPrev = atr(h.slice(0,-1),l.slice(0,-1),c.slice(0,-1));
+  const bodyR = Math.abs(lastPrice-last[1])/(last[2]-last[3]||1);
+
+  /* === STRUCTURE SCORE === */
+  let s = 0, rs = [];
+
+  if(!bear){
+    if(lastPrice > e50){ s++; rs.push("Above EMA50"); }
+    if(e50 > e50p){ s++; rs.push("EMA Rising"); }
+    if(rNow > 50){ s++; rs.push("RSI > 50"); }
+    if(rNow > rPrev){ s++; rs.push("RSI Rising"); }
+    if(last[5] > avgV){ s++; rs.push("Volume Expansion"); }
+    if(bodyR > 0.55){ s++; rs.push("Strong Bull Candle"); }
+    if(aNow > aPrev){ s++; rs.push("Volatility Expansion"); }
+    if(dd > -2){ s++; rs.push("Holding Highs"); }
+  }else{
+    if(lastPrice < e50){ s++; rs.push("Below EMA50"); }
+    if(e50 < e50p){ s++; rs.push("EMA Falling"); }
+    if(rNow < 50){ s++; rs.push("RSI < 50"); }
+    if(rNow < rPrev){ s++; rs.push("RSI Falling"); }
+    if(last[5] > avgV){ s++; rs.push("Sell Volume"); }
+    if(bodyR > 0.55){ s++; rs.push("Strong Bear Candle"); }
+    if(aNow > aPrev){ s++; rs.push("Volatility Expansion"); }
+    if(dd < -2){ s++; rs.push("Acceptance Below High"); }
+  }
+
+  s = Math.min(MAX_SCORE, s);
+  const baseProb = Math.round((s / MAX_SCORE) * 100);
+
+  /* === PROBABILITY ADJUSTMENT === */
+  let finalProb = baseProb;
+  if((!bear && dominantBull) || (bear && !dominantBull)) finalProb += 10;
+  else finalProb -= 5;
+
+  finalProb = Math.max(0, Math.min(100, finalProb));
+
+  /* === BIAS === */
+  let bias = "Neutral";
+  if(!bear){
+    if(finalProb >= 75) bias = "Strong Bull";
+    else if(finalProb >= 55) bias = "Weak Bull";
+  }else{
+    if(finalProb >= 75) bias = "Strong Bear";
+    else if(finalProb >= 55) bias = "Weak Bear";
+  }
+
+  /* === 15m SUPPORT / RESISTANCE LEVELS === */
+  const swings = findSwings(h, l, c, v);
+  const supportLevels = swings.supports;
+  const resistanceLevels = swings.resistances;
+
+  /* === DISTANCE TO LEVELS (%) === */
+  const supportDistances = supportLevels.map(
+    lvl => ((lastPrice - lvl) / lastPrice) * 100
+  );
+  const resistanceDistances = resistanceLevels.map(
+    lvl => ((lvl - lastPrice) / lastPrice) * 100
+  );
+
+  /* === INTERPRETATION === */
+  let levelType, levelStrength, levelText;
+
+  if(dominantBull){
+    levelType = "Support Test";
+    if(finalProb >= 75){
+      levelStrength = "Strong Support";
+      levelText = "High-volume buying suggests strong support. Continuation favored.";
+    }else if(finalProb >= 55){
+      levelStrength = "Moderate Support";
+      levelText = "Support likely to be tested. Watch for reaction.";
+    }else{
+      levelStrength = "Weak Support";
+      levelText = "Support appears weak. Breakdown risk increases.";
+    }
+  }else{
+    levelType = "Resistance Test";
+    if(finalProb >= 75){
+      levelStrength = "Strong Resistance";
+      levelText = "Heavy selling suggests strong resistance. Rejection favored.";
+    }else if(finalProb >= 55){
+      levelStrength = "Moderate Resistance";
+      levelText = "Resistance likely to be tested. Watch for rejection.";
+    }else{
+      levelStrength = "Weak Resistance";
+      levelText = "Resistance appears weak. Breakout risk increases.";
+    }
+  }
+
+  return {
+    sym,
+    prob: finalProb,
+    baseProb,
+    bias,
+    reasons: rs,
+    dominantBull,
+    dominantVol,
+    ema200Dist,
+    change: dChange,
+    levelType,
+    levelStrength,
+    levelText,
+    supportLevels,
+    resistanceLevels,
+    supportDistances,
+    resistanceDistances
+  };
+}
+
+
+
+    /* ================= RENDER ================= */
+function renderCard(d, el, force=false){
+
+  // 🔥 FILTER: show ONLY weak levels (unless forced)
+  const isWeakSupport =
+    d.levelType === "Support Test" &&
+    d.levelStrength === "Weak Support";
+
+  const isWeakResistance =
+    d.levelType === "Resistance Test" &&
+    d.levelStrength === "Weak Resistance";
+
+  if(!force && !isWeakSupport && !isWeakResistance){
+    return; // ❌ skip rendering
+  }
+
+  let card = document.getElementById(el.id+"-"+d.sym);
   if(!card){
     card = document.createElement("div");
     card.className = "card";
-    card.id = el.id + "-" + d.sym;
+    card.id = el.id+"-"+d.sym;
     el.appendChild(card);
   }
 
+  /* === COLORS === */
   const biasColor =
     d.bias.includes("Bull") ? "bull" :
     d.bias.includes("Bear") ? "bear" : "neutral";
 
-  const changeColor = d.change >= 0 ? "bull" : "bear";
+  const levelColor =
+    isWeakResistance ? "bull" :
+    isWeakSupport ? "bear" : "neutral";
 
-  const drawdownColor =
-    d.drawdown >= -1 ? "bull" :
-    d.drawdown <= -4 ? "bear" : "neutral";
+  /* === AI INTERPRETATION === */
+  let aiTitle = "ℹ️ Structure Context";
+  let aiText  = "No weak structure detected. Price is currently balanced.";
 
-  const volumeInterpretation =
-    d.volumeAlign === "confirm"
-      ? "Volume confirms bias (Continuation likely)"
-      : d.volumeAlign === "contradict"
-      ? "Volume contradicts bias (Trap / Absorption risk)"
-      : "Volume neutral";
+  if(isWeakResistance){
+    aiTitle = "🚀 Breakout Watch";
+    aiText =
+      "Resistance is weak. Sellers are failing to defend this level. " +
+      "A break and hold above may trigger continuation higher. " +
+      "Watch for this level to flip into strong support.";
+  }
 
-  const volumeInterpretationColor =
-    d.volumeAlign === "confirm" ? "bull" :
-    d.volumeAlign === "contradict" ? "bear" : "neutral";
+  if(isWeakSupport){
+    aiTitle = "⚠️ Breakdown Watch";
+    aiText =
+      "Support is weak. Buyers are failing to defend this level. " +
+      "A break and hold below may trigger continuation lower. " +
+      "Watch for this level to flip into strong resistance.";
+  }
 
   card.innerHTML = `
     <b>${d.sym}</b>
 
     <div class="prob ${biasColor}">
-      ${d.bias} — ${d.prob}% <span class="muted">(base ${d.baseProb}%)</span>
-    </div>
-
-    <div class="muted ${changeColor}">
-      24h Change: ${d.change.toFixed(2)}%
-    </div>
-
-    <div class="muted ${drawdownColor}">
-      24h Drawdown: ${d.drawdown.toFixed(2)}%
+      ${d.bias} — ${d.prob}%
+      <span class="muted">(Structure Bias)</span>
     </div>
 
     <div class="muted ${d.dominantBull ? "bull" : "bear"}">
-      24h Dominant Vol: ${Number(d.dominantVol).toLocaleString()}
+      Dominant 24h Volume: ${Number(d.dominantVol).toLocaleString()}
     </div>
 
-    <div class="muted ${volumeInterpretationColor}">
-      ${volumeInterpretation}
+    <div class="muted ${levelColor}">
+      🧱 ${d.levelType}: <b>${d.levelStrength}</b>
     </div>
+
+    <div class="muted ${levelColor}">
+      <b>${aiTitle}</b><br>
+      ${aiText}
+    </div>
+
+    ${
+      d.levelType==="Support Test" && d.supportLevels.length ? `
+      <div class="muted bear">
+        🔴 Support: <b>${d.supportLevels[0].toFixed(4)}</b>
+        <span class="muted">(${d.supportDistances[0].toFixed(2)}%)</span>
+      </div>` : ``
+    }
+
+    ${
+      d.levelType==="Resistance Test" && d.resistanceLevels.length ? `
+      <div class="muted bull">
+        🟢 Resistance: <b>${d.resistanceLevels[0].toFixed(4)}</b>
+        <span class="muted">(${d.resistanceDistances[0].toFixed(2)}%)</span>
+      </div>` : ``
+    }
 
     <div class="muted">
       ${d.reasons.join(" • ")}
     </div>
   `;
-}
+}  
+      
+
+    
+  
+  
 
 /* ================= SCAN ================= */
 async function runScan(){
@@ -381,14 +575,38 @@ async function runScan(){
 
 /* ================= MANUAL SEARCH ================= */
 async function runSearch(){
-  const sym=symbolSearch.value.trim().toUpperCase();
-  if(!sym.endsWith("USDT")||BLACKSET.has(sym))return;
-  searchGrid.innerHTML="";
-  const t=await fetchJSON(`${API}/fapi/v1/ticker/24hr?symbol=${sym}`);
-  const dd=(t.lastPrice-t.highPrice)/t.highPrice*100;
-  const r=await analyze(sym,t.priceChangePercent<0,dd);
-  r.change=+t.priceChangePercent;
-  renderCard(r,searchGrid);
+  const sym = symbolSearch.value.trim().toUpperCase();
+  if(!sym) return;
+
+  const fullSym = sym.endsWith("USDT") ? sym : (sym + "USDT");
+  if(BLACKSET.has(fullSym)) return;
+
+  try{
+    status.innerText = `Analyzing ${fullSym}...`;
+    searchGrid.innerHTML = "";
+
+    const t = await fetchJSON(`${API}/fapi/v1/ticker/24hr?symbol=${fullSym}`);
+
+    const dChange = +t.priceChangePercent;
+    const dd = ((+t.lastPrice - +t.highPrice) / +t.highPrice) * 100;
+    const bear = dChange < 0;
+
+    const r = await analyze(fullSym, bear, dd, dChange);
+    r.change = dChange;
+
+    // ✅ FORCE render even if structure is NOT weak
+    renderCard(r, searchGrid, true);
+
+    status.innerText = `Done: ${fullSym}`;
+  }catch(err){
+    console.error(err);
+    status.innerText = `Error analyzing ${fullSym}`;
+    searchGrid.innerHTML = `
+      <div class="card">
+        <b>${fullSym}</b>
+        <div class="muted bear">Failed to analyze or no data.</div>
+      </div>`;
+  }
 }
 </script>
 </body>
