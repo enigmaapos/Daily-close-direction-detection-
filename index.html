@@ -557,14 +557,38 @@ async function runScan(){
 
 /* ================= MANUAL SEARCH ================= */
 async function runSearch(){
-  const sym=symbolSearch.value.trim().toUpperCase();
-  if(!sym.endsWith("USDT")||BLACKSET.has(sym))return;
-  searchGrid.innerHTML="";
-  const t=await fetchJSON(`${API}/fapi/v1/ticker/24hr?symbol=${sym}`);
-  const dd=(t.lastPrice-t.highPrice)/t.highPrice*100;
-  const r=await analyze(sym,t.priceChangePercent<0,dd);
-  r.change=+t.priceChangePercent;
-  renderCard(r,searchGrid);
+  const sym = symbolSearch.value.trim().toUpperCase();
+  if(!sym) return;
+
+  // auto-append USDT if user typed BTC instead of BTCUSDT
+  const fullSym = sym.endsWith("USDT") ? sym : (sym + "USDT");
+  if(BLACKSET.has(fullSym)) return;
+
+  try{
+    status.innerText = `Analyzing ${fullSym}...`;
+    searchGrid.innerHTML = "";
+
+    const t = await fetchJSON(`${API}/fapi/v1/ticker/24hr?symbol=${fullSym}`);
+
+    const dChange = +t.priceChangePercent;
+    const dd = ((+t.lastPrice - +t.highPrice) / +t.highPrice) * 100;
+
+    // "bear" is the direction context (24h down = bear context)
+    const bear = dChange < 0;
+
+    // ✅ pass dChange into analyze (your analyze signature uses 4 params)
+    const r = await analyze(fullSym, bear, dd, dChange);
+
+    // ensure these fields exist for render
+    r.change = dChange;
+
+    renderCard(r, searchGrid);
+    status.innerText = `Done: ${fullSym}`;
+  }catch(err){
+    console.error(err);
+    status.innerText = `Error analyzing ${sym}: ${err.message || err}`;
+    searchGrid.innerHTML = `<div class="card"><b>${sym}</b><div class="muted bear">Failed to analyze. Check symbol or try again.</div></div>`;
+  }
 }
 </script>
 </body>
