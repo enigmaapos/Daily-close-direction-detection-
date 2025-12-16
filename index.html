@@ -516,12 +516,17 @@ function renderCard(d, el, force=false){
     </div>
 
     ${
-      d.levelType === "Support Test" && d.supportLevels.length ? `
-      <div class="muted bear">
-        🔴 Support: <b>${d.supportLevels[0].toFixed(4)}</b>
-        <span class="muted">(${d.supportDistances[0].toFixed(2)}%)</span>
-      </div>` : ``
-    }
+  d.levelType === "Support Test" && d.supportLevels.length ? `
+  <div class="muted bear">
+    🔴 Support:
+    <br>• S1: <b>${d.supportLevels[0].toFixed(4)}</b>
+    <span class="muted">(${d.supportDistances[0].toFixed(2)}%)</span>
+    ${d.supportLevels[1] ? `
+    <br>• S2: <b>${d.supportLevels[1].toFixed(4)}</b>
+    <span class="muted">(${d.supportDistances[1].toFixed(2)}%)</span>
+    ` : ``}
+  </div>` : ``
+}
 
     ${
       d.levelType === "Resistance Test" && d.resistanceLevels.length ? `
