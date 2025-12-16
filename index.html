@@ -529,17 +529,17 @@ function renderCard(d, el, force=false){
 }
 
     ${
-      d.levelType === "Resistance Test" && d.resistanceLevels.length ? `
-      <div class="muted bull">
-        🟢 Resistance: <b>${d.resistanceLevels[0].toFixed(4)}</b>
-        <span class="muted">(${d.resistanceDistances[0].toFixed(2)}%)</span>
-      </div>` : ``
-    }
+  d.levelType === "Resistance Test" && d.resistanceLevels.length ? `
+  <div class="muted bull">
+    🟢 Resistance:
+    <br>• R1: <b>${d.resistanceLevels[0].toFixed(4)}</b>
+    <span class="muted">(${d.resistanceDistances[0].toFixed(2)}%)</span>
 
-    <div class="muted">
-      ${d.reasons.join(" • ")}
-    </div>
-  `;
+    ${d.resistanceLevels[1] ? `
+    <br>• R2: <b>${d.resistanceLevels[1].toFixed(4)}</b>
+    <span class="muted">(${d.resistanceDistances[1].toFixed(2)}%)</span>
+    ` : ``}
+  </div>` : ``
 }
 
     
