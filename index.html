@@ -87,12 +87,12 @@ button.secondary{
 
 <div class="progress-wrap">
   <div class="progress-bar">
+    <div id="scanBadge" class="muted neutral" style="display:none">
+  🔔 Scan in progress…
+    </div>
     <div class="progress-fill" id="progressFill"></div>
   </div>
 </div>
-  <div id="scanBadge" class="muted neutral" style="display:none">
-  🔔 Scan in progress…
-  </div>
 
 <div class="row">
   <button class="primary" onclick="manualScan()">Run Scan</button>
@@ -149,8 +149,6 @@ const API = "https://fapi.binance.com";
 const DELAY = 200;
 const AUTO_INTERVAL = 5 * 60 * 1000;
 const MAX_SCORE = 10;
-  let scanWatchdog = null;
-const SCAN_TIMEOUT_MS = 90_000; // 90 seconds safety
 
 const BLACKSET = new Set([
  "ALPACAUSDT","BNXUSDT","ALPHAUSDT","OCEANUSDT","DGBUSDT","AGIXUSDT",
@@ -167,6 +165,8 @@ const BLACKSET = new Set([
 let autoEnabled=false, autoTimer=null, countdownTimer=null, nextRefreshAt=0;
 let isAuto=false;
   let scanRunning = false;
+  let scanWatchdog = null;
+const SCAN_TIMEOUT_MS = 90_000; // 90 seconds safety
 
 /* ================= AUTO REFRESH ================= */
 function startCountdown(){
@@ -458,107 +458,6 @@ async function analyze(sym, bear, dd, dChange){
 
 
     /* ================= RENDER ================= */
-function renderCard(d, el, force=false){
-
-  // 🔥 FILTER: show ONLY weak levels (unless forced)
-  const isWeakSupport =
-    d.levelType === "Support Test" &&
-    d.levelStrength === "Weak Support";
-
-  const isWeakResistance =
-    d.levelType === "Resistance Test" &&
-    d.levelStrength === "Weak Resistance";
-
-  if(!force && !isWeakSupport && !isWeakResistance){
-    return; // ❌ skip rendering
-  }
-
-  let card = document.getElementById(el.id+"-"+d.sym);
-  if(!card){
-    card = document.createElement("div");
-    card.className = "card";
-    card.id = el.id+"-"+d.sym;
-    el.appendChild(card);
-  }
-
-  /* === COLORS === */
-  const biasColor =
-    d.bias.includes("Bull") ? "bull" :
-    d.bias.includes("Bear") ? "bear" : "neutral";
-
-  const levelColor =
-    isWeakResistance ? "bull" :
-    isWeakSupport ? "bear" : "neutral";
-
-  /* === AI INTERPRETATION === */
-  let aiTitle = "ℹ️ Structure Context";
-  let aiText  = "No weak structure detected. Price is currently balanced.";
-
-  if(isWeakResistance){
-    aiTitle = "🚀 Breakout Watch";
-    aiText =
-      "Resistance is weak. Sellers are failing to defend this level. " +
-      "A break and hold above may trigger continuation higher. " +
-      "Watch for this level to flip into strong support.";
-  }
-
-  if(isWeakSupport){
-    aiTitle = "⚠️ Breakdown Watch";
-    aiText =
-      "Support is weak. Buyers are failing to defend this level. " +
-      "A break and hold below may trigger continuation lower. " +
-      "Watch for this level to flip into strong resistance.";
-  }
-
-  card.innerHTML = `
-    <b>${d.sym}</b>
-
-    <div class="prob ${biasColor}">
-      ${d.bias} — ${d.prob}%
-      <span class="muted">(Structure Bias)</span>
-    </div>
-
-    <div class="muted ${d.dominantBull ? "bull" : "bear"}">
-      Dominant 24h Volume: ${Number(d.dominantVol).toLocaleString()}
-    </div>
-
-    <div class="muted ${levelColor}">
-      🧱 ${d.levelType}: <b>${d.levelStrength}</b>
-    </div>
-
-    <div class="muted ${levelColor}">
-      <b>${aiTitle}</b><br>
-      ${aiText}
-    </div>
-
-    ${
-      d.levelType==="Support Test" && d.supportLevels.length ? `
-      <div class="muted bear">
-        🔴 Support: <b>${d.supportLevels[0].toFixed(4)}</b>
-        <span class="muted">(${d.supportDistances[0].toFixed(2)}%)</span>
-      </div>` : ``
-    }
-
-    ${
-      d.levelType==="Resistance Test" && d.resistanceLevels.length ? `
-      <div class="muted bull">
-        🟢 Resistance: <b>${d.resistanceLevels[0].toFixed(4)}</b>
-        <span class="muted">(${d.resistanceDistances[0].toFixed(2)}%)</span>
-      </div>` : ``
-    }
-
-    <div class="muted">
-      ${d.reasons.join(" • ")}
-    </div>
-  `;
-}  
-      
-
-    
-  
-  
-
-/* ================= SCAN ================= */
 async function runScan(){
   if(scanRunning){
     logSkip("Previous scan still running");
@@ -629,23 +528,84 @@ async function runScan(){
     scanRunning = false;
     document.getElementById("scanBadge").style.display = "none";
   }
+      }
+  
+
+/* ================= SCAN ================= */
+async function runScan(){
+  if(scanRunning) return;
+  scanRunning = true;
+
+  progressFill.style.width = "0%";
+  status.innerText = isAuto ? "Auto refreshing..." : "Scanning...";
+
+  const t=await fetchJSON(`${API}/fapi/v1/ticker/24hr`);
+  const usdt=t.filter(x=>x.symbol.endsWith("USDT")&&!BLACKSET.has(x.symbol));
+
+  const g=[...usdt].sort((a,b)=>b.priceChangePercent-a.priceChangePercent).slice(0,30);
+  const r=[...usdt].sort((a,b)=>a.priceChangePercent-b.priceChangePercent).slice(0,30);
+
+  const total=g.length+r.length;
+  let done=0;
+
+  for(const x of g){
+    const dd=(x.lastPrice-x.highPrice)/x.highPrice*100;
+    const res=await analyze(x.symbol,false,dd);
+    res.change=+x.priceChangePercent;
+    if(res.prob>=80) alertSound.play();
+    renderCard(res,greenGrid);
+    done++;
+    progressFill.style.width=Math.round(done/total*100)+"%";
   }
 
+  for(const x of r){
+    const dd=(x.lastPrice-x.highPrice)/x.highPrice*100;
+    const res=await analyze(x.symbol,true,dd);
+    res.change=+x.priceChangePercent;
+    renderCard(res,redGrid);
+    done++;
+    progressFill.style.width=Math.round(done/total*100)+"%";
+  }
+
+  timestamp.innerText=new Date().toLocaleString();
+  status.innerText="Completed";
+  scanRunning = false;   // ✅ unlock
+      }
+
 /* ================= MANUAL SEARCH ================= */
-function manualScan(){
-  autoEnabled = false;
-  isAuto = false;
+async function runSearch(){
+  const sym = symbolSearch.value.trim().toUpperCase();
+  if(!sym) return;
 
-  clearInterval(autoTimer);
-  clearInterval(countdownTimer);
-  refreshTimer.innerText = "Auto refresh: OFF";
+  const fullSym = sym.endsWith("USDT") ? sym : (sym + "USDT");
+  if(BLACKSET.has(fullSym)) return;
 
-  greenGrid.innerHTML = "";
-  redGrid.innerHTML = "";
-  searchGrid.innerHTML = "";
-  progressFill.style.width = "0%";
+  try{
+    status.innerText = `Analyzing ${fullSym}...`;
+    searchGrid.innerHTML = "";
 
-  runScan();
+    const t = await fetchJSON(`${API}/fapi/v1/ticker/24hr?symbol=${fullSym}`);
+
+    const dChange = +t.priceChangePercent;
+    const dd = ((+t.lastPrice - +t.highPrice) / +t.highPrice) * 100;
+    const bear = dChange < 0;
+
+    const r = await analyze(fullSym, bear, dd, dChange);
+    r.change = dChange;
+
+    // ✅ FORCE render even if structure is NOT weak
+    renderCard(r, searchGrid, true);
+
+    status.innerText = `Done: ${fullSym}`;
+  }catch(err){
+    console.error(err);
+    status.innerText = `Error analyzing ${fullSym}`;
+    searchGrid.innerHTML = `
+      <div class="card">
+        <b>${fullSym}</b>
+        <div class="muted bear">Failed to analyze or no data.</div>
+      </div>`;
+  }
 }
 </script>
 </body>
