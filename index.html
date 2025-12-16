@@ -488,46 +488,50 @@ function renderCard(d, el, force=false){
   }
 
   card.innerHTML = `
-    <b>${d.sym}</b>
+  <b>${d.sym}</b>
 
-    <div class="prob ${biasColor}">
-      ${d.bias} — ${d.prob}%
-      <span class="muted">(Structure Bias)</span>
-    </div>
+  <div class="prob ${biasColor}">
+    ${d.bias} — ${d.prob}%
+    <span class="muted">(Structure Bias)</span>
+  </div>
 
-    <div class="muted ${d.dominantBull ? "bull" : "bear"}">
-      Dominant 24h Volume: ${Number(d.dominantVol).toLocaleString()}
-    </div>
+  <div class="muted ${changeColor}">
+    24h Change: <b>${d.change.toFixed(2)}%</b>
+  </div>
 
-    <div class="muted ${levelColor}">
-      🧱 ${d.levelType}: <b>${d.levelStrength}</b>
-    </div>
+  <div class="muted ${d.dominantBull ? "bull" : "bear"}">
+    Dominant 24h Volume: ${Number(d.dominantVol).toLocaleString()}
+  </div>
 
-    <div class="muted ${levelColor}">
-      <b>${aiTitle}</b><br>
-      ${aiText}
-    </div>
+  <div class="muted ${levelColor}">
+    🧱 ${d.levelType}: <b>${d.levelStrength}</b>
+  </div>
 
-    ${
-      d.levelType==="Support Test" && d.supportLevels.length ? `
-      <div class="muted bear">
-        🔴 Support: <b>${d.supportLevels[0].toFixed(4)}</b>
-        <span class="muted">(${d.supportDistances[0].toFixed(2)}%)</span>
-      </div>` : ``
-    }
+  <div class="muted ${levelColor}">
+    <b>${aiTitle}</b><br>
+    ${aiText}
+  </div>
 
-    ${
-      d.levelType==="Resistance Test" && d.resistanceLevels.length ? `
-      <div class="muted bull">
-        🟢 Resistance: <b>${d.resistanceLevels[0].toFixed(4)}</b>
-        <span class="muted">(${d.resistanceDistances[0].toFixed(2)}%)</span>
-      </div>` : ``
-    }
+  ${
+    d.levelType==="Support Test" && d.supportLevels.length ? `
+    <div class="muted bear">
+      🔴 Support: <b>${d.supportLevels[0].toFixed(4)}</b>
+      <span class="muted">(${d.supportDistances[0].toFixed(2)}%)</span>
+    </div>` : ``
+  }
 
-    <div class="muted">
-      ${d.reasons.join(" • ")}
-    </div>
-  `;
+  ${
+    d.levelType==="Resistance Test" && d.resistanceLevels.length ? `
+    <div class="muted bull">
+      🟢 Resistance: <b>${d.resistanceLevels[0].toFixed(4)}</b>
+      <span class="muted">(${d.resistanceDistances[0].toFixed(2)}%)</span>
+    </div>` : ``
+  }
+
+  <div class="muted">
+    ${d.reasons.join(" • ")}
+  </div>
+`;
 }  
       
 
