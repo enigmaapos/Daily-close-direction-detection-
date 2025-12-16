@@ -542,6 +542,12 @@ function renderCard(d, el, force=false){
   </div>` : ``
 }
 
+<div class="muted">
+      ${d.reasons.join(" • ")}
+    </div>
+  `;
+}
+
     
   
   
@@ -622,13 +628,7 @@ async function runSearch(){
       </div>`;
   }
 }
-  setTimeout(()=>{
-  if(scanRunning){
-    console.warn("⚠️ Scan watchdog forced unlock");
-    scanRunning = false;
-    status.innerText = "Scan force-unlocked";
-  }
-}, 55_000);
+  
 </script>
 </body>
 </html>
