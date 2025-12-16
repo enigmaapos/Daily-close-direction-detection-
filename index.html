@@ -128,6 +128,15 @@ button.secondary{
   </select>
   </div>
 
+  <div class="row">
+  <label class="muted">Level State:</label>
+  <select id="filterLevelState">
+    <option value="all">All</option>
+    <option value="valid">Valid Levels</option>
+    <option value="broken">Broken Levels</option>
+  </select>
+  </div>
+
   <h2>🔍 Manual Analysis</h2>
 
 <div class="muted" style="margin-bottom:6px">
@@ -230,7 +239,7 @@ function manualScan(){
 }
 
   window.addEventListener("DOMContentLoaded", ()=>{
-  ["filterStructure","filterBias","filterChange","filterProb"].forEach(id=>{
+  ["filterStructure","filterBias","filterChange","filterProb","filterlevelState"].forEach(id=>{
     const el = document.getElementById(id);
     if(el) el.addEventListener("change", applyFilters);
   });
@@ -497,10 +506,29 @@ function renderCard(d, el, force=false){
     el.appendChild(card);
   }
 
-  card.dataset.structure = d.levelStrength;
+  /* === LEVEL STATE DETECTION === */
+let levelState = "valid";
+
+// Support broken = price already BELOW support
+if(d.levelType === "Support Test" && d.supportDistances){
+  if(d.supportDistances.some(x => x < 0)){
+    levelState = "broken";
+  }
+}
+
+// Resistance broken = price already ABOVE resistance
+if(d.levelType === "Resistance Test" && d.resistanceDistances){
+  if(d.resistanceDistances.some(x => x < 0)){
+    levelState = "broken";
+  }
+}
+
+/* === DATA ATTRIBUTES FOR FILTERING === */
+card.dataset.levelState = levelState;
 card.dataset.bias = d.bias;
+card.dataset.structure = d.levelStrength;
 card.dataset.prob = d.prob;
-card.dataset.change = d.change >= 0 ? "green" : "red";
+card.dataset.change = d.change >= 0 ? "up" : "down";
 
   /* === COLORS === */
   const biasColor =
@@ -679,6 +707,7 @@ applyFilters();
   const fBias = document.getElementById("filterBias").value;
   const fChange = document.getElementById("filterChange").value;
   const fProb = Number(document.getElementById("filterProb").value);
+  const levelState = document.getElementById("filterLevelState")?.value || "all";
 
   document.querySelectorAll(".card").forEach(card=>{
     let show = true;
@@ -687,6 +716,8 @@ applyFilters();
     if(fBias !== "all" && card.dataset.bias !== fBias) show = false;
     if(fChange !== "all" && card.dataset.change !== fChange) show = false;
     if(Number(card.dataset.prob) < fProb) show = false;
+    if(levelState !== "all" && card.dataset.levelState !== levelState) show = false;
+       
 
     card.style.display = show ? "" : "none";
   });
