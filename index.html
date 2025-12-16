@@ -65,6 +65,14 @@ button.secondary{
   background:#22c55e;
   transition:width .2s linear;
 }
+  #scanBadge{
+  display:inline-block;
+  margin-left:6px;
+  padding:2px 8px;
+  border-radius:999px;
+  font-size:12px;
+  background:#1e293b;
+  }
 </style>
 </head>
 
@@ -82,6 +90,9 @@ button.secondary{
     <div class="progress-fill" id="progressFill"></div>
   </div>
 </div>
+  <div id="scanBadge" class="muted neutral" style="display:none">
+  🔔 Scan in progress…
+  </div>
 
 <div class="row">
   <button class="primary" onclick="manualScan()">Run Scan</button>
@@ -138,6 +149,8 @@ const API = "https://fapi.binance.com";
 const DELAY = 200;
 const AUTO_INTERVAL = 5 * 60 * 1000;
 const MAX_SCORE = 10;
+  let scanWatchdog = null;
+const SCAN_TIMEOUT_MS = 90_000; // 90 seconds safety
 
 const BLACKSET = new Set([
  "ALPACAUSDT","BNXUSDT","ALPHAUSDT","OCEANUSDT","DGBUSDT","AGIXUSDT",
@@ -194,6 +207,19 @@ function manualScan(){
   progressFill.style.width="0%";
   runScan();
 }
+
+  async function runInBatches(items, batchSize, fn){
+  for(let i=0;i<items.length;i+=batchSize){
+    const batch = items.slice(i, i+batchSize);
+    await Promise.all(batch.map(fn));
+    await sleep(250); // rate-limit safety
+  }
+  }
+
+  function logSkip(reason){
+  console.warn("[SCAN SKIPPED]", reason);
+  status.innerText = `Skipped: ${reason}`;
+  }
 
 /* ================= HELPERS ================= */
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
@@ -534,56 +560,81 @@ function renderCard(d, el, force=false){
 
 /* ================= SCAN ================= */
 async function runScan(){
-  if(scanRunning) return;
+  if(scanRunning){
+    logSkip("Previous scan still running");
+    return;
+  }
+
   scanRunning = true;
+  document.getElementById("scanBadge").style.display = "inline-block";
+
+  // ⏱️ watchdog
+  scanWatchdog = setTimeout(()=>{
+    console.error("Scan timeout — force unlock");
+    scanRunning = false;
+    document.getElementById("scanBadge").style.display = "none";
+    status.innerText = "Scan force-stopped (timeout)";
+  }, SCAN_TIMEOUT_MS);
 
   try{
     progressFill.style.width = "0%";
-    status.innerText = isAuto ? "Auto refreshing..." : "Scanning...";
+    status.innerText = isAuto ? "Auto refreshing…" : "Scanning…";
 
-    const t = await fetchJSON(`${API}/fapi/v1/ticker/24hr`);
-    const usdt = t.filter(x => x.symbol.endsWith("USDT") && !BLACKSET.has(x.symbol));
+    const tickers = await fetchJSON(`${API}/fapi/v1/ticker/24hr`);
+    const usdt = tickers.filter(x =>
+      x.symbol.endsWith("USDT") && !BLACKSET.has(x.symbol)
+    );
 
-    const g = [...usdt].sort((a,b)=>b.priceChangePercent-a.priceChangePercent).slice(0,30);
-    const r = [...usdt].sort((a,b)=>a.priceChangePercent-b.priceChangePercent).slice(0,30);
+    const g = [...usdt]
+      .sort((a,b)=>b.priceChangePercent-a.priceChangePercent)
+      .slice(0,30);
+
+    const r = [...usdt]
+      .sort((a,b)=>a.priceChangePercent-b.priceChangePercent)
+      .slice(0,30);
 
     const total = g.length + r.length;
     let done = 0;
 
-    for(const x of g){
+    // 🟢 GREEN batch
+    await runInBatches(g, 5, async x=>{
       const dd = (x.lastPrice - x.highPrice) / x.highPrice * 100;
       const res = await analyze(x.symbol,false,dd);
       res.change = +x.priceChangePercent;
       renderCard(res, greenGrid);
       done++;
-      progressFill.style.width = Math.round(done/total*100) + "%";
-    }
+      progressFill.style.width = Math.round(done/total*100)+"%";
+    });
 
-    for(const x of r){
+    // 🔴 RED batch
+    await runInBatches(r, 5, async x=>{
       const dd = (x.lastPrice - x.highPrice) / x.highPrice * 100;
       const res = await analyze(x.symbol,true,dd);
       res.change = +x.priceChangePercent;
       renderCard(res, redGrid);
       done++;
-      progressFill.style.width = Math.round(done/total*100) + "%";
-    }
+      progressFill.style.width = Math.round(done/total*100)+"%";
+    });
 
     timestamp.innerText = new Date().toLocaleString();
     status.innerText = "Completed";
 
   }catch(err){
     console.error(err);
-    status.innerText = "Scan failed — retrying next cycle";
+    status.innerText = "Scan failed — will retry";
 
   }finally{
-    scanRunning = false; // ✅ ALWAYS unlock
+    clearTimeout(scanWatchdog);
+    scanWatchdog = null;
+    scanRunning = false;
+    document.getElementById("scanBadge").style.display = "none";
   }
-}
+  }
 
 /* ================= MANUAL SEARCH ================= */
 function manualScan(){
-  isAuto = false;
   autoEnabled = false;
+  isAuto = false;
 
   clearInterval(autoTimer);
   clearInterval(countdownTimer);
