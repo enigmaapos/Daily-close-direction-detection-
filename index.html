@@ -229,8 +229,11 @@ function manualScan(){
   runScan();
 }
 
+  window.addEventListener("DOMContentLoaded", ()=>{
   ["filterStructure","filterBias","filterChange","filterProb"].forEach(id=>{
-  document.getElementById(id).addEventListener("change", applyFilters);
+    const el = document.getElementById(id);
+    if(el) el.addEventListener("change", applyFilters);
+  });
 });
   
 
@@ -631,6 +634,7 @@ async function runScan(){
   timestamp.innerText=new Date().toLocaleString();
   status.innerText="Completed";
   scanRunning = false;   // ✅ unlock
+  applyFilters();
       }
 
 /* ================= MANUAL SEARCH ================= */
@@ -656,6 +660,7 @@ async function runSearch(){
 
     // ✅ FORCE render even if structure is NOT weak
     renderCard(r, searchGrid, true);
+applyFilters();
 
     status.innerText = `Done: ${fullSym}`;
   }catch(err){
