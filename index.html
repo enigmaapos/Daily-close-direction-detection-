@@ -239,7 +239,13 @@ function manualScan(){
 }
 
   window.addEventListener("DOMContentLoaded", ()=>{
-  ["filterStructure","filterBias","filterChange","filterProb","filterlevelState"].forEach(id=>{
+  [
+    "filterStructure",
+    "filterBias",
+    "filterChange",
+    "filterProb",
+    "filterLevelState" // ✅ FIXED CASE
+  ].forEach(id=>{
     const el = document.getElementById(id);
     if(el) el.addEventListener("change", applyFilters);
   });
@@ -528,7 +534,7 @@ card.dataset.levelState = levelState;
 card.dataset.bias = d.bias;
 card.dataset.structure = d.levelStrength;
 card.dataset.prob = d.prob;
-card.dataset.change = d.change >= 0 ? "up" : "down";
+card.dataset.change = d.change >= 0 ? "green" : "red";
 
   /* === COLORS === */
   const biasColor =
