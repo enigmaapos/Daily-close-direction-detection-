@@ -450,11 +450,11 @@ function renderCard(d, el, force=false){
     return; // ❌ skip rendering
   }
 
-  let card = document.getElementById(el.id+"-"+d.sym);
+  let card = document.getElementById(el.id + "-" + d.sym);
   if(!card){
     card = document.createElement("div");
     card.className = "card";
-    card.id = el.id+"-"+d.sym;
+    card.id = el.id + "-" + d.sym;
     el.appendChild(card);
   }
 
@@ -467,6 +467,8 @@ function renderCard(d, el, force=false){
     isWeakResistance ? "bull" :
     isWeakSupport ? "bear" : "neutral";
 
+  const changeColor = d.change >= 0 ? "bull" : "bear";
+
   /* === AI INTERPRETATION === */
   let aiTitle = "ℹ️ Structure Context";
   let aiText  = "No weak structure detected. Price is currently balanced.";
@@ -475,65 +477,64 @@ function renderCard(d, el, force=false){
     aiTitle = "🚀 Breakout Watch";
     aiText =
       "Resistance is weak. Sellers are failing to defend this level. " +
-      "A break and hold above may trigger continuation higher. " +
-      "Watch for this level to flip into strong support.";
+      "A clean break and hold above may trigger continuation higher. " +
+      "Watch for this level to flip into STRONG SUPPORT.";
   }
 
   if(isWeakSupport){
     aiTitle = "⚠️ Breakdown Watch";
     aiText =
       "Support is weak. Buyers are failing to defend this level. " +
-      "A break and hold below may trigger continuation lower. " +
-      "Watch for this level to flip into strong resistance.";
+      "A clean break and hold below may trigger continuation lower. " +
+      "Watch for this level to flip into STRONG RESISTANCE.";
   }
 
   card.innerHTML = `
-  <b>${d.sym}</b>
+    <b>${d.sym}</b>
 
-  <div class="prob ${biasColor}">
-    ${d.bias} — ${d.prob}%
-    <span class="muted">(Structure Bias)</span>
-  </div>
+    <div class="prob ${biasColor}">
+      ${d.bias} — ${d.prob}%
+      <span class="muted">(Structure Bias)</span>
+    </div>
 
-  <div class="muted ${changeColor}">
-    24h Change: <b>${d.change.toFixed(2)}%</b>
-  </div>
+    <div class="muted ${changeColor}">
+      24h Change: <b>${d.change.toFixed(2)}%</b>
+    </div>
 
-  <div class="muted ${d.dominantBull ? "bull" : "bear"}">
-    Dominant 24h Volume: ${Number(d.dominantVol).toLocaleString()}
-  </div>
+    <div class="muted ${d.dominantBull ? "bull" : "bear"}">
+      Dominant 24h Volume: ${Number(d.dominantVol).toLocaleString()}
+    </div>
 
-  <div class="muted ${levelColor}">
-    🧱 ${d.levelType}: <b>${d.levelStrength}</b>
-  </div>
+    <div class="muted ${levelColor}">
+      🧱 ${d.levelType}: <b>${d.levelStrength}</b>
+    </div>
 
-  <div class="muted ${levelColor}">
-    <b>${aiTitle}</b><br>
-    ${aiText}
-  </div>
+    <div class="muted ${levelColor}">
+      <b>${aiTitle}</b><br>
+      ${aiText}
+    </div>
 
-  ${
-    d.levelType==="Support Test" && d.supportLevels.length ? `
-    <div class="muted bear">
-      🔴 Support: <b>${d.supportLevels[0].toFixed(4)}</b>
-      <span class="muted">(${d.supportDistances[0].toFixed(2)}%)</span>
-    </div>` : ``
-  }
+    ${
+      d.levelType === "Support Test" && d.supportLevels.length ? `
+      <div class="muted bear">
+        🔴 Support: <b>${d.supportLevels[0].toFixed(4)}</b>
+        <span class="muted">(${d.supportDistances[0].toFixed(2)}%)</span>
+      </div>` : ``
+    }
 
-  ${
-    d.levelType==="Resistance Test" && d.resistanceLevels.length ? `
-    <div class="muted bull">
-      🟢 Resistance: <b>${d.resistanceLevels[0].toFixed(4)}</b>
-      <span class="muted">(${d.resistanceDistances[0].toFixed(2)}%)</span>
-    </div>` : ``
-  }
+    ${
+      d.levelType === "Resistance Test" && d.resistanceLevels.length ? `
+      <div class="muted bull">
+        🟢 Resistance: <b>${d.resistanceLevels[0].toFixed(4)}</b>
+        <span class="muted">(${d.resistanceDistances[0].toFixed(2)}%)</span>
+      </div>` : ``
+    }
 
-  <div class="muted">
-    ${d.reasons.join(" • ")}
-  </div>
-`;
-}  
-      
+    <div class="muted">
+      ${d.reasons.join(" • ")}
+    </div>
+  `;
+}
 
     
   
