@@ -198,6 +198,14 @@ function manualScan(){
   runScan();
 }
 
+  setTimeout(()=>{
+  if(scanRunning){
+    console.warn("⚠️ Scan watchdog forced unlock");
+    scanRunning = false;
+    status.innerText = "Scan force-unlocked";
+  }
+}, 55_000);
+
 /* ================= HELPERS ================= */
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const fetchJSON=async u=>(await fetch(u)).json();
