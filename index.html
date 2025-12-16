@@ -190,43 +190,14 @@ function toggleAuto(){
 }
 
 function manualScan(){
-
-  // 🔒 stop ALL auto mechanisms
-  isAuto = false;
-  autoEnabled = false;
-
-  clearInterval(autoTimer);
-  clearInterval(countdownTimer);
-  clearInterval(manualTimer);
-
-  autoTimer = null;
-  countdownTimer = null;
-  manualTimer = null;
-  manualSymbol = null;
-
-  // 🔓 unlock scan state
-  scanRunning = false;
-
-  // 🧹 clear UI
-  greenGrid.innerHTML = "";
-  redGrid.innerHTML   = "";
-  searchGrid.innerHTML = "";
-
-  progressFill.style.width = "0%";
-  refreshTimer.innerText = "Auto refresh: OFF";
-  status.innerText = "Manual scan started...";
-
-  // 🚀 start fresh scan
+  isAuto=false;
+  greenGrid.innerHTML="";
+  redGrid.innerHTML="";
+  searchGrid.innerHTML="";
+  progressFill.style.width="0%";
   runScan();
 }
-
-  setTimeout(()=>{
-  if(scanRunning){
-    console.warn("⚠️ Scan watchdog forced unlock");
-    scanRunning = false;
-    status.innerText = "Scan force-unlocked";
-  }
-}, 55_000);
+  
 
 /* ================= HELPERS ================= */
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
@@ -646,6 +617,13 @@ async function runSearch(){
       </div>`;
   }
 }
+  setTimeout(()=>{
+  if(scanRunning){
+    console.warn("⚠️ Scan watchdog forced unlock");
+    scanRunning = false;
+    status.innerText = "Scan force-unlocked";
+  }
+}, 55_000);
 </script>
 </body>
 </html>
