@@ -97,6 +97,37 @@ button.secondary{
   <button class="secondary" onclick="runSearch()">Analyze</button>
 </div>
 
+  <div class="row" style="margin-top:6px">
+  <select id="filterStructure">
+    <option value="all">All Structures</option>
+    <option value="Weak Support">Weak Support</option>
+    <option value="Weak Resistance">Weak Resistance</option>
+  </select>
+
+  <select id="filterBias">
+    <option value="all">All Bias</option>
+    <option value="Strong Bull">Strong Bull</option>
+    <option value="Weak Bull">Weak Bull</option>
+    <option value="Strong Bear">Strong Bear</option>
+    <option value="Weak Bear">Weak Bear</option>
+    <option value="Neutral">Neutral</option>
+  </select>
+
+  <select id="filterChange">
+    <option value="all">All Change</option>
+    <option value="green">Green (24h +)</option>
+    <option value="red">Red (24h -)</option>
+  </select>
+
+  <select id="filterProb">
+    <option value="0">Any Probability</option>
+    <option value="50">≥ 50%</option>
+    <option value="60">≥ 60%</option>
+    <option value="70">≥ 70%</option>
+    <option value="80">≥ 80%</option>
+  </select>
+  </div>
+
   <h2>🔍 Manual Analysis</h2>
 
 <div class="muted" style="margin-bottom:6px">
@@ -197,6 +228,10 @@ function manualScan(){
   progressFill.style.width="0%";
   runScan();
 }
+
+  ["filterStructure","filterBias","filterChange","filterProb"].forEach(id=>{
+  document.getElementById(id).addEventListener("change", applyFilters);
+});
   
 
 /* ================= HELPERS ================= */
@@ -447,9 +482,9 @@ function renderCard(d, el, force=false){
     d.levelType === "Resistance Test" &&
     d.levelStrength === "Weak Resistance";
 
-  if(!force && !isWeakSupport && !isWeakResistance){
-    return; // ❌ skip rendering
-  }
+  if(!force && el.id === "searchGrid" && !isWeakSupport && !isWeakResistance){
+  return;
+}
 
   let card = document.getElementById(el.id + "-" + d.sym);
   if(!card){
@@ -458,6 +493,11 @@ function renderCard(d, el, force=false){
     card.id = el.id + "-" + d.sym;
     el.appendChild(card);
   }
+
+  card.dataset.structure = d.levelStrength;
+card.dataset.bias = d.bias;
+card.dataset.prob = d.prob;
+card.dataset.change = d.change >= 0 ? "green" : "red";
 
   /* === COLORS === */
   const biasColor =
@@ -628,6 +668,24 @@ async function runSearch(){
       </div>`;
   }
 }
+
+  function applyFilters(){
+  const fStructure = document.getElementById("filterStructure").value;
+  const fBias = document.getElementById("filterBias").value;
+  const fChange = document.getElementById("filterChange").value;
+  const fProb = Number(document.getElementById("filterProb").value);
+
+  document.querySelectorAll(".card").forEach(card=>{
+    let show = true;
+
+    if(fStructure !== "all" && card.dataset.structure !== fStructure) show = false;
+    if(fBias !== "all" && card.dataset.bias !== fBias) show = false;
+    if(fChange !== "all" && card.dataset.change !== fChange) show = false;
+    if(Number(card.dataset.prob) < fProb) show = false;
+
+    card.style.display = show ? "" : "none";
+  });
+  }
   
 </script>
 </body>
