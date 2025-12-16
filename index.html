@@ -138,8 +138,8 @@ const refreshTimer = document.getElementById("refreshTimer");
 
 /* ================= CONFIG ================= */
 const API = "https://fapi.binance.com";
-const DELAY = 200;
-const AUTO_INTERVAL = 5 * 60 * 1000;
+const AUTO_INTERVAL = 60 * 1000; // 1 minute
+const DELAY = 300;              // safe pacing
 const MAX_SCORE = 10;
 
 const BLACKSET = new Set([
