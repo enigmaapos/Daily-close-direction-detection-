@@ -382,25 +382,35 @@ const sw = {
   const supportStrength = structureLabel(supportScore, "support");
   const resistanceStrength = structureLabel(resistanceScore, "resistance");
 
-    /* === Structure Action === */
-  let bias="Neutral",prob=50,structure="none";
-  if(bull){
-    if(rb){bias="Bullish Continuation";prob=85;structure="resistance broken";}
-    else if(sw.S.length){bias="Bullish Defense";prob=70;structure="support holding";}
-    else{bias="Bull Trap Risk";prob=40;}
-  }else{
-    if(sb){bias="Bearish Continuation";prob=85;structure="support broken";}
-    else if(sw.R.length){bias="Bearish Defense";prob=70;structure="resistance failed";}
-    else{bias="Bear Trap Risk";prob=40;}
-  }
+     /* === STRUCTURE ACTION (FACT) === */
+  let structure = "no structure";
 
-  /* === Bias & Probability === */
   if(bull){
     if(resistanceBroken){
+      structure = "resistance broken";
+    }
+    else if(supportScore > 0){
+      structure = "support holding";
+    }
+  } else {
+    if(supportBroken){
+      structure = "support broken";
+    }
+    else if(resistanceScore > 0){
+      structure = "resistance failed";
+    }
+  }
+
+  /* === BIAS & PROBABILITY (INTERPRETATION) === */
+  let bias = "Neutral";
+  let prob = 50;
+
+  if(bull){
+    if(structure === "resistance broken"){
       bias = "Bullish Continuation";
       prob = 70 + Math.min(resistanceScore * 3, 15);
     }
-    else if(supportScore > 0){
+    else if(structure === "support holding"){
       bias = "Bullish Defense";
       prob = 60 + Math.min(supportScore * 3, 15);
     }
@@ -410,11 +420,11 @@ const sw = {
     }
   }
   else{
-    if(supportBroken){
+    if(structure === "support broken"){
       bias = "Bearish Continuation";
       prob = 70 + Math.min(supportScore * 3, 15);
     }
-    else if(resistanceScore > 0){
+    else if(structure === "resistance failed"){
       bias = "Bearish Defense";
       prob = 60 + Math.min(resistanceScore * 3, 15);
     }
@@ -424,9 +434,25 @@ const sw = {
     }
   }
 
-  return {sym,price,change,bull,prob,bias,structure,S:sw.S,R:sw.R,
-          supportStrength,resistanceStrength,};
+  return {
+    sym,
+    price,
+    change,
+    bull,
+
+    structure,                 // FACT
+    bias,                      // INTERPRETATION
+    prob,
+
+    supportStrength,
+    resistanceStrength,
+
+    S: sw.S,
+    R: sw.R
+  };
 }
+
+
 
    
 
