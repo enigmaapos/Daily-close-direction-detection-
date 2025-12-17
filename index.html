@@ -666,6 +666,25 @@ card.dataset.change = d.change >= 0 ? "green" : "red";
   🧭 Overall Dominant: <b>${d.overallDominant}</b>
 </div>
 
+<div class="muted" style="margin-top:6px;padding:6px;border-left:3px solid ${
+      d.overallDominant.includes("Bear") ? "#fb7185" :
+      d.overallDominant.includes("Bull") ? "#22c55e" : "#facc15"
+    }">
+
+      <b>🧠 Market Control Rule</b><br>
+      Volume shows <b>intent</b> — structure shows <b>control</b>.<br>
+
+      ${
+        d.overallDominant.includes("Bear")
+        ? `🟥 In a <b>Bear-dominant</b> market, green volume is a <b>pullback</b>
+           <br>unless structure is <b>reclaimed</b>.`
+        : d.overallDominant.includes("Bull")
+        ? `🟩 In a <b>Bull-dominant</b> market, red volume is a <b>pullback</b>
+           <br>unless structure is <b>lost</b>.`
+        : `🟨 Neutral control — wait for <b>structure confirmation</b>.`
+      }
+    </div>
+
     <div class="prob ${biasColor}">
       ${d.bias} — ${d.prob}%
       <span class="muted">(Structure Bias)</span>
