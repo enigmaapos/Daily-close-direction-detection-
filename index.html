@@ -431,11 +431,12 @@ async function analyze(sym, bear, dd, dChange){
     }
   }
 
-  /* === ZONE INTERPRETATION (VOLUME-BASED) === */
+  
+/* === ZONE INTERPRETATION (VOLUME-BASED) === */
 let supportZoneLabel = "Support";
 let resistanceZoneLabel = "Resistance";
 
-if(!d.dominantBull){
+if(!dominantBull){
   // 🔴 Dominant RED volume
   supportZoneLabel = "Buy Zone (if hold)";
   resistanceZoneLabel = "Breakout / Take-Profit Zone";
@@ -444,6 +445,7 @@ if(!d.dominantBull){
   resistanceZoneLabel = "Sell Zone (if fail)";
   supportZoneLabel = "Breakdown / Take-Profit Zone";
 }
+  
 
   /* === Indicators === */
   const avgV = v.slice(-40).reduce((a,b)=>a+b,0)/40;
@@ -573,7 +575,9 @@ if(!d.dominantBull){
     supportLevels,
     resistanceLevels,
     supportDistances,
-    resistanceDistances
+    resistanceDistances,
+    supportZoneLabel,
+  	resistanceZoneLabel
   };
 }
 
@@ -684,8 +688,7 @@ function renderCard(d, el, force=false){
     <div class="muted ${activeLevelColor}" style="margin-top:4px">
       🎯 <b>Current Structure Test:</b> ${d.levelType}
     </div>
-    🔴 <b>${supportZoneLabel}</b>
-    🟢 <b>${resistanceZoneLabel}</b>
+  
 
     <div class="prob ${biasColor}">
       ${d.bias} — ${d.prob}% <span class="muted">(Structure Bias)</span>
@@ -709,6 +712,7 @@ function renderCard(d, el, force=false){
     ${d.supportLevels?.length ? `
       <div class="muted bear" style="margin-top:6px">
         🔴 <b>Support</b>
+        🔴 <b>${d.supportZoneLabel}</b>
         ${supportBroken ? `<div class="muted bear">⚠ Broken (structure already lost)</div>` : ``}
         <br>• S1: <b>${d.supportLevels[0].toFixed(4)}</b>
         <span class="muted">(${d.supportDistances[0].toFixed(2)}%)</span>
@@ -723,6 +727,7 @@ function renderCard(d, el, force=false){
     ${d.resistanceLevels?.length ? `
       <div class="muted bull" style="margin-top:6px">
         🟢 <b>Resistance</b>
+        🟢 <b>${d.resistanceZoneLabel}</b>
         ${resistanceBroken ? `<div class="muted bull">✅ Broken (resistance already cleared)</div>` : ``}
         <br>• R1: <b>${d.resistanceLevels[0].toFixed(4)}</b>
         <span class="muted">(${d.resistanceDistances[0].toFixed(2)}%)</span>
