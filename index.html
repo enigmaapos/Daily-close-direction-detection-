@@ -195,6 +195,8 @@ let nextScanAt=null;
 let countdownTimer=null;
 let scanLock=false;
 let autoEnabled=true;
+  let isAutoScan = false;
+let autoTimer = null;
 
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const fetchJSON=async u=>(await fetch(u)).json();
@@ -216,12 +218,20 @@ function startCountdown(){
 }
 
 /* ================= AUTO REFRESH ================= */
-function scheduleNextAutoScan(){
-  if(!autoEnabled) return;
-  setTimeout(()=>{
-    if(!scanLock) runScan();
-  },AUTO_INTERVAL);
+function startAutoScan(){
+  if(autoTimer) clearInterval(autoTimer);
+  autoTimer = setInterval(async ()=>{
+    if(scanLock) return;
+    isAutoScan = true;
+    await runScan();
+  }, AUTO_INTERVAL);
 }
+
+  window.onload = () => {
+  nextScanAt = Date.now() + AUTO_INTERVAL;
+  startCountdown();
+  startAutoScan();
+};
 
 /* === IMPROVED 15m SWING DETECTION (CONFIRMED) === */
 function findSwings(h, l, c, v){
@@ -345,22 +355,40 @@ function applyFilters(){
 filterBias.onchange=filterVol.onchange=filterProb.onchange=applyFilters;
 
 /* ================= RENDER ================= */
-function renderCard(d,el,isFav=false){
-  const card=document.createElement("div");
-  card.className="card";
-  card.dataset.bias=d.bias;
-  card.dataset.vol=d.bull?"bull":"bear";
-  card.dataset.prob=d.prob;
+function renderCard(d, el, isFav=false){
+  const id = `card-${d.sym}`;
+  let card = document.getElementById(id);
 
-  card.innerHTML=`
-    ${isFav?`<div class="close" onclick="removeFav('${d.sym}')">✖</div>`:
-    `<div class="star" onclick="addFav('${d.sym}')">⭐</div>`}
+  // create only once
+  if(!card){
+    card = document.createElement("div");
+    card.id = id;
+    card.className = "card";
+    el.appendChild(card);
+  }
+
+  card.dataset.bias = d.bias;
+  card.dataset.vol  = d.bull ? "bull" : "bear";
+  card.dataset.prob = d.prob;
+
+  card.innerHTML = `
+    ${isFav
+      ? `<div class="close" onclick="removeFav('${d.sym}')">✖</div>`
+      : `<div class="star" onclick="addFav('${d.sym}')">⭐</div>`
+    }
     <b>${d.sym}</b>
     <div class="muted">Price: ${d.price.toFixed(4)}</div>
-    <div class="muted ${d.change>=0?"bull":"bear"}">24h Change: ${d.change.toFixed(2)}%</div>
-    <div class="muted ${d.bull?"bull":"bear"}">${d.bull?"Bullish":"Bearish"} Volume Control</div>
+    <div class="muted ${d.change>=0?"bull":"bear"}">
+      24h Change: ${d.change.toFixed(2)}%
+    </div>
+    <div class="muted ${d.bull?"bull":"bear"}">
+      ${d.bull?"Bullish":"Bearish"} Volume Control
+    </div>
     <div class="muted">Structure: ${d.structure}</div>
-    <div class="prob ${d.bias.includes("Bull")?"bull":d.bias.includes("Bear")?"bear":"neutral"}">
+    <div class="prob ${
+      d.bias.includes("Bull")?"bull":
+      d.bias.includes("Bear")?"bear":"neutral"
+    }">
       ${d.bias} — ${d.prob}%
     </div>
     ${d.S[0]?`<div class="muted bear">S1: ${d.S[0].toFixed(4)}</div>`:""}
@@ -368,7 +396,7 @@ function renderCard(d,el,isFav=false){
     ${d.R[0]?`<div class="muted bull">R1: ${d.R[0].toFixed(4)}</div>`:""}
     ${d.R[1]?`<div class="muted bull">R2: ${d.R[1].toFixed(4)}</div>`:""}
   `;
-  el.appendChild(card);
+
   applyFilters();
 }
 
@@ -389,37 +417,39 @@ function removeFav(sym){
 /* ================= SCAN ================= */
 async function runScan(){
   if(scanLock) return;
-  scanLock=true;
-  scanBtn.disabled=true;
+  scanLock = true;
+  scanBtn.disabled = true;
 
-  greenGrid.innerHTML=""; redGrid.innerHTML="";
-  progressFill.style.width="0%";
-
-  const t=await fetchJSON(`${API}/fapi/v1/ticker/24hr`);
-  const usdt=t.filter(x=>x.symbol.endsWith("USDT")&&!BLACKSET.has(x.symbol));
-
-  const g=[...usdt].sort((a,b)=>b.priceChangePercent-a.priceChangePercent).slice(0,30);
-  const r=[...usdt].sort((a,b)=>a.priceChangePercent-b.priceChangePercent).slice(0,30);
-  const all=[...g,...r];
-  let done=0;
-
-  for(const x of all){
-    const d=await analyze(x.symbol,+x.priceChangePercent);
-    renderCard(d,x.priceChangePercent>=0?greenGrid:redGrid);
-    done++;
-    progressFill.style.width=Math.round(done/all.length*100)+"%";
+  // ❗ reset ONLY on manual scan
+  if(!isAutoScan){
+    greenGrid.innerHTML = "";
+    redGrid.innerHTML = "";
+    progressFill.style.width = "0%";
   }
 
-  timestamp.innerText=new Date().toLocaleString();
-  nextScanAt=Date.now()+AUTO_INTERVAL;
+  const t = await fetchJSON(`${API}/fapi/v1/ticker/24hr`);
+  const usdt = t.filter(x=>x.symbol.endsWith("USDT") && !BLACKSET.has(x.symbol));
+
+  const g = [...usdt].sort((a,b)=>b.priceChangePercent-a.priceChangePercent).slice(0,30);
+  const r = [...usdt].sort((a,b)=>a.priceChangePercent-b.priceChangePercent).slice(0,30);
+  const all = [...g, ...r];
+
+  let done = 0;
+  for(const x of all){
+    const d = await analyze(x.symbol, +x.priceChangePercent);
+    renderCard(d, x.priceChangePercent>=0 ? greenGrid : redGrid);
+    done++;
+    progressFill.style.width = Math.round(done/all.length*100)+"%";
+    await sleep(120); // rate-limit safety
+  }
+
+  timestamp.innerText = new Date().toLocaleString();
+  nextScanAt = Date.now() + AUTO_INTERVAL;
   startCountdown();
 
-  setTimeout(()=>{
-    scanLock=false;
-    scanBtn.disabled=false;
-  },AUTO_INTERVAL);
-
-  scheduleNextAutoScan();
+  scanLock = false;
+  scanBtn.disabled = false;
+  isAutoScan = false;
 }
 
 /* ================= SEARCH ================= */
