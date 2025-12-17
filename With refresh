@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>15m Volume + Structure Probability Scanner</title>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+
+<style>
+body{
+  font-family:Inter,system-ui,Arial;
+  background:#0f1720;
+  color:#e6eef8;
+  margin:16px;
+}
+h1{font-size:18px;margin-bottom:6px}
+h2{font-size:16px;margin-top:14px}
+.muted{color:#9fb3cc;font-size:13px}
+button,input,select{
+  padding:7px 10px;
+  border-radius:6px;
+  border:1px solid #334155;
+  background:#0b1220;
+  color:#e6eef8;
+}
+button.primary{
+  background:#22c55e;
+  border:0;
+  color:#042e16;
+  font-weight:700;
+  cursor:pointer;
+}
+button.secondary{background:#334155;border:0}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(280px,1fr));
+  gap:12px;
+}
+.card{
+  background:#0b1220;
+  border:1px solid #172033;
+  border-radius:10px;
+  padding:12px;
+  position:relative;
+}
+.bull{color:#22c55e}
+.bear{color:#fb7185}
+.neutral{color:#facc15}
+.prob{font-weight:700}
+
+.star{
+  position:absolute;
+  top:8px; right:8px;
+  cursor:pointer;
+  font-size:16px;
+}
+.close{
+  position:absolute;
+  top:8px; left:8px;
+  cursor:pointer;
+  color:#fb7185;
+}
+
+.progress{
+  height:10px;
+  background:#172033;
+  border-radius:6px;
+  overflow:hidden;
+}
+.progress > div{
+  height:100%;
+  width:0%;
+  background:#22c55e;
+  transition:width .2s linear;
+}
+</style>
+</head>
+
+<body>
+
+<h1>📊 15m Volume → Structure Probability Scanner</h1>
+<div class="muted">Dominant volume + structure confirmation only</div>
+<div class="muted">
+  Last update: <span id="timestamp">—</span><br>
+  Next scan in: <span id="nextScan">—</span>
+</div>
+
+<div class="row">
+  <button class="primary" onclick="runScan()">Run Scan</button>
+  <input id="symbolSearch" placeholder="BTCUSDT"/>
+  <button class="secondary" onclick="runSearch()">Analyze</button>
+</div>
+
+<div class="row">
+  <select id="filterBias">
+    <option value="all">All Bias</option>
+    <option>Bullish Continuation</option>
+    <option>Bullish Defense</option>
+    <option>Bearish Continuation</option>
+    <option>Bearish Defense</option>
+  </select>
+
+  <select id="filterVol">
+    <option value="all">All Volume</option>
+    <option value="bull">Bull Volume</option>
+    <option value="bear">Bear Volume</option>
+  </select>
+
+  <select id="filterProb">
+    <option value="0">Any Prob</option>
+    <option value="60">≥ 60%</option>
+    <option value="70">≥ 70%</option>
+    <option value="80">≥ 80%</option>
+  </select>
+</div>
+
+<div class="progress"><div id="progressFill"></div></div>
+
+<h2>⭐ Favorites</h2>
+<div class="grid" id="favGrid"></div>
+
+<h2>🔍 Manual</h2>
+<div class="grid" id="searchGrid"></div>
+
+<h2>🟢 Top Gainers</h2>
+<div class="grid" id="greenGrid"></div>
+
+<h2>🔴 Top Losers</h2>
+<div class="grid" id="redGrid"></div>
+
+<script>
+/* ================= CONFIG ================= */
+const API = "https://fapi.binance.com";
+const DELAY = 250;
+const AUTO_INTERVAL = 60 * 1000; // 1 minute
+
+const BLACKSET = new Set([
+  "ALPACAUSDT","BNXUSDT","ALPHAUSDT","OCEANUSDT","DGBUSDT","AGIXUSDT",
+  "LINAUSDT","LOKAUSDT","KEYUSDT","MDTUSDT","LOOMUSDT","RENUSDT",
+  "OMNIUSDT","SLERFUSDT","STMXUSDT","UXLINKUSDT","BSWUSDT",
+  "NEIROETHUSDT","VIDTUSDT","TROYUSDT","BAKEUSDT","MEMEFIUSDT",
+  "NULSUSDT","HIFIUSDT","LEVERUSDT","XEMUSDT","STRAXUSDT",
+  "COMBOUSDT","AI16ZUSDT","MILKUSDT","TOKENUSDT","SXPUSDT",
+  "MYROUSDT","1000XUSDT","DARUSDT","PORT3USDT","SKATEUSDT",
+  "AIAUSDT","AMBUSDT","FLMUSDT","PERPUSDT","OBOLUSDT","SWELLUSDT","FTMUSDT"
+]);
+
+const favSet = new Set();
+let nextScanAt = null;
+let countdownTimer = null;
+
+const sleep = ms => new Promise(r=>setTimeout(r,ms));
+const fetchJSON = async u => (await fetch(u)).json();
+
+/* ================= COUNTDOWN ================= */
+function startCountdown(){
+  clearInterval(countdownTimer);
+  countdownTimer = setInterval(()=>{
+    if(!nextScanAt) return;
+    const diff = nextScanAt - Date.now();
+    if(diff <= 0){
+      document.getElementById("nextScan").innerText = "Now";
+      return;
+    }
+    const m = Math.floor(diff / 60000);
+    const s = Math.floor((diff % 60000) / 1000);
+    document.getElementById("nextScan").innerText =
+      `${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
+  },1000);
+}
+
+/* ================= STRUCTURE ================= */
+function findSwings(h,l,c,v){
+  const S=[],R=[];
+  const avg=v.slice(-40).reduce((a,b)=>a+b,0)/40;
+  for(let i=2;i<h.length-2;i++){
+    if(l[i]<l[i-1]&&l[i]<l[i+1]&&v[i]>=avg) S.push(l[i]);
+    if(h[i]>h[i-1]&&h[i]>h[i+1]&&v[i]>=avg) R.push(h[i]);
+  }
+  return {S:S.slice(-2).reverse(),R:R.slice(-2).reverse()};
+}
+
+/* ================= ANALYZE ================= */
+async function analyze(sym,change){
+  const k = await fetchJSON(`${API}/fapi/v1/klines?symbol=${sym}&interval=15m&limit=240`);
+  await sleep(DELAY);
+
+  const c=k.map(x=>+x[4]);
+  const h=k.map(x=>+x[2]);
+  const l=k.map(x=>+x[3]);
+  const v=k.map(x=>+x[5]);
+  const price=c.at(-1);
+
+  let domV=0, bull=true;
+  for(let i=k.length-96;i<k.length;i++){
+    if(v[i]>domV){domV=v[i];bull=k[i][4]>k[i][1];}
+  }
+
+  const sw=findSwings(h,l,c,v);
+  const sb=sw.S.some(x=>price<x);
+  const rb=sw.R.some(x=>price>x);
+
+  let bias="Neutral",prob=50,structure="none";
+  if(bull){
+    if(rb){bias="Bullish Continuation";prob=85;structure="resistance broken";}
+    else if(sw.S.length){bias="Bullish Defense";prob=70;structure="support holding";}
+    else{bias="Bull Trap Risk";prob=40;}
+  }else{
+    if(sb){bias="Bearish Continuation";prob=85;structure="support broken";}
+    else if(sw.R.length){bias="Bearish Defense";prob=70;structure="resistance failed";}
+    else{bias="Bear Trap Risk";prob=40;}
+  }
+
+  return {sym,price,change,bull,prob,bias,structure,S:sw.S,R:sw.R};
+}
+
+/* ================= RENDER ================= */
+function renderCard(d,el,isFav=false){
+  const card=document.createElement("div");
+  card.className="card";
+
+  card.innerHTML = `
+    ${isFav
+      ? `<div class="close" onclick="removeFav('${d.sym}')">✖</div>`
+      : `<div class="star" onclick="addFav('${d.sym}')">⭐</div>`
+    }
+    <b>${d.sym}</b>
+    <div class="muted">Price: ${d.price.toFixed(4)}</div>
+    <div class="muted ${d.change>=0?"bull":"bear"}">
+      24h Change: ${d.change.toFixed(2)}%
+    </div>
+    <div class="muted ${d.bull?"bull":"bear"}">
+      ${d.bull?"Bullish":"Bearish"} Volume Control
+    </div>
+    <div class="muted">Structure: ${d.structure}</div>
+    <div class="prob ${d.bias.includes("Bull")?"bull":d.bias.includes("Bear")?"bear":"neutral"}">
+      ${d.bias} — ${d.prob}%
+    </div>
+    ${d.S[0]?`<div class="muted bear">S1: ${d.S[0].toFixed(4)}</div>`:""}
+    ${d.S[1]?`<div class="muted bear">S2: ${d.S[1].toFixed(4)}</div>`:""}
+    ${d.R[0]?`<div class="muted bull">R1: ${d.R[0].toFixed(4)}</div>`:""}
+    ${d.R[1]?`<div class="muted bull">R2: ${d.R[1].toFixed(4)}</div>`:""}
+  `;
+  el.appendChild(card);
+}
+
+/* ================= FAVORITES ================= */
+async function addFav(sym){
+  if(BLACKSET.has(sym)) return;
+  favSet.add(sym);
+  const t=await fetchJSON(`${API}/fapi/v1/ticker/24hr?symbol=${sym}`);
+  const d=await analyze(sym,+t.priceChangePercent);
+  renderCard(d,document.getElementById("favGrid"),true);
+}
+function removeFav(sym){
+  favSet.delete(sym);
+  document.getElementById("favGrid").innerHTML="";
+  favSet.forEach(addFav);
+}
+
+/* ================= SCAN ================= */
+async function runScan(){
+  greenGrid.innerHTML=""; redGrid.innerHTML="";
+  const bar=document.getElementById("progressFill");
+  bar.style.width="0%";
+
+  const t=await fetchJSON(`${API}/fapi/v1/ticker/24hr`);
+  const usdt=t.filter(x=>x.symbol.endsWith("USDT") && !BLACKSET.has(x.symbol));
+
+  const g=[...usdt].sort((a,b)=>b.priceChangePercent-a.priceChangePercent).slice(0,30);
+  const r=[...usdt].sort((a,b)=>a.priceChangePercent-b.priceChangePercent).slice(0,30);
+  const total=g.length+r.length;
+  let done=0;
+
+  for(const x of [...g,...r]){
+    const d=await analyze(x.symbol,+x.priceChangePercent);
+    renderCard(d,x.priceChangePercent>=0?greenGrid:redGrid);
+    done++;
+    bar.style.width=Math.round(done/total*100)+"%";
+  }
+
+  document.getElementById("timestamp").innerText=new Date().toLocaleString();
+  nextScanAt = Date.now() + AUTO_INTERVAL;
+  startCountdown();
+}
+
+/* ================= SEARCH ================= */
+async function runSearch(){
+  const s=document.getElementById("symbolSearch").value.toUpperCase();
+  if(!s) return;
+
+  const sym=s.endsWith("USDT")?s:s+"USDT";
+  if(BLACKSET.has(sym)) return;
+
+  searchGrid.innerHTML="";
+  const t=await fetchJSON(`${API}/fapi/v1/ticker/24hr?symbol=${sym}`);
+  const d=await analyze(sym,+t.priceChangePercent);
+  renderCard(d,searchGrid);
+  document.getElementById("timestamp").innerText=new Date().toLocaleString();
+}
+</script>
+</body>
+</html>
