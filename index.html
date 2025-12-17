@@ -360,7 +360,8 @@ filterBias.onchange=filterVol.onchange=filterProb.onchange=applyFilters;
 
 /* ================= RENDER ================= */
 function renderCard(d, el, isFav=false){
-  const id = `card-${d.sym}`;
+  const scope = el.id || "global";
+const id = `card-${scope}-${d.sym}`;
   let card = document.getElementById(id);
 
   // create only once
