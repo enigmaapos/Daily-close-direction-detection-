@@ -309,6 +309,50 @@ function findSwings(h, l, c, v){
   };
 }
 
+  function scoreStructure(levels, price, closes, volumes){
+  let score = 0;
+  const TOL = 0.003;
+
+  const recentCloses = closes.slice(-30);
+  const avgVol =
+    volumes.slice(-30).reduce((a,b)=>a+b,0) / 30;
+
+  for(const lvl of levels){
+    let touches = 0;
+    let defended = 0;
+
+    for(let i=0;i<recentCloses.length;i++){
+      const dist = Math.abs(recentCloses[i] - lvl) / lvl;
+
+      if(dist < TOL){
+        touches++;
+        if(
+          (recentCloses[i] > lvl && price > lvl) ||
+          (recentCloses[i] < lvl && price < lvl)
+        ){
+          defended++;
+        }
+      }
+    }
+
+    if(touches >= 2) score++;
+    if(defended >= 2) score++;
+    if(defended >= 3) score++;
+
+    if(volumes.at(-1) > avgVol * 1.1) score++;
+  }
+
+  return score;
+  }
+
+  function structureLabel(score, type){
+  if(score >= 4) return `strong ${type}`;
+  if(score >= 2) return `moderate ${type}`;
+  if(score >= 1) return `weak ${type}`;
+  return `unconfirmed ${type}`;
+  }
+  
+
 /* ================= ANALYZE ================= */
 async function analyze(sym,change){
   const k=await fetchJSON(`${API}/fapi/v1/klines?symbol=${sym}&interval=15m&limit=240`);
@@ -322,6 +366,7 @@ async function analyze(sym,change){
     if(v[i]>domV){domV=v[i];bull=k[i][4]>k[i][1];}
   }
 
+    /* === Structure Levels === */
   const swings = findSwings(h,l,c,v);
 const sw = {
   S: swings.supports || [],
@@ -330,6 +375,11 @@ const sw = {
   const sb=sw.S.some(x=>price<x);
   const rb=sw.R.some(x=>price>x);
 
+    /* === Structure Scores === */
+  const supportStrength = structureLabel(supportScore, "support");
+  const resistanceStrength = structureLabel(resistanceScore, "resistance");
+
+    /* === Structure Action === */
   let bias="Neutral",prob=50,structure="none";
   if(bull){
     if(rb){bias="Bullish Continuation";prob=85;structure="resistance broken";}
@@ -341,8 +391,44 @@ const sw = {
     else{bias="Bear Trap Risk";prob=40;}
   }
 
-  return {sym,price,change,bull,prob,bias,structure,S:sw.S,R:sw.R};
+  /* === Bias & Probability === */
+  let bias = "Neutral";
+  let prob = 50;
+
+  if(bull){
+    if(resistanceBroken){
+      bias = "Bullish Continuation";
+      prob = 70 + Math.min(resistanceScore * 3, 15);
+    }
+    else if(supportScore > 0){
+      bias = "Bullish Defense";
+      prob = 60 + Math.min(supportScore * 3, 15);
+    }
+    else{
+      bias = "Bull Trap Risk";
+      prob = 40;
+    }
+  }
+  else{
+    if(supportBroken){
+      bias = "Bearish Continuation";
+      prob = 70 + Math.min(supportScore * 3, 15);
+    }
+    else if(resistanceScore > 0){
+      bias = "Bearish Defense";
+      prob = 60 + Math.min(resistanceScore * 3, 15);
+    }
+    else{
+      bias = "Bear Trap Risk";
+      prob = 40;
+    }
+  }
+
+  return {sym,price,change,bull,prob,bias,structure,S:sw.S,R:sw.R,
+          supportStrength,resistanceStrength,};
 }
+
+   
 
 /* ================= FILTERS ================= */
 function applyFilters(){
@@ -387,16 +473,34 @@ const id = `card-${scope}-${d.sym}`;
     <div class="muted ${d.change>=0?"bull":"bear"}">
       24h Change: ${d.change.toFixed(2)}%
     </div>
+    
     <div class="muted ${d.bull?"bull":"bear"}">
       ${d.bull?"Bullish":"Bearish"} Volume Control
     </div>
+
+      <!-- STRUCTURE ACTION -->
     <div class="muted">Structure: ${d.structure}</div>
+    
+      <!-- BIAS & PROBABILITY -->
     <div class="prob ${
       d.bias.includes("Bull")?"bull":
       d.bias.includes("Bear")?"bear":"neutral"
     }">
       ${d.bias} — ${d.prob}%
     </div>
+    
+       <!-- STRUCTURE STRENGTH -->
+    ${d.supportStrength
+      ? `<div class="muted bear">Support: ${d.supportStrength}</div>`
+      : ""
+    }
+
+    ${d.resistanceStrength
+      ? `<div class="muted bull">Resistance: ${d.resistanceStrength}</div>`
+      : ""
+    }
+
+      <!-- LEVELS -->
     ${d.S[0]?`<div class="muted bear">S1: ${d.S[0].toFixed(4)}</div>`:""}
     ${d.S[1]?`<div class="muted bear">S2: ${d.S[1].toFixed(4)}</div>`:""}
     ${d.R[0]?`<div class="muted bull">R1: ${d.R[0].toFixed(4)}</div>`:""}
