@@ -553,7 +553,6 @@ async function analyze(sym, bear, dd, dChange){
 
 
 
-        
 /* ================= RENDER ================= */
 function renderCard(d, el, force=false){
 
@@ -579,18 +578,18 @@ function renderCard(d, el, force=false){
     el.appendChild(card);
   }
 
-  /* === LEVEL STATE === */
+  /* === LEVEL STATE (STRUCTURE BREAK DETECTION) === */
   let levelState = "valid";
   const BREAK_TOL = -0.2;
 
-  if(d.levelType === "Support Test" && d.supportDistances?.some(x=>x < BREAK_TOL)){
+  if(d.levelType === "Support Test" && d.supportDistances?.some(x => x < BREAK_TOL)){
     levelState = "broken";
   }
-  if(d.levelType === "Resistance Test" && d.resistanceDistances?.some(x=>x < BREAK_TOL)){
+  if(d.levelType === "Resistance Test" && d.resistanceDistances?.some(x => x < BREAK_TOL)){
     levelState = "broken";
   }
 
-  /* === DATA ATTRIBUTES (FILTERING) === */
+  /* === DATA ATTRIBUTES (FILTERS) === */
   card.dataset.levelState = levelState;
   card.dataset.bias = d.bias;
   card.dataset.structure = d.levelStrength;
@@ -612,29 +611,31 @@ function renderCard(d, el, force=false){
     d.levelType === "Support Test" ? "bear" :
     d.levelType === "Resistance Test" ? "bull" : "neutral";
 
-  /* === DAILY CLOSE EXPECTATION === */
+  /* === DAILY CLOSE BIAS (STRUCTURE OVERRIDES EVERYTHING) === */
   let dailyCloseBias = "Unclear";
   let dailyCloseColor = "neutral";
 
-  if(d.overallDominant.includes("Bull")){
-    if(d.levelType === "Resistance Test" && d.levelStrength === "Weak Resistance"){
-      dailyCloseBias = "Bullish Daily Close (Resistance Breakout)";
-      dailyCloseColor = "bull";
-    }
-    if(d.levelType === "Support Test" && levelState === "broken"){
-      dailyCloseBias = "Bearish Daily Close (Support Failed)";
-      dailyCloseColor = "bear";
-    }
+  // HARD structure rules
+  if(d.levelType === "Support Test" && levelState === "broken"){
+    dailyCloseBias = "Bearish Daily Close (Support Broken)";
+    dailyCloseColor = "bear";
+  }
+  else if(d.levelType === "Resistance Test" && levelState === "broken"){
+    dailyCloseBias = "Bullish Daily Close (Resistance Broken)";
+    dailyCloseColor = "bull";
   }
 
-  if(d.overallDominant.includes("Bear")){
-    if(d.levelType === "Support Test" && d.levelStrength === "Weak Support"){
-      dailyCloseBias = "Bearish Daily Close (Support Breakdown)";
-      dailyCloseColor = "bear";
-    }
-    if(d.levelType === "Resistance Test" && levelState === "broken"){
-      dailyCloseBias = "Bullish Daily Close (Resistance Reclaimed)";
+  // Dominance context (only if structure NOT broken)
+  else if(d.overallDominant.includes("Bull")){
+    if(d.levelType === "Resistance Test" && d.levelStrength === "Weak Resistance"){
+      dailyCloseBias = "Bullish Daily Close (Weak Resistance)";
       dailyCloseColor = "bull";
+    }
+  }
+  else if(d.overallDominant.includes("Bear")){
+    if(d.levelType === "Support Test" && d.levelStrength === "Weak Support"){
+      dailyCloseBias = "Bearish Daily Close (Weak Support)";
+      dailyCloseColor = "bear";
     }
   }
 
@@ -665,7 +666,7 @@ function renderCard(d, el, force=false){
           ? `🟥 Bear dominant → green volume = pullback unless structure reclaimed`
           : d.overallDominant.includes("Bull")
           ? `🟩 Bull dominant → red volume = pullback unless structure lost`
-          : `🟨 Neutral → wait for structure confirmation`
+          : `🟨 Neutral → structure decides direction`
       }
     </div>
 
@@ -687,7 +688,7 @@ function renderCard(d, el, force=false){
       📅 <b>Daily Close Bias:</b> ${dailyCloseBias}
     </div>
 
-    <!-- SUPPORT (always shown if exists) -->
+    <!-- SUPPORT (always shown) -->
     ${d.supportLevels?.length ? `
       <div class="muted bear" style="margin-top:6px">
         🔴 <b>Support</b>
@@ -700,7 +701,7 @@ function renderCard(d, el, force=false){
       </div>
     ` : ``}
 
-    <!-- RESISTANCE (always shown if exists) -->
+    <!-- RESISTANCE (always shown) -->
     ${d.resistanceLevels?.length ? `
       <div class="muted bull" style="margin-top:6px">
         🟢 <b>Resistance</b>
@@ -718,7 +719,7 @@ function renderCard(d, el, force=false){
     </div>
   `;
 }
-    
+
   
   
 
