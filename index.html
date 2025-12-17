@@ -519,16 +519,16 @@ function renderCard(d, el, force=false){
   /* === LEVEL STATE DETECTION === */
 let levelState = "valid";
 
-// Support broken = price already BELOW support
-if(d.levelType === "Support Test" && d.supportDistances){
-  if(d.supportDistances.some(x => x < 0)){
+const BREAK_TOL = -0.2; // 🔒 0.2% tolerance
+
+if(d.levelType === "Support Test" && d.supportDistances?.length){
+  if(d.supportDistances.some(x => x < BREAK_TOL)){
     levelState = "broken";
   }
 }
 
-// Resistance broken = price already ABOVE resistance
-if(d.levelType === "Resistance Test" && d.resistanceDistances){
-  if(d.resistanceDistances.some(x => x < 0)){
+if(d.levelType === "Resistance Test" && d.resistanceDistances?.length){
+  if(d.resistanceDistances.some(x => x < BREAK_TOL)){
     levelState = "broken";
   }
 }
@@ -717,9 +717,14 @@ applyFilters();
   const fBias = document.getElementById("filterBias").value;
   const fChange = document.getElementById("filterChange").value;
   const fProb = Number(document.getElementById("filterProb").value);
-  const levelState = document.getElementById("filterLevelState")?.value || "all";
+  const levelState = document.getElementById("filterLevelState").value;
 
-  document.querySelectorAll(".card").forEach(card=>{
+  // ✅ ONLY filter cards inside result grids
+  const cards = document.querySelectorAll(
+    "#greenGrid .card, #redGrid .card, #searchGrid .card"
+  );
+
+  cards.forEach(card=>{
     let show = true;
 
     if(fStructure !== "all" && card.dataset.structure !== fStructure) show = false;
@@ -727,11 +732,10 @@ applyFilters();
     if(fChange !== "all" && card.dataset.change !== fChange) show = false;
     if(Number(card.dataset.prob) < fProb) show = false;
     if(levelState !== "all" && card.dataset.levelState !== levelState) show = false;
-       
 
     card.style.display = show ? "" : "none";
   });
-  }
+}
 
   function resetFilters(){
   document.getElementById("filterStructure").value = "all";
