@@ -91,6 +91,29 @@ button.secondary{background:#334155;border:0}
   <button class="secondary" onclick="runSearch()">Analyze</button>
 </div>
 
+<div class="row">
+  <select id="filterBias">
+    <option value="all">All Bias</option>
+    <option>Bullish Continuation</option>
+    <option>Bullish Defense</option>
+    <option>Bearish Continuation</option>
+    <option>Bearish Defense</option>
+  </select>
+
+  <select id="filterVol">
+    <option value="all">All Volume</option>
+    <option value="bull">Bull Volume</option>
+    <option value="bear">Bear Volume</option>
+  </select>
+
+  <select id="filterProb">
+    <option value="0">Any Prob</option>
+    <option value="60">≥ 60%</option>
+    <option value="70">≥ 70%</option>
+    <option value="80">≥ 80%</option>
+  </select>
+</div>
+
 <div class="progress"><div id="progressFill"></div></div>
 
 <h2>⭐ Favorites</h2>
@@ -126,7 +149,6 @@ const favSet = new Set();
 let nextScanAt = null;
 let countdownTimer = null;
 
-/* ================= HELPERS ================= */
 const sleep = ms => new Promise(r=>setTimeout(r,ms));
 const fetchJSON = async u => (await fetch(u)).json();
 
@@ -160,7 +182,7 @@ function findSwings(h,l,c,v){
 
 /* ================= ANALYZE ================= */
 async function analyze(sym,change){
-  const k=await fetchJSON(`${API}/fapi/v1/klines?symbol=${sym}&interval=15m&limit=240`);
+  const k = await fetchJSON(`${API}/fapi/v1/klines?symbol=${sym}&interval=15m&limit=240`);
   await sleep(DELAY);
 
   const c=k.map(x=>+x[4]);
@@ -197,9 +219,11 @@ function renderCard(d,el,isFav=false){
   const card=document.createElement("div");
   card.className="card";
 
-  card.innerHTML=`
-    ${isFav?`<div class="close" onclick="removeFav('${d.sym}')">✖</div>`:
-      `<div class="star" onclick="addFav('${d.sym}')">⭐</div>`}
+  card.innerHTML = `
+    ${isFav
+      ? `<div class="close" onclick="removeFav('${d.sym}')">✖</div>`
+      : `<div class="star" onclick="addFav('${d.sym}')">⭐</div>`
+    }
     <b>${d.sym}</b>
     <div class="muted">Price: ${d.price.toFixed(4)}</div>
     <div class="muted ${d.change>=0?"bull":"bear"}">
@@ -241,7 +265,7 @@ async function runScan(){
   bar.style.width="0%";
 
   const t=await fetchJSON(`${API}/fapi/v1/ticker/24hr`);
-  const usdt=t.filter(x=>x.symbol.endsWith("USDT")&&!BLACKSET.has(x.symbol));
+  const usdt=t.filter(x=>x.symbol.endsWith("USDT") && !BLACKSET.has(x.symbol));
 
   const g=[...usdt].sort((a,b)=>b.priceChangePercent-a.priceChangePercent).slice(0,30);
   const r=[...usdt].sort((a,b)=>a.priceChangePercent-b.priceChangePercent).slice(0,30);
