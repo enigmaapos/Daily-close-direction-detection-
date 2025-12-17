@@ -431,6 +431,20 @@ async function analyze(sym, bear, dd, dChange){
     }
   }
 
+  /* === ZONE INTERPRETATION (VOLUME-BASED) === */
+let supportZoneLabel = "Support";
+let resistanceZoneLabel = "Resistance";
+
+if(!d.dominantBull){
+  // 🔴 Dominant RED volume
+  supportZoneLabel = "Buy Zone (if hold)";
+  resistanceZoneLabel = "Breakout / Take-Profit Zone";
+}else{
+  // 🟢 Dominant GREEN volume
+  resistanceZoneLabel = "Sell Zone (if fail)";
+  supportZoneLabel = "Breakdown / Take-Profit Zone";
+}
+
   /* === Indicators === */
   const avgV = v.slice(-40).reduce((a,b)=>a+b,0)/40;
   const e50  = ema(c.slice(-60),50);
@@ -670,6 +684,8 @@ function renderCard(d, el, force=false){
     <div class="muted ${activeLevelColor}" style="margin-top:4px">
       🎯 <b>Current Structure Test:</b> ${d.levelType}
     </div>
+    🔴 <b>${supportZoneLabel}</b>
+    🟢 <b>${resistanceZoneLabel}</b>
 
     <div class="prob ${biasColor}">
       ${d.bias} — ${d.prob}% <span class="muted">(Structure Bias)</span>
