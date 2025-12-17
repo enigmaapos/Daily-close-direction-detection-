@@ -397,6 +397,7 @@ async function runScan(){
   scanBtn.disabled=true;
 
   if(!isAutoScan){
+    console.log("🔄 Auto Scan Running");
     greenGrid.innerHTML="";
     redGrid.innerHTML="";
     progressFill.style.width="0%";
@@ -421,12 +422,11 @@ async function runScan(){
   nextScanAt=Date.now()+AUTO_INTERVAL;
   startCountdown();
 
-  setTimeout(()=>{
-    scanLock=false;
-    scanBtn.disabled=false;
-  },AUTO_INTERVAL);
+  scanLock = false;
+scanBtn.disabled = false;
 
   scheduleNextAutoScan();
+  isAutoScan = false;
 }
 
 /* ================= SEARCH ================= */
@@ -442,6 +442,12 @@ async function runSearch(){
   renderCard(d,searchGrid);
   timestamp.innerText=new Date().toLocaleString();
 }
+
+  window.onload = () => {
+  nextScanAt = Date.now() + AUTO_INTERVAL;
+  startCountdown();
+  scheduleNextAutoScan();
+};
 </script>
 </body>
 </html>
