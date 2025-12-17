@@ -640,12 +640,7 @@ card.dataset.dailyClose = dailyCloseState;
 /* === DAILY CLOSE BIAS (STRUCTURE FIRST, ALWAYS) === */
 let dailyCloseBias = "Unclear";
 let dailyCloseColor = "neutral";
-
-  // normalize daily close state for filtering
 let dailyCloseState = "unclear";
-if(dailyCloseBias.includes("Bullish")) dailyCloseState = "bullish";
-if(dailyCloseBias.includes("Bearish")) dailyCloseState = "bearish";
-
 
 const supportBroken =
   d.supportDistances?.length >= 2 &&
@@ -657,27 +652,31 @@ const resistanceBroken =
   d.resistanceDistances[0] < BREAK_TOL &&
   d.resistanceDistances[1] < BREAK_TOL;
 
-// 1️⃣ HARD STRUCTURE OVERRIDE
+// 1️⃣ HARD STRUCTURE OVERRIDE (absolute truth)
 if(supportBroken){
   dailyCloseBias = "Bearish Daily Close (Support Broken)";
   dailyCloseColor = "bear";
+  dailyCloseState = "bearish";
 }
 else if(resistanceBroken){
   dailyCloseBias = "Bullish Daily Close (Resistance Broken)";
   dailyCloseColor = "bull";
+  dailyCloseState = "bullish";
 }
 
-// 2️⃣ DOMINANCE CONTEXT (only if no hard break)
+// 2️⃣ DOMINANCE CONTEXT (only if NO hard break)
 else if(d.overallDominant.includes("Bull")){
   if(d.levelType === "Resistance Test" && d.levelStrength === "Weak Resistance"){
     dailyCloseBias = "Bullish Daily Close (Weak Resistance)";
     dailyCloseColor = "bull";
+    dailyCloseState = "bullish";
   }
 }
 else if(d.overallDominant.includes("Bear")){
   if(d.levelType === "Support Test" && d.levelStrength === "Weak Support"){
     dailyCloseBias = "Bearish Daily Close (Weak Support)";
     dailyCloseColor = "bear";
+    dailyCloseState = "bearish";
   }
 }
 
