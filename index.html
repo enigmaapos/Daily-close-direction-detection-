@@ -137,6 +137,10 @@ button.secondary{
   </select>
   </div>
 
+  <div class="row" style="margin-top:6px">
+  <button class="secondary" onclick="resetFilters()">Reset Filters</button>
+  </div>
+
   <h2>🔍 Manual Analysis</h2>
 
 <div class="muted" style="margin-bottom:6px">
@@ -727,6 +731,16 @@ applyFilters();
 
     card.style.display = show ? "" : "none";
   });
+  }
+
+  function resetFilters(){
+  document.getElementById("filterStructure").value = "all";
+  document.getElementById("filterBias").value = "all";
+  document.getElementById("filterChange").value = "all";
+  document.getElementById("filterProb").value = "0";
+  document.getElementById("filterLevelState").value = "all";
+
+  applyFilters(); // 🔁 re-apply to show everything
   }
   
 </script>
