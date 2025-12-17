@@ -194,6 +194,7 @@ const favSet=new Set();
 let nextScanAt=null;
 let countdownTimer=null;
 let scanLock=false;
+let autoEnabled=true;
 
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const fetchJSON=async u=>(await fetch(u)).json();
@@ -212,6 +213,14 @@ function startCountdown(){
     const s=Math.floor((d%60000)/1000);
     nextScan.innerText=`${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
   },1000);
+}
+
+/* ================= AUTO REFRESH ================= */
+function scheduleNextAutoScan(){
+  if(!autoEnabled) return;
+  setTimeout(()=>{
+    if(!scanLock) runScan();
+  },AUTO_INTERVAL);
 }
 
 /* ================= STRUCTURE ================= */
@@ -261,7 +270,6 @@ function applyFilters(){
   const b=filterBias.value;
   const v=filterVol.value;
   const p=+filterProb.value;
-
   document.querySelectorAll(".card").forEach(c=>{
     let ok=true;
     if(b!=="all"&&c.dataset.bias!==b) ok=false;
@@ -346,6 +354,8 @@ async function runScan(){
     scanLock=false;
     scanBtn.disabled=false;
   },AUTO_INTERVAL);
+
+  scheduleNextAutoScan();
 }
 
 /* ================= SEARCH ================= */
