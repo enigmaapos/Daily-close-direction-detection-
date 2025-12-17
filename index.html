@@ -638,6 +638,10 @@ card.dataset.change = d.change >= 0 ? "green" : "red";
       "Watch for this level to flip into STRONG RESISTANCE.";
   }
 
+  const volumeDominanceLabel = d.dominantBull
+  ? "Bullish Volume Control"
+  : "Bearish Volume Control";
+
   card.innerHTML = `
     <b>${d.sym}</b>
 
@@ -655,8 +659,13 @@ card.dataset.change = d.change >= 0 ? "green" : "red";
     </div>
 
     <div class="muted ${d.dominantBull ? "bull" : "bear"}">
-      Dominant 24h Volume: ${Number(d.dominantVol).toLocaleString()}
-    </div>
+  📊 Dominant 24h Volume:
+  <b>${Number(d.dominantVol).toLocaleString()}</b>
+  <br>
+  <span class="${d.dominantBull ? "bull" : "bear"}">
+    ${volumeDominanceLabel}
+  </span>
+</div>
 
     <div class="muted ${levelColor}">
       🧱 ${d.levelType}: <b>${d.levelStrength}</b>
