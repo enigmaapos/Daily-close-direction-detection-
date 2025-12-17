@@ -80,35 +80,15 @@ button.secondary{background:#334155;border:0}
 
 <h1>📊 15m Volume → Structure Probability Scanner</h1>
 <div class="muted">Dominant volume + structure confirmation only</div>
-<div class="muted">Last update: <span id="timestamp">—</span></div>
+<div class="muted">
+  Last update: <span id="timestamp">—</span><br>
+  Next scan in: <span id="nextScan">—</span>
+</div>
 
 <div class="row">
   <button class="primary" onclick="runScan()">Run Scan</button>
   <input id="symbolSearch" placeholder="BTCUSDT"/>
   <button class="secondary" onclick="runSearch()">Analyze</button>
-</div>
-
-<div class="row">
-  <select id="filterBias">
-    <option value="all">All Bias</option>
-    <option>Bullish Continuation</option>
-    <option>Bullish Defense</option>
-    <option>Bearish Continuation</option>
-    <option>Bearish Defense</option>
-  </select>
-
-  <select id="filterVol">
-    <option value="all">All Volume</option>
-    <option value="bull">Bull Volume</option>
-    <option value="bear">Bear Volume</option>
-  </select>
-
-  <select id="filterProb">
-    <option value="0">Any Prob</option>
-    <option value="60">≥ 60%</option>
-    <option value="70">≥ 70%</option>
-    <option value="80">≥ 80%</option>
-  </select>
 </div>
 
 <div class="progress"><div id="progressFill"></div></div>
@@ -126,15 +106,48 @@ button.secondary{background:#334155;border:0}
 <div class="grid" id="redGrid"></div>
 
 <script>
-const API="https://fapi.binance.com";
-const DELAY=250;
+/* ================= CONFIG ================= */
+const API = "https://fapi.binance.com";
+const DELAY = 250;
+const AUTO_INTERVAL = 60 * 1000; // 1 minute
 
-const favSet=new Set();
+const BLACKSET = new Set([
+  "ALPACAUSDT","BNXUSDT","ALPHAUSDT","OCEANUSDT","DGBUSDT","AGIXUSDT",
+  "LINAUSDT","LOKAUSDT","KEYUSDT","MDTUSDT","LOOMUSDT","RENUSDT",
+  "OMNIUSDT","SLERFUSDT","STMXUSDT","UXLINKUSDT","BSWUSDT",
+  "NEIROETHUSDT","VIDTUSDT","TROYUSDT","BAKEUSDT","MEMEFIUSDT",
+  "NULSUSDT","HIFIUSDT","LEVERUSDT","XEMUSDT","STRAXUSDT",
+  "COMBOUSDT","AI16ZUSDT","MILKUSDT","TOKENUSDT","SXPUSDT",
+  "MYROUSDT","1000XUSDT","DARUSDT","PORT3USDT","SKATEUSDT",
+  "AIAUSDT","AMBUSDT","FLMUSDT","PERPUSDT","OBOLUSDT","SWELLUSDT","FTMUSDT"
+]);
 
-const sleep=ms=>new Promise(r=>setTimeout(r,ms));
-const fetchJSON=async u=>(await fetch(u)).json();
+const favSet = new Set();
+let nextScanAt = null;
+let countdownTimer = null;
 
-/* ===== STRUCTURE ===== */
+/* ================= HELPERS ================= */
+const sleep = ms => new Promise(r=>setTimeout(r,ms));
+const fetchJSON = async u => (await fetch(u)).json();
+
+/* ================= COUNTDOWN ================= */
+function startCountdown(){
+  clearInterval(countdownTimer);
+  countdownTimer = setInterval(()=>{
+    if(!nextScanAt) return;
+    const diff = nextScanAt - Date.now();
+    if(diff <= 0){
+      document.getElementById("nextScan").innerText = "Now";
+      return;
+    }
+    const m = Math.floor(diff / 60000);
+    const s = Math.floor((diff % 60000) / 1000);
+    document.getElementById("nextScan").innerText =
+      `${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
+  },1000);
+}
+
+/* ================= STRUCTURE ================= */
 function findSwings(h,l,c,v){
   const S=[],R=[];
   const avg=v.slice(-40).reduce((a,b)=>a+b,0)/40;
@@ -145,7 +158,7 @@ function findSwings(h,l,c,v){
   return {S:S.slice(-2).reverse(),R:R.slice(-2).reverse()};
 }
 
-/* ===== ANALYZE ===== */
+/* ================= ANALYZE ================= */
 async function analyze(sym,change){
   const k=await fetchJSON(`${API}/fapi/v1/klines?symbol=${sym}&interval=15m&limit=240`);
   await sleep(DELAY);
@@ -179,13 +192,10 @@ async function analyze(sym,change){
   return {sym,price,change,bull,prob,bias,structure,S:sw.S,R:sw.R};
 }
 
-/* ===== RENDER ===== */
+/* ================= RENDER ================= */
 function renderCard(d,el,isFav=false){
   const card=document.createElement("div");
   card.className="card";
-  card.dataset.bias=d.bias;
-  card.dataset.prob=d.prob;
-  card.dataset.vol=d.bull?"bull":"bear";
 
   card.innerHTML=`
     ${isFav?`<div class="close" onclick="removeFav('${d.sym}')">✖</div>`:
@@ -210,8 +220,9 @@ function renderCard(d,el,isFav=false){
   el.appendChild(card);
 }
 
-/* ===== FAVORITES ===== */
+/* ================= FAVORITES ================= */
 async function addFav(sym){
+  if(BLACKSET.has(sym)) return;
   favSet.add(sym);
   const t=await fetchJSON(`${API}/fapi/v1/ticker/24hr?symbol=${sym}`);
   const d=await analyze(sym,+t.priceChangePercent);
@@ -223,14 +234,14 @@ function removeFav(sym){
   favSet.forEach(addFav);
 }
 
-/* ===== SCAN ===== */
+/* ================= SCAN ================= */
 async function runScan(){
   greenGrid.innerHTML=""; redGrid.innerHTML="";
   const bar=document.getElementById("progressFill");
   bar.style.width="0%";
 
   const t=await fetchJSON(`${API}/fapi/v1/ticker/24hr`);
-  const usdt=t.filter(x=>x.symbol.endsWith("USDT"));
+  const usdt=t.filter(x=>x.symbol.endsWith("USDT")&&!BLACKSET.has(x.symbol));
 
   const g=[...usdt].sort((a,b)=>b.priceChangePercent-a.priceChangePercent).slice(0,30);
   const r=[...usdt].sort((a,b)=>a.priceChangePercent-b.priceChangePercent).slice(0,30);
@@ -243,15 +254,21 @@ async function runScan(){
     done++;
     bar.style.width=Math.round(done/total*100)+"%";
   }
+
   document.getElementById("timestamp").innerText=new Date().toLocaleString();
+  nextScanAt = Date.now() + AUTO_INTERVAL;
+  startCountdown();
 }
 
-/* ===== SEARCH ===== */
+/* ================= SEARCH ================= */
 async function runSearch(){
   const s=document.getElementById("symbolSearch").value.toUpperCase();
   if(!s) return;
-  searchGrid.innerHTML="";
+
   const sym=s.endsWith("USDT")?s:s+"USDT";
+  if(BLACKSET.has(sym)) return;
+
+  searchGrid.innerHTML="";
   const t=await fetchJSON(`${API}/fapi/v1/ticker/24hr?symbol=${sym}`);
   const d=await analyze(sym,+t.priceChangePercent);
   renderCard(d,searchGrid);
