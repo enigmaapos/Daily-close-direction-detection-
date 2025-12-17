@@ -563,7 +563,6 @@ async function analyze(sym, bear, dd, dChange){
 }
 
 
-
 /* ================= RENDER ================= */
 function renderCard(d, el, force=false){
 
@@ -588,6 +587,14 @@ function renderCard(d, el, force=false){
     card.id = el.id + "-" + d.sym;
     el.appendChild(card);
   }
+
+  /* === CURRENT PRICE (SAFE RESOLVE) === */
+  const currentPrice =
+    d.lastPrice ??
+    d.markPrice ??
+    d.price ??
+    d.closeNow ??
+    0;
 
   /* === LEVEL STATE (STRUCTURE BREAK DETECTION) === */
   let levelState = "valid";
@@ -658,6 +665,13 @@ function renderCard(d, el, force=false){
   card.innerHTML = `
     <b>${d.sym}</b>
 
+    <div class="muted" style="margin-top:4px">
+      💰 <b>Current Price:</b>
+      <span class="${currentPrice >= d.resistanceLevels?.[0] ? "bull" : "neutral"}">
+        ${currentPrice.toFixed(4)}
+      </span>
+    </div>
+
     <div class="muted ${dominantColor}">
       🧭 Overall Dominant: <b>${d.overallDominant}</b>
     </div>
@@ -699,7 +713,7 @@ function renderCard(d, el, force=false){
       📅 <b>Daily Close Bias:</b> ${dailyCloseBias}
     </div>
 
-    <!-- SUPPORT (always shown) -->
+    <!-- SUPPORT -->
     ${d.supportLevels?.length ? `
       <div class="muted bear" style="margin-top:6px">
         🔴 <b>Support</b>
@@ -712,7 +726,7 @@ function renderCard(d, el, force=false){
       </div>
     ` : ``}
 
-    <!-- RESISTANCE (always shown) -->
+    <!-- RESISTANCE -->
     ${d.resistanceLevels?.length ? `
       <div class="muted bull" style="margin-top:6px">
         🟢 <b>Resistance</b>
@@ -729,8 +743,8 @@ function renderCard(d, el, force=false){
       ${d.reasons.join(" • ")}
     </div>
   `;
-    }
-  
+}
+
   
 
 /* ================= SCAN ================= */
