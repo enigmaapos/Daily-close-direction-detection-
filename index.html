@@ -578,16 +578,29 @@ function renderCard(d, el, force=false){
     el.appendChild(card);
   }
 
-  /* === LEVEL STATE (STRUCTURE BREAK DETECTION) === */
-  let levelState = "valid";
-  const BREAK_TOL = -0.2;
+/* === LEVEL STATE (REAL STRUCTURE BREAK) === */
+let levelState = "valid";
+const BREAK_TOL = -0.2;
 
-  if(d.levelType === "Support Test" && d.supportDistances?.some(x => x < BREAK_TOL)){
-    levelState = "broken";
-  }
-  if(d.levelType === "Resistance Test" && d.resistanceDistances?.some(x => x < BREAK_TOL)){
-    levelState = "broken";
-  }
+// REAL support break = S1 AND S2 broken
+if(
+  d.levelType === "Support Test" &&
+  d.supportDistances?.length >= 2 &&
+  d.supportDistances[0] < BREAK_TOL &&
+  d.supportDistances[1] < BREAK_TOL
+){
+  levelState = "broken";
+}
+
+// REAL resistance break = R1 AND R2 broken
+if(
+  d.levelType === "Resistance Test" &&
+  d.resistanceDistances?.length >= 2 &&
+  d.resistanceDistances[0] < BREAK_TOL &&
+  d.resistanceDistances[1] < BREAK_TOL
+){
+  levelState = "broken";
+}
 
   /* === DATA ATTRIBUTES (FILTERS) === */
   card.dataset.levelState = levelState;
