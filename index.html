@@ -311,7 +311,11 @@ async function analyze(sym,change){
     if(v[i]>domV){domV=v[i];bull=k[i][4]>k[i][1];}
   }
 
-  const sw=findSwings(h,l,c,v);
+  const swings = findSwings(h,l,c,v);
+const sw = {
+  S: swings.supports || [],
+  R: swings.resistances || []
+};
   const sb=sw.S.some(x=>price<x);
   const rb=sw.R.some(x=>price>x);
 
