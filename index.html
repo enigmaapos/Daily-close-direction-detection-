@@ -376,6 +376,9 @@ const sw = {
   const rb=sw.R.some(x=>price>x);
 
     /* === Structure Scores === */
+    const supportScore     = scoreStructure(S, price, c, v);
+  const resistanceScore  = scoreStructure(R, price, c, v);
+  
   const supportStrength = structureLabel(supportScore, "support");
   const resistanceStrength = structureLabel(resistanceScore, "resistance");
 
