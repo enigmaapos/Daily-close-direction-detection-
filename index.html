@@ -223,15 +223,75 @@ function scheduleNextAutoScan(){
   },AUTO_INTERVAL);
 }
 
-/* ================= STRUCTURE ================= */
-function findSwings(h,l,c,v){
-  const S=[],R=[];
-  const avg=v.slice(-40).reduce((a,b)=>a+b,0)/40;
-  for(let i=2;i<h.length-2;i++){
-    if(l[i]<l[i-1]&&l[i]<l[i+1]&&v[i]>=avg) S.push(l[i]);
-    if(h[i]>h[i-1]&&h[i]>h[i+1]&&v[i]>=avg) R.push(h[i]);
+/* === IMPROVED 15m SWING DETECTION (CONFIRMED) === */
+function findSwings(h, l, c, v){
+  const supports = [];
+  const resistances = [];
+
+  // parameters (tunable but safe defaults)
+  const LOOKBACK = 2;          // candles on each side
+  const CONFIRM = 2;           // candles to confirm reaction
+  const VOL_MULT = 1.2;        // volume must be above average
+
+  const avgVol = v.slice(-40).reduce((a,b)=>a+b,0) / 40;
+
+  for(let i = LOOKBACK; i < h.length - CONFIRM; i++){
+
+    /* === SWING LOW (SUPPORT) === */
+    let isSwingLow = true;
+    for(let j = 1; j <= LOOKBACK; j++){
+      if(l[i] >= l[i-j] || l[i] >= l[i+j]){
+        isSwingLow = false;
+        break;
+      }
+    }
+
+    if(isSwingLow){
+      // confirmation: price must move away upward
+      let confirmed = true;
+      for(let k = 1; k <= CONFIRM; k++){
+        if(c[i+k] <= c[i]){
+          confirmed = false;
+          break;
+        }
+      }
+
+      // volume filter (defense)
+      if(confirmed && v[i] >= avgVol * VOL_MULT){
+        supports.push(l[i]);
+      }
+    }
+
+    /* === SWING HIGH (RESISTANCE) === */
+    let isSwingHigh = true;
+    for(let j = 1; j <= LOOKBACK; j++){
+      if(h[i] <= h[i-j] || h[i] <= h[i+j]){
+        isSwingHigh = false;
+        break;
+      }
+    }
+
+    if(isSwingHigh){
+      // confirmation: price must move away downward
+      let confirmed = true;
+      for(let k = 1; k <= CONFIRM; k++){
+        if(c[i+k] >= c[i]){
+          confirmed = false;
+          break;
+        }
+      }
+
+      // volume filter (supply)
+      if(confirmed && v[i] >= avgVol * VOL_MULT){
+        resistances.push(h[i]);
+      }
+    }
   }
-  return {S:S.slice(-2).reverse(),R:R.slice(-2).reverse()};
+
+  return {
+    supports: supports.slice(-2).reverse(),       // S1, S2
+    resistances: resistances.slice(-2).reverse()  // R1, R2
+  };
 }
 
 /* ================= ANALYZE ================= */
@@ -247,7 +307,11 @@ async function analyze(sym,change){
     if(v[i]>domV){domV=v[i];bull=k[i][4]>k[i][1];}
   }
 
-  const sw=findSwings(h,l,c,v);
+  const swings = findSwings(h,l,c,v);
+const sw = {
+  S: swings.supports || [],
+  R: swings.resistances || []
+};
   const sb=sw.S.some(x=>price<x);
   const rb=sw.R.some(x=>price>x);
 
