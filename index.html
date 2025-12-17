@@ -309,50 +309,6 @@ function findSwings(h, l, c, v){
   };
 }
 
-  function scoreStructure(levels, price, closes, volumes){
-  let score = 0;
-  const TOL = 0.003;
-
-  const recentCloses = closes.slice(-30);
-  const avgVol =
-    volumes.slice(-30).reduce((a,b)=>a+b,0) / 30;
-
-  for(const lvl of levels){
-    let touches = 0;
-    let defended = 0;
-
-    for(let i=0;i<recentCloses.length;i++){
-      const dist = Math.abs(recentCloses[i] - lvl) / lvl;
-
-      if(dist < TOL){
-        touches++;
-        if(
-          (recentCloses[i] > lvl && price > lvl) ||
-          (recentCloses[i] < lvl && price < lvl)
-        ){
-          defended++;
-        }
-      }
-    }
-
-    if(touches >= 2) score++;
-    if(defended >= 2) score++;
-    if(defended >= 3) score++;
-
-    if(volumes.at(-1) > avgVol * 1.1) score++;
-  }
-
-  return score;
-  }
-
-  function structureLabel(score, type){
-  if(score >= 4) return `strong ${type}`;
-  if(score >= 2) return `moderate ${type}`;
-  if(score >= 1) return `weak ${type}`;
-  return `unconfirmed ${type}`;
-  }
-  
-
 /* ================= ANALYZE ================= */
 async function analyze(sym,change){
   const k=await fetchJSON(`${API}/fapi/v1/klines?symbol=${sym}&interval=15m&limit=240`);
@@ -366,7 +322,6 @@ async function analyze(sym,change){
     if(v[i]>domV){domV=v[i];bull=k[i][4]>k[i][1];}
   }
 
-    /* === Structure Levels === */
   const swings = findSwings(h,l,c,v);
 const sw = {
   S: swings.supports || [],
@@ -375,86 +330,19 @@ const sw = {
   const sb=sw.S.some(x=>price<x);
   const rb=sw.R.some(x=>price>x);
 
-    /* === Structure Scores === */
-    const supportScore     = scoreStructure(S, price, c, v);
-  const resistanceScore  = scoreStructure(R, price, c, v);
-  
-  const supportStrength = structureLabel(supportScore, "support");
-  const resistanceStrength = structureLabel(resistanceScore, "resistance");
-
-     /* === STRUCTURE ACTION (FACT) === */
-  let structure = "no structure";
-
+  let bias="Neutral",prob=50,structure="none";
   if(bull){
-    if(resistanceBroken){
-      structure = "resistance broken";
-    }
-    else if(supportScore > 0){
-      structure = "support holding";
-    }
-  } else {
-    if(supportBroken){
-      structure = "support broken";
-    }
-    else if(resistanceScore > 0){
-      structure = "resistance failed";
-    }
+    if(rb){bias="Bullish Continuation";prob=85;structure="resistance broken";}
+    else if(sw.S.length){bias="Bullish Defense";prob=70;structure="support holding";}
+    else{bias="Bull Trap Risk";prob=40;}
+  }else{
+    if(sb){bias="Bearish Continuation";prob=85;structure="support broken";}
+    else if(sw.R.length){bias="Bearish Defense";prob=70;structure="resistance failed";}
+    else{bias="Bear Trap Risk";prob=40;}
   }
 
-  /* === BIAS & PROBABILITY (INTERPRETATION) === */
-  let bias = "Neutral";
-  let prob = 50;
-
-  if(bull){
-    if(structure === "resistance broken"){
-      bias = "Bullish Continuation";
-      prob = 70 + Math.min(resistanceScore * 3, 15);
-    }
-    else if(structure === "support holding"){
-      bias = "Bullish Defense";
-      prob = 60 + Math.min(supportScore * 3, 15);
-    }
-    else{
-      bias = "Bull Trap Risk";
-      prob = 40;
-    }
-  }
-  else{
-    if(structure === "support broken"){
-      bias = "Bearish Continuation";
-      prob = 70 + Math.min(supportScore * 3, 15);
-    }
-    else if(structure === "resistance failed"){
-      bias = "Bearish Defense";
-      prob = 60 + Math.min(resistanceScore * 3, 15);
-    }
-    else{
-      bias = "Bear Trap Risk";
-      prob = 40;
-    }
-  }
-
-  return {
-    sym,
-    price,
-    change,
-    bull,
-
-    structure,                 // FACT
-    bias,                      // INTERPRETATION
-    prob,
-
-    supportStrength,
-    resistanceStrength,
-
-    S: sw.S,
-    R: sw.R
-  };
+  return {sym,price,change,bull,prob,bias,structure,S:sw.S,R:sw.R};
 }
-
-
-
-   
 
 /* ================= FILTERS ================= */
 function applyFilters(){
@@ -489,14 +377,6 @@ const id = `card-${scope}-${d.sym}`;
   card.dataset.vol  = d.bull ? "bull" : "bear";
   card.dataset.prob = d.prob;
 
-    
-  const showSupport =
-    d.supportStrength && !d.supportStrength.includes("unconfirmed");
-
-  const showResistance =
-    d.resistanceStrength && !d.resistanceStrength.includes("unconfirmed");
-  
-
   card.innerHTML = `
     ${isFav
       ? `<div class="close" onclick="removeFav('${d.sym}')">✖</div>`
@@ -507,34 +387,16 @@ const id = `card-${scope}-${d.sym}`;
     <div class="muted ${d.change>=0?"bull":"bear"}">
       24h Change: ${d.change.toFixed(2)}%
     </div>
-    
     <div class="muted ${d.bull?"bull":"bear"}">
       ${d.bull?"Bullish":"Bearish"} Volume Control
     </div>
-
-      
     <div class="muted">Structure: ${d.structure}</div>
-    
-    
     <div class="prob ${
       d.bias.includes("Bull")?"bull":
       d.bias.includes("Bear")?"bear":"neutral"
     }">
       ${d.bias} — ${d.prob}%
     </div>
-    
-
-    ${d.supportStrength
-      ? `<div class="muted bear">Support: ${d.supportStrength}</div>`
-      : ""
-    }
-
-    ${d.resistanceStrength
-      ? `<div class="muted bull">Resistance: ${d.resistanceStrength}</div>`
-      : ""
-    }
-
-  
     ${d.S[0]?`<div class="muted bear">S1: ${d.S[0].toFixed(4)}</div>`:""}
     ${d.S[1]?`<div class="muted bear">S2: ${d.S[1].toFixed(4)}</div>`:""}
     ${d.R[0]?`<div class="muted bull">R1: ${d.R[0].toFixed(4)}</div>`:""}
