@@ -350,6 +350,52 @@ function findSwings(h, l, c, v){
 }
 
 
+  function detectOverallDominance({
+  dominantBull,
+  change,
+  levelType,
+  levelStrength,
+  supportDistances,
+  resistanceDistances,
+  reasons,
+  lastPrice,
+  e50
+}){
+  let bull = 0, bear = 0;
+
+  // Volume control
+  dominantBull ? bull++ : bear++;
+
+  // Price impulse
+  if(change >= 5) bull++;
+  if(change <= -5) bear++;
+
+  // Structure weakness
+  if(levelType === "Support Test" && levelStrength === "Weak Support") bear++;
+  if(levelType === "Resistance Test" && levelStrength === "Weak Resistance") bull++;
+
+  // Broken levels
+  if(levelType === "Support Test" && supportDistances?.some(x => x < -0.2)) bear++;
+  if(levelType === "Resistance Test" && resistanceDistances?.some(x => x < -0.2)) bull++;
+
+  // Trend location
+  if(lastPrice > e50) bull++;
+  if(lastPrice < e50) bear++;
+
+  // Acceptance / volatility
+  if(reasons.includes("Acceptance Below High")) bear++;
+  if(reasons.includes("Holding Highs")) bull++;
+
+  if(reasons.includes("Volatility Expansion")){
+    change < 0 ? bear++ : bull++;
+  }
+
+  if(bear >= bull + 2) return "Bear Dominant";
+  if(bull >= bear + 2) return "Bull Dominant";
+  return "Neutral Control";
+  }
+
+
   
 /* ================= ANALYSIS ================= */
 async function analyze(sym, bear, dd, dChange){
@@ -470,11 +516,24 @@ async function analyze(sym, bear, dd, dChange){
     }
   }
 
+  const overallDominant = detectOverallDominance({
+  dominantBull,
+  change: dChange,
+  levelType,
+  levelStrength,
+  supportDistances,
+  resistanceDistances,
+  reasons: rs,
+  lastPrice,
+  e50
+});
+
   return {
     sym,
     prob: finalProb,
     baseProb,
     bias,
+    overallDominant,
     reasons: rs,
     dominantBull,
     dominantVol,
@@ -551,6 +610,10 @@ card.dataset.change = d.change >= 0 ? "green" : "red";
 
   const changeColor = d.change >= 0 ? "bull" : "bear";
 
+  const dominantColor =
+  d.overallDominant.includes("Bull") ? "bull" :
+  d.overallDominant.includes("Bear") ? "bear" : "neutral";
+
   /* === AI INTERPRETATION === */
   let aiTitle = "ℹ️ Structure Context";
   let aiText  = "No weak structure detected. Price is currently balanced.";
@@ -573,6 +636,10 @@ card.dataset.change = d.change >= 0 ? "green" : "red";
 
   card.innerHTML = `
     <b>${d.sym}</b>
+
+    <div class="muted ${dominantColor}">
+  🧭 Overall Dominant: <b>${d.overallDominant}</b>
+</div>
 
     <div class="prob ${biasColor}">
       ${d.bias} — ${d.prob}%
