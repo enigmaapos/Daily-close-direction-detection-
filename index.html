@@ -216,14 +216,13 @@ function startCountdown(){
   },1000);
 }
 
-/* ================= AUTO REFRESH ================= */
-function scheduleNextAutoScan(){
-  if(!autoEnabled) return;
-  setTimeout(()=>{
-    if(!scanLock){
-      isAutoScan = true;
-      runScan();
-    }
+/* ================= AUTO SCAN ================= */
+function startAutoScan(){
+  if(autoTimer) clearInterval(autoTimer);
+  autoTimer=setInterval(()=>{
+    if(scanLock) return;
+    isAutoScan=true;
+    runScan();
   },AUTO_INTERVAL);
 }
 
