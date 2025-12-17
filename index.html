@@ -564,8 +564,7 @@ async function analyze(sym, bear, dd, dChange){
 
 
 
-  /* ================= RENDER ================= */
-function renderCard(d, el, force = false) {
+            function renderCard(d, el, force = false) {
 
   /* === FILTER: weak structure only (unless forced search) === */
   const isWeakSupport =
@@ -589,30 +588,31 @@ function renderCard(d, el, force = false) {
     el.appendChild(card);
   }
 
-  /* === STRUCTURE BREAK LOGIC (REAL: 2 LEVELS) === */
+  /* === STRUCTURE BREAK (ONLY ACTIVE STRUCTURE CAN BREAK) === */
   const BREAK_TOL = -0.2;
 
   const supportBroken =
+    d.levelType === "Support Test" &&
     d.supportDistances?.length >= 2 &&
     d.supportDistances[0] < BREAK_TOL &&
     d.supportDistances[1] < BREAK_TOL;
 
   const resistanceBroken =
+    d.levelType === "Resistance Test" &&
     d.resistanceDistances?.length >= 2 &&
     d.resistanceDistances[0] < BREAK_TOL &&
     d.resistanceDistances[1] < BREAK_TOL;
 
-  let levelState = "valid";
-  if (supportBroken || resistanceBroken) {
-    levelState = "broken";
-  }
+  const levelState = (supportBroken || resistanceBroken)
+    ? "broken"
+    : "valid";
 
-  /* === DAILY CLOSE BIAS (STRUCTURE FIRST — ABSOLUTE) === */
+  /* === DAILY CLOSE BIAS (STRUCTURE > EVERYTHING) === */
   let dailyCloseBias = "Unclear";
   let dailyCloseColor = "neutral";
   let dailyCloseState = "unclear";
 
-  // 1️⃣ HARD STRUCTURE OVERRIDE (truth > everything)
+  // HARD STRUCTURE TRUTH
   if (supportBroken) {
     dailyCloseBias = "Bearish Daily Close (Support Broken)";
     dailyCloseColor = "bear";
@@ -624,23 +624,25 @@ function renderCard(d, el, force = false) {
     dailyCloseState = "bullish";
   }
 
-  // 2️⃣ DOMINANCE CONTEXT (only if structure NOT broken)
-  else if (d.overallDominant.includes("Bull")) {
-    if (d.levelType === "Resistance Test" && d.levelStrength === "Weak Resistance") {
-      dailyCloseBias = "Bullish Daily Close (Weak Resistance)";
-      dailyCloseColor = "bull";
-      dailyCloseState = "bullish";
-    }
+  // CONTEXT ONLY IF STRUCTURE HOLDS
+  else if (d.overallDominant.includes("Bull") &&
+           d.levelType === "Resistance Test" &&
+           d.levelStrength === "Weak Resistance") {
+
+    dailyCloseBias = "Bullish Daily Close (Weak Resistance)";
+    dailyCloseColor = "bull";
+    dailyCloseState = "bullish";
   }
-  else if (d.overallDominant.includes("Bear")) {
-    if (d.levelType === "Support Test" && d.levelStrength === "Weak Support") {
-      dailyCloseBias = "Bearish Daily Close (Weak Support)";
-      dailyCloseColor = "bear";
-      dailyCloseState = "bearish";
-    }
+  else if (d.overallDominant.includes("Bear") &&
+           d.levelType === "Support Test" &&
+           d.levelStrength === "Weak Support") {
+
+    dailyCloseBias = "Bearish Daily Close (Weak Support)";
+    dailyCloseColor = "bear";
+    dailyCloseState = "bearish";
   }
 
-  /* === DATASET (FILTERS — AFTER ALL LOGIC) === */
+  /* === DATASET (FILTERS) === */
   card.dataset.levelState = levelState;
   card.dataset.bias = d.bias;
   card.dataset.structure = d.levelStrength;
@@ -680,8 +682,7 @@ function renderCard(d, el, force = false) {
     </div>
 
     <div class="prob ${biasColor}">
-      ${d.bias} — ${d.prob}%
-      <span class="muted">(Structure Bias)</span>
+      ${d.bias} — ${d.prob}% <span class="muted">(Structure Bias)</span>
     </div>
 
     <div class="muted ${changeColor}">
@@ -727,7 +728,6 @@ function renderCard(d, el, force = false) {
     </div>
   `;
 }
-
   
   
 
