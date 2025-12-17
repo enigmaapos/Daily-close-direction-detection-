@@ -624,33 +624,43 @@ if(
     d.levelType === "Support Test" ? "bear" :
     d.levelType === "Resistance Test" ? "bull" : "neutral";
 
-  /* === DAILY CLOSE BIAS (STRUCTURE OVERRIDES EVERYTHING) === */
-  let dailyCloseBias = "Unclear";
-  let dailyCloseColor = "neutral";
+/* === DAILY CLOSE BIAS (STRUCTURE FIRST, ALWAYS) === */
+let dailyCloseBias = "Unclear";
+let dailyCloseColor = "neutral";
 
-  // HARD structure rules
-  if(d.levelType === "Support Test" && levelState === "broken"){
-    dailyCloseBias = "Bearish Daily Close (Support Broken)";
-    dailyCloseColor = "bear";
-  }
-  else if(d.levelType === "Resistance Test" && levelState === "broken"){
-    dailyCloseBias = "Bullish Daily Close (Resistance Broken)";
+const supportBroken =
+  d.supportDistances?.length >= 2 &&
+  d.supportDistances[0] < BREAK_TOL &&
+  d.supportDistances[1] < BREAK_TOL;
+
+const resistanceBroken =
+  d.resistanceDistances?.length >= 2 &&
+  d.resistanceDistances[0] < BREAK_TOL &&
+  d.resistanceDistances[1] < BREAK_TOL;
+
+// 1️⃣ HARD STRUCTURE OVERRIDE
+if(supportBroken){
+  dailyCloseBias = "Bearish Daily Close (Support Broken)";
+  dailyCloseColor = "bear";
+}
+else if(resistanceBroken){
+  dailyCloseBias = "Bullish Daily Close (Resistance Broken)";
+  dailyCloseColor = "bull";
+}
+
+// 2️⃣ DOMINANCE CONTEXT (only if no hard break)
+else if(d.overallDominant.includes("Bull")){
+  if(d.levelType === "Resistance Test" && d.levelStrength === "Weak Resistance"){
+    dailyCloseBias = "Bullish Daily Close (Weak Resistance)";
     dailyCloseColor = "bull";
   }
-
-  // Dominance context (only if structure NOT broken)
-  else if(d.overallDominant.includes("Bull")){
-    if(d.levelType === "Resistance Test" && d.levelStrength === "Weak Resistance"){
-      dailyCloseBias = "Bullish Daily Close (Weak Resistance)";
-      dailyCloseColor = "bull";
-    }
+}
+else if(d.overallDominant.includes("Bear")){
+  if(d.levelType === "Support Test" && d.levelStrength === "Weak Support"){
+    dailyCloseBias = "Bearish Daily Close (Weak Support)";
+    dailyCloseColor = "bear";
   }
-  else if(d.overallDominant.includes("Bear")){
-    if(d.levelType === "Support Test" && d.levelStrength === "Weak Support"){
-      dailyCloseBias = "Bearish Daily Close (Weak Support)";
-      dailyCloseColor = "bear";
-    }
-  }
+}
 
   const volumeLabel = d.dominantBull
     ? "Bullish Volume Control"
