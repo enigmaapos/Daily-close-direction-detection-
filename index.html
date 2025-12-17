@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>15m Volume + Structure Probability Scanner</title>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+
+<style>
+body{
+  font-family:Inter,system-ui,Arial;
+  background:#0f1720;
+  color:#e6eef8;
+  margin:16px;
+}
+h1{font-size:18px;margin-bottom:6px}
+h2{font-size:16px;margin-top:14px}
+.muted{color:#9fb3cc;font-size:13px}
+button,input{
+  padding:8px 12px;
+  border-radius:6px;
+  border:1px solid #334155;
+  background:#0b1220;
+  color:#e6eef8;
+}
+button.primary{
+  background:#22c55e;
+  border:0;
+  color:#042e16;
+  font-weight:700;
+  cursor:pointer;
+}
+button.secondary{
+  background:#334155;
+  border:0;
+  cursor:pointer;
+}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(280px,1fr));
+  gap:12px;
+}
+.card{
+  background:#0b1220;
+  border:1px solid #172033;
+  border-radius:10px;
+  padding:12px;
+}
+.bull{color:#22c55e}
+.bear{color:#fb7185}
+.neutral{color:#facc15}
+.prob{font-weight:700}
+</style>
+</head>
+
+<body>
+
+<h1>📊 15m Volume → Structure Probability Scanner</h1>
+<div class="muted">
+  Dominant volume + structure confirmation only (no indicators)
+</div>
+
+<div class="row">
+  <button class="primary" onclick="runScan()">Run Scan</button>
+  <input id="symbolSearch" placeholder="BTCUSDT"/>
+  <button class="secondary" onclick="runSearch()">Analyze</button>
+</div>
+
+<h2>🔍 Manual</h2>
+<div class="grid" id="searchGrid"></div>
+
+<h2>🟢 Top Gainers</h2>
+<div class="grid" id="greenGrid"></div>
+
+<h2>🔴 Top Losers</h2>
+<div class="grid" id="redGrid"></div>
+
+<script>
+/* ================= CONFIG ================= */
+const API = "https://fapi.binance.com";
+const DELAY = 250;
+
+const BLACKSET = new Set([
+ "ALPACAUSDT","BNXUSDT","ALPHAUSDT","OCEANUSDT","DGBUSDT","AGIXUSDT",
+ "LINAUSDT","LOKAUSDT","KEYUSDT","MDTUSDT","LOOMUSDT","RENUSDT",
+ "OMNIUSDT","SLERFUSDT","STMXUSDT","UXLINKUSDT","BSWUSDT",
+ "NEIROETHUSDT","VIDTUSDT","TROYUSDT","BAKEUSDT","MEMEFIUSDT",
+ "NULSUSDT","HIFIUSDT","LEVERUSDT","XEMUSDT","STRAXUSDT",
+ "COMBOUSDT","AI16ZUSDT","MILKUSDT","TOKENUSDT","SXPUSDT",
+ "MYROUSDT","1000XUSDT","DARUSDT"
+]);
+
+/* ================= HELPERS ================= */
+const sleep = ms => new Promise(r=>setTimeout(r,ms));
+const fetchJSON = async u => (await fetch(u)).json();
+
+/* ================= STRUCTURE ================= */
+function findSwings(h,l,c,v){
+  const supports=[], resistances=[];
+  const LOOK=2, CONFIRM=2;
+  const avgV = v.slice(-40).reduce((a,b)=>a+b,0)/40;
+
+  for(let i=LOOK;i<h.length-CONFIRM;i++){
+    let low=true, high=true;
+    for(let j=1;j<=LOOK;j++){
+      if(l[i]>=l[i-j]||l[i]>=l[i+j]) low=false;
+      if(h[i]<=h[i-j]||h[i]<=h[i+j]) high=false;
+    }
+    if(low && v[i]>=avgV){
+      if(c[i+1]>c[i] && c[i+2]>c[i]) supports.push(l[i]);
+    }
+    if(high && v[i]>=avgV){
+      if(c[i+1]<c[i] && c[i+2]<c[i]) resistances.push(h[i]);
+    }
+  }
+  return {
+    supports:supports.slice(-2).reverse(),
+    resistances:resistances.slice(-2).reverse()
+  };
+}
+
+/* ================= ANALYZE ================= */
+async function analyze(sym){
+  const k = await fetchJSON(`${API}/fapi/v1/klines?symbol=${sym}&interval=15m&limit=240`);
+  await sleep(DELAY);
+
+  const c=k.map(x=>+x[4]);
+  const h=k.map(x=>+x[2]);
+  const l=k.map(x=>+x[3]);
+  const v=k.map(x=>+x[5]);
+  const lastPrice=c[c.length-1];
+
+  /* Dominant 24h volume */
+  let dominantVol=0, dominantBull=true;
+  for(let i=k.length-96;i<k.length;i++){
+    if(v[i]>dominantVol){
+      dominantVol=v[i];
+      dominantBull=k[i][4]>k[i][1];
+    }
+  }
+
+  const swings=findSwings(h,l,c,v);
+  const S=swings.supports, R=swings.resistances;
+
+  const supportBroken=S.some(x=>lastPrice<x);
+  const resistanceBroken=R.some(x=>lastPrice>x);
+
+  let structure="none", prob=50, bias="Neutral";
+
+  if(dominantBull){
+    if(resistanceBroken){
+      structure="resistance_broken";
+      prob=85; bias="Bullish Continuation";
+    }else if(S.length){
+      structure="support_holding";
+      prob=70; bias="Bullish Defense";
+    }else{
+      prob=40; bias="Bull Trap Risk";
+    }
+  }else{
+    if(supportBroken){
+      structure="support_broken";
+      prob=85; bias="Bearish Continuation";
+    }else if(R.length){
+      structure="resistance_failed";
+      prob=70; bias="Bearish Defense";
+    }else{
+      prob=40; bias="Bear Trap Risk";
+    }
+  }
+
+  return {sym,lastPrice,dominantBull,dominantVol,structure,prob,bias,S,R};
+}
+
+/* ================= RENDER ================= */
+function renderCard(d,el){
+  const card=document.createElement("div");
+  card.className="card";
+
+  card.innerHTML=`
+    <b>${d.sym}</b>
+    <div class="muted">Price: ${d.lastPrice.toFixed(4)}</div>
+    <div class="muted ${d.dominantBull?"bull":"bear"}">
+      ${d.dominantBull?"Bullish":"Bearish"} Volume Control
+    </div>
+    <div class="muted">Structure: <b>${d.structure.replace("_"," ")}</b></div>
+    <div class="prob ${d.bias.includes("Bull")?"bull":d.bias.includes("Bear")?"bear":"neutral"}">
+      ${d.bias} — ${d.prob}%
+    </div>
+    ${d.S[0]?`<div class="muted bear">Support: ${d.S[0].toFixed(4)}</div>`:""}
+    ${d.R[0]?`<div class="muted bull">Resistance: ${d.R[0].toFixed(4)}</div>`:""}
+  `;
+  el.appendChild(card);
+}
+
+/* ================= SCAN ================= */
+async function runScan(){
+  greenGrid.innerHTML=""; redGrid.innerHTML="";
+  const t=await fetchJSON(`${API}/fapi/v1/ticker/24hr`);
+  const usdt=t.filter(x=>x.symbol.endsWith("USDT")&&!BLACKSET.has(x.symbol));
+
+  const g=[...usdt].sort((a,b)=>b.priceChangePercent-a.priceChangePercent).slice(0,30);
+  const r=[...usdt].sort((a,b)=>a.priceChangePercent-b.priceChangePercent).slice(0,30);
+
+  for(const x of g){
+    const d=await analyze(x.symbol);
+    renderCard(d,greenGrid);
+  }
+  for(const x of r){
+    const d=await analyze(x.symbol);
+    renderCard(d,redGrid);
+  }
+}
+
+/* ================= SEARCH ================= */
+async function runSearch(){
+  const sym=document.getElementById("symbolSearch").value.toUpperCase();
+  if(!sym) return;
+  searchGrid.innerHTML="";
+  const full=sym.endsWith("USDT")?sym:sym+"USDT";
+  if(BLACKSET.has(full)) return;
+  const d=await analyze(full);
+  renderCard(d,searchGrid);
+}
+</script>
+</body>
+</html>
