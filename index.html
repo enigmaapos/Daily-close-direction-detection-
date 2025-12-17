@@ -6,47 +6,84 @@
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 
 <style>
+:root{
+  --bg:#0f1720;
+  --panel:#0b1220;
+  --border:#172033;
+  --muted:#9fb3cc;
+  --bull:#22c55e;
+  --bear:#fb7185;
+  --neutral:#facc15;
+  --accent:#38bdf8;
+}
+
 body{
   font-family:Inter,system-ui,Arial;
-  background:#0f1720;
+  background:var(--bg);
   color:#e6eef8;
   margin:16px;
 }
+
 h1{font-size:18px;margin-bottom:6px}
-h2{font-size:16px;margin-top:14px}
-.muted{color:#9fb3cc;font-size:13px}
+h2{font-size:16px;margin:16px 0 8px}
+
+.muted{color:var(--muted);font-size:13px}
+
 button,input,select{
-  padding:7px 10px;
+  padding:8px 12px;
   border-radius:6px;
   border:1px solid #334155;
-  background:#0b1220;
+  background:var(--panel);
   color:#e6eef8;
 }
+
 button.primary{
-  background:#22c55e;
+  background:var(--bull);
   border:0;
   color:#042e16;
   font-weight:700;
   cursor:pointer;
 }
-button.secondary{background:#334155;border:0}
-.row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+button.primary:disabled{
+  opacity:.5;
+  cursor:not-allowed;
+}
+
+button.secondary{
+  background:#334155;
+  border:0;
+}
+
+.row{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  margin-bottom:10px;
+}
+
 .grid{
   display:grid;
   grid-template-columns:repeat(auto-fill,minmax(280px,1fr));
   gap:12px;
 }
+
 .card{
-  background:#0b1220;
-  border:1px solid #172033;
-  border-radius:10px;
+  background:var(--panel);
+  border:1px solid var(--border);
+  border-radius:12px;
   padding:12px;
   position:relative;
+  transition:transform .15s ease, box-shadow .15s ease;
 }
-.bull{color:#22c55e}
-.bear{color:#fb7185}
-.neutral{color:#facc15}
-.prob{font-weight:700}
+.card:hover{
+  transform:translateY(-2px);
+  box-shadow:0 8px 24px rgba(0,0,0,.6);
+}
+
+.bull{color:var(--bull)}
+.bear{color:var(--bear)}
+.neutral{color:var(--neutral)}
+.prob{font-weight:700;margin-top:4px}
 
 .star{
   position:absolute;
@@ -58,20 +95,28 @@ button.secondary{background:#334155;border:0}
   position:absolute;
   top:8px; left:8px;
   cursor:pointer;
-  color:#fb7185;
+  color:var(--bear);
 }
 
 .progress{
   height:10px;
-  background:#172033;
+  background:var(--border);
   border-radius:6px;
   overflow:hidden;
+  margin:8px 0 14px;
 }
 .progress > div{
   height:100%;
   width:0%;
-  background:#22c55e;
+  background:linear-gradient(90deg,var(--bull),#4ade80);
   transition:width .2s linear;
+}
+
+.filter-box{
+  background:var(--panel);
+  border:1px solid var(--border);
+  border-radius:8px;
+  padding:8px;
 }
 </style>
 </head>
@@ -86,12 +131,12 @@ button.secondary{background:#334155;border:0}
 </div>
 
 <div class="row">
-  <button class="primary" onclick="runScan()">Run Scan</button>
+  <button class="primary" id="scanBtn" onclick="runScan()">Run Scan</button>
   <input id="symbolSearch" placeholder="BTCUSDT"/>
   <button class="secondary" onclick="runSearch()">Analyze</button>
 </div>
 
-<div class="row">
+<div class="row filter-box">
   <select id="filterBias">
     <option value="all">All Bias</option>
     <option>Bullish Continuation</option>
@@ -130,42 +175,42 @@ button.secondary{background:#334155;border:0}
 
 <script>
 /* ================= CONFIG ================= */
-const API = "https://fapi.binance.com";
-const DELAY = 250;
-const AUTO_INTERVAL = 60 * 1000; // 1 minute
+const API="https://fapi.binance.com";
+const DELAY=300;
+const AUTO_INTERVAL=60*1000;
 
-const BLACKSET = new Set([
-  "ALPACAUSDT","BNXUSDT","ALPHAUSDT","OCEANUSDT","DGBUSDT","AGIXUSDT",
-  "LINAUSDT","LOKAUSDT","KEYUSDT","MDTUSDT","LOOMUSDT","RENUSDT",
-  "OMNIUSDT","SLERFUSDT","STMXUSDT","UXLINKUSDT","BSWUSDT",
-  "NEIROETHUSDT","VIDTUSDT","TROYUSDT","BAKEUSDT","MEMEFIUSDT",
-  "NULSUSDT","HIFIUSDT","LEVERUSDT","XEMUSDT","STRAXUSDT",
-  "COMBOUSDT","AI16ZUSDT","MILKUSDT","TOKENUSDT","SXPUSDT",
-  "MYROUSDT","1000XUSDT","DARUSDT","PORT3USDT","SKATEUSDT",
-  "AIAUSDT","AMBUSDT","FLMUSDT","PERPUSDT","OBOLUSDT","SWELLUSDT","FTMUSDT"
+const BLACKSET=new Set([
+"ALPACAUSDT","BNXUSDT","ALPHAUSDT","OCEANUSDT","DGBUSDT","AGIXUSDT",
+"LINAUSDT","LOKAUSDT","KEYUSDT","MDTUSDT","LOOMUSDT","RENUSDT",
+"OMNIUSDT","SLERFUSDT","STMXUSDT","UXLINKUSDT","BSWUSDT",
+"NEIROETHUSDT","VIDTUSDT","TROYUSDT","BAKEUSDT","MEMEFIUSDT",
+"NULSUSDT","HIFIUSDT","LEVERUSDT","XEMUSDT","STRAXUSDT",
+"COMBOUSDT","AI16ZUSDT","MILKUSDT","TOKENUSDT","SXPUSDT",
+"MYROUSDT","1000XUSDT","DARUSDT","PORT3USDT","SKATEUSDT",
+"AIAUSDT","AMBUSDT","FLMUSDT","PERPUSDT","OBOLUSDT","SWELLUSDT","FTMUSDT"
 ]);
 
-const favSet = new Set();
-let nextScanAt = null;
-let countdownTimer = null;
+const favSet=new Set();
+let nextScanAt=null;
+let countdownTimer=null;
+let scanLock=false;
 
-const sleep = ms => new Promise(r=>setTimeout(r,ms));
-const fetchJSON = async u => (await fetch(u)).json();
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const fetchJSON=async u=>(await fetch(u)).json();
 
 /* ================= COUNTDOWN ================= */
 function startCountdown(){
   clearInterval(countdownTimer);
-  countdownTimer = setInterval(()=>{
+  countdownTimer=setInterval(()=>{
     if(!nextScanAt) return;
-    const diff = nextScanAt - Date.now();
-    if(diff <= 0){
-      document.getElementById("nextScan").innerText = "Now";
+    const d=nextScanAt-Date.now();
+    if(d<=0){
+      nextScan.innerText="Ready";
       return;
     }
-    const m = Math.floor(diff / 60000);
-    const s = Math.floor((diff % 60000) / 1000);
-    document.getElementById("nextScan").innerText =
-      `${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
+    const m=Math.floor(d/60000);
+    const s=Math.floor((d%60000)/1000);
+    nextScan.innerText=`${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
   },1000);
 }
 
@@ -182,16 +227,13 @@ function findSwings(h,l,c,v){
 
 /* ================= ANALYZE ================= */
 async function analyze(sym,change){
-  const k = await fetchJSON(`${API}/fapi/v1/klines?symbol=${sym}&interval=15m&limit=240`);
+  const k=await fetchJSON(`${API}/fapi/v1/klines?symbol=${sym}&interval=15m&limit=240`);
   await sleep(DELAY);
 
-  const c=k.map(x=>+x[4]);
-  const h=k.map(x=>+x[2]);
-  const l=k.map(x=>+x[3]);
-  const v=k.map(x=>+x[5]);
+  const c=k.map(x=>+x[4]),h=k.map(x=>+x[2]),l=k.map(x=>+x[3]),v=k.map(x=>+x[5]);
   const price=c.at(-1);
 
-  let domV=0, bull=true;
+  let domV=0,bull=true;
   for(let i=k.length-96;i<k.length;i++){
     if(v[i]>domV){domV=v[i];bull=k[i][4]>k[i][1];}
   }
@@ -214,24 +256,37 @@ async function analyze(sym,change){
   return {sym,price,change,bull,prob,bias,structure,S:sw.S,R:sw.R};
 }
 
+/* ================= FILTERS ================= */
+function applyFilters(){
+  const b=filterBias.value;
+  const v=filterVol.value;
+  const p=+filterProb.value;
+
+  document.querySelectorAll(".card").forEach(c=>{
+    let ok=true;
+    if(b!=="all"&&c.dataset.bias!==b) ok=false;
+    if(v!=="all"&&c.dataset.vol!==v) ok=false;
+    if(p>0&&+c.dataset.prob<p) ok=false;
+    c.style.display=ok?"":"none";
+  });
+}
+filterBias.onchange=filterVol.onchange=filterProb.onchange=applyFilters;
+
 /* ================= RENDER ================= */
 function renderCard(d,el,isFav=false){
   const card=document.createElement("div");
   card.className="card";
+  card.dataset.bias=d.bias;
+  card.dataset.vol=d.bull?"bull":"bear";
+  card.dataset.prob=d.prob;
 
-  card.innerHTML = `
-    ${isFav
-      ? `<div class="close" onclick="removeFav('${d.sym}')">✖</div>`
-      : `<div class="star" onclick="addFav('${d.sym}')">⭐</div>`
-    }
+  card.innerHTML=`
+    ${isFav?`<div class="close" onclick="removeFav('${d.sym}')">✖</div>`:
+    `<div class="star" onclick="addFav('${d.sym}')">⭐</div>`}
     <b>${d.sym}</b>
     <div class="muted">Price: ${d.price.toFixed(4)}</div>
-    <div class="muted ${d.change>=0?"bull":"bear"}">
-      24h Change: ${d.change.toFixed(2)}%
-    </div>
-    <div class="muted ${d.bull?"bull":"bear"}">
-      ${d.bull?"Bullish":"Bearish"} Volume Control
-    </div>
+    <div class="muted ${d.change>=0?"bull":"bear"}">24h Change: ${d.change.toFixed(2)}%</div>
+    <div class="muted ${d.bull?"bull":"bear"}">${d.bull?"Bullish":"Bearish"} Volume Control</div>
     <div class="muted">Structure: ${d.structure}</div>
     <div class="prob ${d.bias.includes("Bull")?"bull":d.bias.includes("Bear")?"bear":"neutral"}">
       ${d.bias} — ${d.prob}%
@@ -242,6 +297,7 @@ function renderCard(d,el,isFav=false){
     ${d.R[1]?`<div class="muted bull">R2: ${d.R[1].toFixed(4)}</div>`:""}
   `;
   el.appendChild(card);
+  applyFilters();
 }
 
 /* ================= FAVORITES ================= */
@@ -250,45 +306,52 @@ async function addFav(sym){
   favSet.add(sym);
   const t=await fetchJSON(`${API}/fapi/v1/ticker/24hr?symbol=${sym}`);
   const d=await analyze(sym,+t.priceChangePercent);
-  renderCard(d,document.getElementById("favGrid"),true);
+  renderCard(d,favGrid,true);
 }
 function removeFav(sym){
   favSet.delete(sym);
-  document.getElementById("favGrid").innerHTML="";
+  favGrid.innerHTML="";
   favSet.forEach(addFav);
 }
 
 /* ================= SCAN ================= */
 async function runScan(){
+  if(scanLock) return;
+  scanLock=true;
+  scanBtn.disabled=true;
+
   greenGrid.innerHTML=""; redGrid.innerHTML="";
-  const bar=document.getElementById("progressFill");
-  bar.style.width="0%";
+  progressFill.style.width="0%";
 
   const t=await fetchJSON(`${API}/fapi/v1/ticker/24hr`);
-  const usdt=t.filter(x=>x.symbol.endsWith("USDT") && !BLACKSET.has(x.symbol));
+  const usdt=t.filter(x=>x.symbol.endsWith("USDT")&&!BLACKSET.has(x.symbol));
 
   const g=[...usdt].sort((a,b)=>b.priceChangePercent-a.priceChangePercent).slice(0,30);
   const r=[...usdt].sort((a,b)=>a.priceChangePercent-b.priceChangePercent).slice(0,30);
-  const total=g.length+r.length;
+  const all=[...g,...r];
   let done=0;
 
-  for(const x of [...g,...r]){
+  for(const x of all){
     const d=await analyze(x.symbol,+x.priceChangePercent);
     renderCard(d,x.priceChangePercent>=0?greenGrid:redGrid);
     done++;
-    bar.style.width=Math.round(done/total*100)+"%";
+    progressFill.style.width=Math.round(done/all.length*100)+"%";
   }
 
-  document.getElementById("timestamp").innerText=new Date().toLocaleString();
-  nextScanAt = Date.now() + AUTO_INTERVAL;
+  timestamp.innerText=new Date().toLocaleString();
+  nextScanAt=Date.now()+AUTO_INTERVAL;
   startCountdown();
+
+  setTimeout(()=>{
+    scanLock=false;
+    scanBtn.disabled=false;
+  },AUTO_INTERVAL);
 }
 
 /* ================= SEARCH ================= */
 async function runSearch(){
-  const s=document.getElementById("symbolSearch").value.toUpperCase();
+  const s=symbolSearch.value.toUpperCase();
   if(!s) return;
-
   const sym=s.endsWith("USDT")?s:s+"USDT";
   if(BLACKSET.has(sym)) return;
 
@@ -296,7 +359,7 @@ async function runSearch(){
   const t=await fetchJSON(`${API}/fapi/v1/ticker/24hr?symbol=${sym}`);
   const d=await analyze(sym,+t.priceChangePercent);
   renderCard(d,searchGrid);
-  document.getElementById("timestamp").innerText=new Date().toLocaleString();
+  timestamp.innerText=new Date().toLocaleString();
 }
 </script>
 </body>
