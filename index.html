@@ -553,10 +553,11 @@ async function analyze(sym, bear, dd, dChange){
 
 
 
-    /* ================= RENDER ================= */
+        
+/* ================= RENDER ================= */
 function renderCard(d, el, force=false){
 
-  // 🔥 FILTER: show ONLY weak levels (unless forced)
+  /* === FILTER: weak structure only (unless forced search) === */
   const isWeakSupport =
     d.levelType === "Support Test" &&
     d.levelStrength === "Weak Support";
@@ -566,9 +567,10 @@ function renderCard(d, el, force=false){
     d.levelStrength === "Weak Resistance";
 
   if(!force && el.id === "searchGrid" && !isWeakSupport && !isWeakResistance){
-  return;
-}
+    return;
+  }
 
+  /* === CARD INSTANCE === */
   let card = document.getElementById(el.id + "-" + d.sym);
   if(!card){
     card = document.createElement("div");
@@ -577,126 +579,98 @@ function renderCard(d, el, force=false){
     el.appendChild(card);
   }
 
-  /* === LEVEL STATE DETECTION === */
-let levelState = "valid";
+  /* === LEVEL STATE === */
+  let levelState = "valid";
+  const BREAK_TOL = -0.2;
 
-const BREAK_TOL = -0.2; // 🔒 0.2% tolerance
-
-if(d.levelType === "Support Test" && d.supportDistances?.length){
-  if(d.supportDistances.some(x => x < BREAK_TOL)){
+  if(d.levelType === "Support Test" && d.supportDistances?.some(x=>x < BREAK_TOL)){
     levelState = "broken";
   }
-}
-
-if(d.levelType === "Resistance Test" && d.resistanceDistances?.length){
-  if(d.resistanceDistances.some(x => x < BREAK_TOL)){
+  if(d.levelType === "Resistance Test" && d.resistanceDistances?.some(x=>x < BREAK_TOL)){
     levelState = "broken";
   }
-}
 
-/* === DATA ATTRIBUTES FOR FILTERING === */
-card.dataset.levelState = levelState;
-card.dataset.bias = d.bias;
-card.dataset.structure = d.levelStrength;
-card.dataset.prob = d.prob;
-card.dataset.change = d.change >= 0 ? "green" : "red";
+  /* === DATA ATTRIBUTES (FILTERING) === */
+  card.dataset.levelState = levelState;
+  card.dataset.bias = d.bias;
+  card.dataset.structure = d.levelStrength;
+  card.dataset.prob = d.prob;
+  card.dataset.change = d.change >= 0 ? "green" : "red";
 
   /* === COLORS === */
   const biasColor =
     d.bias.includes("Bull") ? "bull" :
     d.bias.includes("Bear") ? "bear" : "neutral";
 
-  const levelColor =
-    isWeakResistance ? "bull" :
-    isWeakSupport ? "bear" : "neutral";
-
   const changeColor = d.change >= 0 ? "bull" : "bear";
 
   const dominantColor =
-  d.overallDominant.includes("Bull") ? "bull" :
-  d.overallDominant.includes("Bear") ? "bear" : "neutral";
+    d.overallDominant.includes("Bull") ? "bull" :
+    d.overallDominant.includes("Bear") ? "bear" : "neutral";
 
-  /* === AI INTERPRETATION === */
-  let aiTitle = "ℹ️ Structure Context";
-  let aiText  = "No weak structure detected. Price is currently balanced.";
-
-  if(isWeakResistance){
-    aiTitle = "🚀 Breakout Watch";
-    aiText =
-      "Resistance is weak. Sellers are failing to defend this level. " +
-      "A clean break and hold above may trigger continuation higher. " +
-      "Watch for this level to flip into STRONG SUPPORT.";
-  }
-
-  if(isWeakSupport){
-    aiTitle = "⚠️ Breakdown Watch";
-    aiText =
-      "Support is weak. Buyers are failing to defend this level. " +
-      "A clean break and hold below may trigger continuation lower. " +
-      "Watch for this level to flip into STRONG RESISTANCE.";
-  }
-
-  const volumeDominanceLabel = d.dominantBull
-  ? "Bullish Volume Control"
-  : "Bearish Volume Control";
+  const activeLevelColor =
+    d.levelType === "Support Test" ? "bear" :
+    d.levelType === "Resistance Test" ? "bull" : "neutral";
 
   /* === DAILY CLOSE EXPECTATION === */
-let dailyCloseBias = "Unclear";
-let dailyCloseColor = "neutral";
+  let dailyCloseBias = "Unclear";
+  let dailyCloseColor = "neutral";
 
-// Bull dominant logic
-if(d.overallDominant.includes("Bull")){
-  if(d.levelType === "Resistance Test" && d.levelStrength === "Weak Resistance"){
-    dailyCloseBias = "Bullish Daily Close (Resistance Breakout)";
-    dailyCloseColor = "bull";
+  if(d.overallDominant.includes("Bull")){
+    if(d.levelType === "Resistance Test" && d.levelStrength === "Weak Resistance"){
+      dailyCloseBias = "Bullish Daily Close (Resistance Breakout)";
+      dailyCloseColor = "bull";
+    }
+    if(d.levelType === "Support Test" && levelState === "broken"){
+      dailyCloseBias = "Bearish Daily Close (Support Failed)";
+      dailyCloseColor = "bear";
+    }
   }
-  if(d.levelType === "Support Test" && d.levelStrength === "Strong Support" && levelState === "broken"){
-    dailyCloseBias = "Bearish Daily Close (Support Failed)";
-    dailyCloseColor = "bear";
-  }
-}
 
-// Bear dominant logic
-if(d.overallDominant.includes("Bear")){
-  if(d.levelType === "Support Test" && d.levelStrength === "Weak Support"){
-    dailyCloseBias = "Bearish Daily Close (Support Breakdown)";
-    dailyCloseColor = "bear";
+  if(d.overallDominant.includes("Bear")){
+    if(d.levelType === "Support Test" && d.levelStrength === "Weak Support"){
+      dailyCloseBias = "Bearish Daily Close (Support Breakdown)";
+      dailyCloseColor = "bear";
+    }
+    if(d.levelType === "Resistance Test" && levelState === "broken"){
+      dailyCloseBias = "Bullish Daily Close (Resistance Reclaimed)";
+      dailyCloseColor = "bull";
+    }
   }
-  if(d.levelType === "Resistance Test" && d.levelStrength === "Strong Resistance" && levelState === "broken"){
-    dailyCloseBias = "Bullish Daily Close (Resistance Reclaimed)";
-    dailyCloseColor = "bull";
-  }
-}
 
+  const volumeLabel = d.dominantBull
+    ? "Bullish Volume Control"
+    : "Bearish Volume Control";
+
+  /* === RENDER === */
   card.innerHTML = `
     <b>${d.sym}</b>
 
     <div class="muted ${dominantColor}">
-  🧭 Overall Dominant: <b>${d.overallDominant}</b>
-</div>
+      🧭 Overall Dominant: <b>${d.overallDominant}</b>
+    </div>
 
-<div class="muted" style="margin-top:6px;padding:6px;border-left:3px solid ${
+    <div class="muted ${activeLevelColor}" style="margin-top:4px">
+      🎯 <b>Current Structure Test:</b> ${d.levelType}
+    </div>
+
+    <div class="muted" style="margin-top:6px;padding:6px;border-left:3px solid ${
       d.overallDominant.includes("Bear") ? "#fb7185" :
       d.overallDominant.includes("Bull") ? "#22c55e" : "#facc15"
     }">
-
       <b>🧠 Market Control Rule</b><br>
       Volume shows <b>intent</b> — structure shows <b>control</b>.<br>
-
       ${
         d.overallDominant.includes("Bear")
-        ? `🟥 In a <b>Bear-dominant</b> market, green volume is a <b>pullback</b>
-           <br>unless structure is <b>reclaimed</b>.`
-        : d.overallDominant.includes("Bull")
-        ? `🟩 In a <b>Bull-dominant</b> market, red volume is a <b>pullback</b>
-           <br>unless structure is <b>lost</b>.`
-        : `🟨 Neutral control — wait for <b>structure confirmation</b>.`
+          ? `🟥 Bear dominant → green volume = pullback unless structure reclaimed`
+          : d.overallDominant.includes("Bull")
+          ? `🟩 Bull dominant → red volume = pullback unless structure lost`
+          : `🟨 Neutral → wait for structure confirmation`
       }
     </div>
 
     <div class="prob ${biasColor}">
-      ${d.bias} — ${d.prob}%
-      <span class="muted">(Structure Bias)</span>
+      ${d.bias} — ${d.prob}% <span class="muted">(Structure Bias)</span>
     </div>
 
     <div class="muted ${changeColor}">
@@ -704,59 +678,46 @@ if(d.overallDominant.includes("Bear")){
     </div>
 
     <div class="muted ${d.dominantBull ? "bull" : "bear"}">
-  📊 Dominant 24h Volume:
-  <b>${Number(d.dominantVol).toLocaleString()}</b>
-  <br>
-  <span class="${d.dominantBull ? "bull" : "bear"}">
-    ${volumeDominanceLabel}
-  </span>
-</div>
-<div class="muted ${dailyCloseColor}" style="margin-top:4px">
-  📅 <b>Daily Close Bias:</b> ${dailyCloseBias}
-</div>
-
-    <div class="muted ${levelColor}">
-      🧱 ${d.levelType}: <b>${d.levelStrength}</b>
+      📊 Dominant 24h Volume:
+      <b>${Number(d.dominantVol).toLocaleString()}</b><br>
+      ${volumeLabel}
     </div>
 
-    <div class="muted ${levelColor}">
-      <b>${aiTitle}</b><br>
-      ${aiText}
+    <div class="muted ${dailyCloseColor}" style="margin-top:4px">
+      📅 <b>Daily Close Bias:</b> ${dailyCloseBias}
     </div>
 
-    ${
-  d.levelType === "Support Test" && d.supportLevels.length ? `
-  <div class="muted bear">
-    🔴 Support:
-    <br>• S1: <b>${d.supportLevels[0].toFixed(4)}</b>
-    <span class="muted">(${d.supportDistances[0].toFixed(2)}%)</span>
-    ${d.supportLevels[1] ? `
-    <br>• S2: <b>${d.supportLevels[1].toFixed(4)}</b>
-    <span class="muted">(${d.supportDistances[1].toFixed(2)}%)</span>
+    <!-- SUPPORT (always shown if exists) -->
+    ${d.supportLevels?.length ? `
+      <div class="muted bear" style="margin-top:6px">
+        🔴 <b>Support</b>
+        <br>• S1: <b>${d.supportLevels[0].toFixed(4)}</b>
+        <span class="muted">(${d.supportDistances[0].toFixed(2)}%)</span>
+        ${d.supportLevels[1] ? `
+          <br>• S2: <b>${d.supportLevels[1].toFixed(4)}</b>
+          <span class="muted">(${d.supportDistances[1].toFixed(2)}%)</span>
+        ` : ``}
+      </div>
     ` : ``}
-  </div>` : ``
-}
 
-    ${
-  d.levelType === "Resistance Test" && d.resistanceLevels.length ? `
-  <div class="muted bull">
-    🟢 Resistance:
-    <br>• R1: <b>${d.resistanceLevels[0].toFixed(4)}</b>
-    <span class="muted">(${d.resistanceDistances[0].toFixed(2)}%)</span>
-
-    ${d.resistanceLevels[1] ? `
-    <br>• R2: <b>${d.resistanceLevels[1].toFixed(4)}</b>
-    <span class="muted">(${d.resistanceDistances[1].toFixed(2)}%)</span>
+    <!-- RESISTANCE (always shown if exists) -->
+    ${d.resistanceLevels?.length ? `
+      <div class="muted bull" style="margin-top:6px">
+        🟢 <b>Resistance</b>
+        <br>• R1: <b>${d.resistanceLevels[0].toFixed(4)}</b>
+        <span class="muted">(${d.resistanceDistances[0].toFixed(2)}%)</span>
+        ${d.resistanceLevels[1] ? `
+          <br>• R2: <b>${d.resistanceLevels[1].toFixed(4)}</b>
+          <span class="muted">(${d.resistanceDistances[1].toFixed(2)}%)</span>
+        ` : ``}
+      </div>
     ` : ``}
-  </div>` : ``
-}
 
-<div class="muted">
+    <div class="muted" style="margin-top:6px">
       ${d.reasons.join(" • ")}
     </div>
   `;
 }
-
     
   
   
