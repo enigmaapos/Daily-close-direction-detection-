@@ -227,10 +227,14 @@ function startAutoScan(){
   }, AUTO_INTERVAL);
 }
 
-  window.onload = () => {
+  window.onload = async () => {
   nextScanAt = Date.now() + AUTO_INTERVAL;
   startCountdown();
   startAutoScan();
+
+  // 🔥 run first scan immediately
+  isAutoScan = true;
+  await runScan();
 };
 
 /* === IMPROVED 15m SWING DETECTION (CONFIRMED) === */
