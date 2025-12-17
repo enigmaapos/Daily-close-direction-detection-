@@ -613,13 +613,12 @@ if(
   levelState = "broken";
 }
 
-  /* === DATA ATTRIBUTES (FILTERS) === */
-  card.dataset.levelState = levelState;
-  card.dataset.bias = d.bias;
-  card.dataset.structure = d.levelStrength;
-  card.dataset.prob = d.prob;
-  card.dataset.change = d.change >= 0 ? "green" : "red";
-  // attach to card dataset
+/* === DATASET ATTACHMENT (AFTER LOGIC) === */
+card.dataset.levelState = levelState;
+card.dataset.bias = d.bias;
+card.dataset.structure = d.levelStrength;
+card.dataset.prob = d.prob;
+card.dataset.change = d.change >= 0 ? "green" : "red";
 card.dataset.dailyClose = dailyCloseState;
 
   /* === COLORS === */
