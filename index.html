@@ -463,6 +463,12 @@ const id = `card-${scope}-${d.sym}`;
   card.dataset.vol  = d.bull ? "bull" : "bear";
   card.dataset.prob = d.prob;
 
+    const showSupport =
+    d.supportStrength && !d.supportStrength.includes("unconfirmed");
+
+  const showResistance =
+    d.resistanceStrength && !d.resistanceStrength.includes("unconfirmed");
+
   card.innerHTML = `
     ${isFav
       ? `<div class="close" onclick="removeFav('${d.sym}')">✖</div>`
