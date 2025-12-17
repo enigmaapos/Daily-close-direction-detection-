@@ -134,6 +134,16 @@ button.secondary{
   </select>
   </div>
 
+  <div class="row">
+  <label class="muted">Daily Close Bias:</label>
+  <select id="filterDailyClose">
+    <option value="all">All</option>
+    <option value="bullish">Bullish Daily Close</option>
+    <option value="bearish">Bearish Daily Close</option>
+    <option value="unclear">Unclear</option>
+  </select>
+  </div>
+
   <div class="row" style="margin-top:6px">
   <button class="secondary" onclick="resetFilters()">Reset Filters</button>
   </div>
@@ -250,7 +260,8 @@ function manualScan(){
     "filterBias",
     "filterChange",
     "filterProb",
-    "filterLevelState" // ✅ FIXED CASE
+    "filterLevelState",
+    "filterDailyClose" // ✅ NEW
   ].forEach(id=>{
     const el = document.getElementById(id);
     if(el) el.addEventListener("change", applyFilters);
@@ -608,6 +619,8 @@ if(
   card.dataset.structure = d.levelStrength;
   card.dataset.prob = d.prob;
   card.dataset.change = d.change >= 0 ? "green" : "red";
+  // attach to card dataset
+card.dataset.dailyClose = dailyCloseState;
 
   /* === COLORS === */
   const biasColor =
@@ -627,6 +640,12 @@ if(
 /* === DAILY CLOSE BIAS (STRUCTURE FIRST, ALWAYS) === */
 let dailyCloseBias = "Unclear";
 let dailyCloseColor = "neutral";
+
+  // normalize daily close state for filtering
+let dailyCloseState = "unclear";
+if(dailyCloseBias.includes("Bullish")) dailyCloseState = "bullish";
+if(dailyCloseBias.includes("Bearish")) dailyCloseState = "bearish";
+
 
 const supportBroken =
   d.supportDistances?.length >= 2 &&
@@ -838,9 +857,9 @@ applyFilters();
   const fBias = document.getElementById("filterBias").value;
   const fChange = document.getElementById("filterChange").value;
   const fProb = Number(document.getElementById("filterProb").value);
-  const levelState = document.getElementById("filterLevelState").value;
+  const fLevelState = document.getElementById("filterLevelState").value;
+  const fDailyClose = document.getElementById("filterDailyClose")?.value || "all";
 
-  // ✅ ONLY filter cards inside result grids
   const cards = document.querySelectorAll(
     "#greenGrid .card, #redGrid .card, #searchGrid .card"
   );
@@ -852,7 +871,8 @@ applyFilters();
     if(fBias !== "all" && card.dataset.bias !== fBias) show = false;
     if(fChange !== "all" && card.dataset.change !== fChange) show = false;
     if(Number(card.dataset.prob) < fProb) show = false;
-    if(levelState !== "all" && card.dataset.levelState !== levelState) show = false;
+    if(fLevelState !== "all" && card.dataset.levelState !== fLevelState) show = false;
+    if(fDailyClose !== "all" && card.dataset.dailyClose !== fDailyClose) show = false;
 
     card.style.display = show ? "" : "none";
   });
@@ -864,9 +884,10 @@ applyFilters();
   document.getElementById("filterChange").value = "all";
   document.getElementById("filterProb").value = "0";
   document.getElementById("filterLevelState").value = "all";
+  document.getElementById("filterDailyClose").value = "all";
 
-  applyFilters(); // 🔁 re-apply to show everything
-  }
+  applyFilters();
+}
   
 </script>
 </body>
