@@ -564,8 +564,8 @@ async function analyze(sym, bear, dd, dChange){
 
 
 
-/* ================= RENDER ================= */
-function renderCard(d, el, force=false){
+  /* ================= RENDER ================= */
+function renderCard(d, el, force = false) {
 
   /* === FILTER: weak structure only (unless forced search) === */
   const isWeakSupport =
@@ -576,50 +576,77 @@ function renderCard(d, el, force=false){
     d.levelType === "Resistance Test" &&
     d.levelStrength === "Weak Resistance";
 
-  if(!force && el.id === "searchGrid" && !isWeakSupport && !isWeakResistance){
+  if (!force && el.id === "searchGrid" && !isWeakSupport && !isWeakResistance) {
     return;
   }
 
   /* === CARD INSTANCE === */
   let card = document.getElementById(el.id + "-" + d.sym);
-  if(!card){
+  if (!card) {
     card = document.createElement("div");
     card.className = "card";
     card.id = el.id + "-" + d.sym;
     el.appendChild(card);
   }
 
-/* === LEVEL STATE (REAL STRUCTURE BREAK) === */
-let levelState = "valid";
-const BREAK_TOL = -0.2;
+  /* === STRUCTURE BREAK LOGIC (REAL: 2 LEVELS) === */
+  const BREAK_TOL = -0.2;
 
-// REAL support break = S1 AND S2 broken
-if(
-  d.levelType === "Support Test" &&
-  d.supportDistances?.length >= 2 &&
-  d.supportDistances[0] < BREAK_TOL &&
-  d.supportDistances[1] < BREAK_TOL
-){
-  levelState = "broken";
-}
+  const supportBroken =
+    d.supportDistances?.length >= 2 &&
+    d.supportDistances[0] < BREAK_TOL &&
+    d.supportDistances[1] < BREAK_TOL;
 
-// REAL resistance break = R1 AND R2 broken
-if(
-  d.levelType === "Resistance Test" &&
-  d.resistanceDistances?.length >= 2 &&
-  d.resistanceDistances[0] < BREAK_TOL &&
-  d.resistanceDistances[1] < BREAK_TOL
-){
-  levelState = "broken";
-}
+  const resistanceBroken =
+    d.resistanceDistances?.length >= 2 &&
+    d.resistanceDistances[0] < BREAK_TOL &&
+    d.resistanceDistances[1] < BREAK_TOL;
 
-/* === DATASET ATTACHMENT (AFTER LOGIC) === */
-card.dataset.levelState = levelState;
-card.dataset.bias = d.bias;
-card.dataset.structure = d.levelStrength;
-card.dataset.prob = d.prob;
-card.dataset.change = d.change >= 0 ? "green" : "red";
-card.dataset.dailyClose = dailyCloseState;
+  let levelState = "valid";
+  if (supportBroken || resistanceBroken) {
+    levelState = "broken";
+  }
+
+  /* === DAILY CLOSE BIAS (STRUCTURE FIRST — ABSOLUTE) === */
+  let dailyCloseBias = "Unclear";
+  let dailyCloseColor = "neutral";
+  let dailyCloseState = "unclear";
+
+  // 1️⃣ HARD STRUCTURE OVERRIDE (truth > everything)
+  if (supportBroken) {
+    dailyCloseBias = "Bearish Daily Close (Support Broken)";
+    dailyCloseColor = "bear";
+    dailyCloseState = "bearish";
+  }
+  else if (resistanceBroken) {
+    dailyCloseBias = "Bullish Daily Close (Resistance Broken)";
+    dailyCloseColor = "bull";
+    dailyCloseState = "bullish";
+  }
+
+  // 2️⃣ DOMINANCE CONTEXT (only if structure NOT broken)
+  else if (d.overallDominant.includes("Bull")) {
+    if (d.levelType === "Resistance Test" && d.levelStrength === "Weak Resistance") {
+      dailyCloseBias = "Bullish Daily Close (Weak Resistance)";
+      dailyCloseColor = "bull";
+      dailyCloseState = "bullish";
+    }
+  }
+  else if (d.overallDominant.includes("Bear")) {
+    if (d.levelType === "Support Test" && d.levelStrength === "Weak Support") {
+      dailyCloseBias = "Bearish Daily Close (Weak Support)";
+      dailyCloseColor = "bear";
+      dailyCloseState = "bearish";
+    }
+  }
+
+  /* === DATASET (FILTERS — AFTER ALL LOGIC) === */
+  card.dataset.levelState = levelState;
+  card.dataset.bias = d.bias;
+  card.dataset.structure = d.levelStrength;
+  card.dataset.prob = d.prob;
+  card.dataset.change = d.change >= 0 ? "green" : "red";
+  card.dataset.dailyClose = dailyCloseState;
 
   /* === COLORS === */
   const biasColor =
@@ -635,49 +662,6 @@ card.dataset.dailyClose = dailyCloseState;
   const activeLevelColor =
     d.levelType === "Support Test" ? "bear" :
     d.levelType === "Resistance Test" ? "bull" : "neutral";
-
-/* === DAILY CLOSE BIAS (STRUCTURE FIRST, ALWAYS) === */
-let dailyCloseBias = "Unclear";
-let dailyCloseColor = "neutral";
-let dailyCloseState = "unclear";
-
-const supportBroken =
-  d.supportDistances?.length >= 2 &&
-  d.supportDistances[0] < BREAK_TOL &&
-  d.supportDistances[1] < BREAK_TOL;
-
-const resistanceBroken =
-  d.resistanceDistances?.length >= 2 &&
-  d.resistanceDistances[0] < BREAK_TOL &&
-  d.resistanceDistances[1] < BREAK_TOL;
-
-// 1️⃣ HARD STRUCTURE OVERRIDE (absolute truth)
-if(supportBroken){
-  dailyCloseBias = "Bearish Daily Close (Support Broken)";
-  dailyCloseColor = "bear";
-  dailyCloseState = "bearish";
-}
-else if(resistanceBroken){
-  dailyCloseBias = "Bullish Daily Close (Resistance Broken)";
-  dailyCloseColor = "bull";
-  dailyCloseState = "bullish";
-}
-
-// 2️⃣ DOMINANCE CONTEXT (only if NO hard break)
-else if(d.overallDominant.includes("Bull")){
-  if(d.levelType === "Resistance Test" && d.levelStrength === "Weak Resistance"){
-    dailyCloseBias = "Bullish Daily Close (Weak Resistance)";
-    dailyCloseColor = "bull";
-    dailyCloseState = "bullish";
-  }
-}
-else if(d.overallDominant.includes("Bear")){
-  if(d.levelType === "Support Test" && d.levelStrength === "Weak Support"){
-    dailyCloseBias = "Bearish Daily Close (Weak Support)";
-    dailyCloseColor = "bear";
-    dailyCloseState = "bearish";
-  }
-}
 
   const volumeLabel = d.dominantBull
     ? "Bullish Volume Control"
@@ -695,23 +679,9 @@ else if(d.overallDominant.includes("Bear")){
       🎯 <b>Current Structure Test:</b> ${d.levelType}
     </div>
 
-    <div class="muted" style="margin-top:6px;padding:6px;border-left:3px solid ${
-      d.overallDominant.includes("Bear") ? "#fb7185" :
-      d.overallDominant.includes("Bull") ? "#22c55e" : "#facc15"
-    }">
-      <b>🧠 Market Control Rule</b><br>
-      Volume shows <b>intent</b> — structure shows <b>control</b>.<br>
-      ${
-        d.overallDominant.includes("Bear")
-          ? `🟥 Bear dominant → green volume = pullback unless structure reclaimed`
-          : d.overallDominant.includes("Bull")
-          ? `🟩 Bull dominant → red volume = pullback unless structure lost`
-          : `🟨 Neutral → structure decides direction`
-      }
-    </div>
-
     <div class="prob ${biasColor}">
-      ${d.bias} — ${d.prob}% <span class="muted">(Structure Bias)</span>
+      ${d.bias} — ${d.prob}%
+      <span class="muted">(Structure Bias)</span>
     </div>
 
     <div class="muted ${changeColor}">
@@ -728,28 +698,26 @@ else if(d.overallDominant.includes("Bear")){
       📅 <b>Daily Close Bias:</b> ${dailyCloseBias}
     </div>
 
-    <!-- SUPPORT (always shown) -->
     ${d.supportLevels?.length ? `
       <div class="muted bear" style="margin-top:6px">
         🔴 <b>Support</b>
         <br>• S1: <b>${d.supportLevels[0].toFixed(4)}</b>
-        <span class="muted">(${d.supportDistances[0].toFixed(2)}%)</span>
+        (${d.supportDistances[0].toFixed(2)}%)
         ${d.supportLevels[1] ? `
           <br>• S2: <b>${d.supportLevels[1].toFixed(4)}</b>
-          <span class="muted">(${d.supportDistances[1].toFixed(2)}%)</span>
+          (${d.supportDistances[1].toFixed(2)}%)
         ` : ``}
       </div>
     ` : ``}
 
-    <!-- RESISTANCE (always shown) -->
     ${d.resistanceLevels?.length ? `
       <div class="muted bull" style="margin-top:6px">
         🟢 <b>Resistance</b>
         <br>• R1: <b>${d.resistanceLevels[0].toFixed(4)}</b>
-        <span class="muted">(${d.resistanceDistances[0].toFixed(2)}%)</span>
+        (${d.resistanceDistances[0].toFixed(2)}%)
         ${d.resistanceLevels[1] ? `
           <br>• R2: <b>${d.resistanceLevels[1].toFixed(4)}</b>
-          <span class="muted">(${d.resistanceDistances[1].toFixed(2)}%)</span>
+          (${d.resistanceDistances[1].toFixed(2)}%)
         ` : ``}
       </div>
     ` : ``}
