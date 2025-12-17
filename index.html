@@ -216,43 +216,24 @@ function startCountdown(){
 }
 
 function toggleAuto(){
-  autoEnabled = !autoEnabled;
-
-  clearInterval(autoTimer);
-  clearInterval(countdownTimer);
-
+  autoEnabled=!autoEnabled;
+  clearInterval(autoTimer); clearInterval(countdownTimer);
   if(autoEnabled){
-    isAuto = true;
-
-    // 🔒 run first scan safely
-    safeAutoScan();
-
-    autoTimer = setInterval(safeAutoScan, AUTO_INTERVAL);
+    isAuto=true;
+    runScan();
+    nextRefreshAt=Date.now()+AUTO_INTERVAL;
+    autoTimer=setInterval(()=>{
+      isAuto=true;
+      runScan();
+      nextRefreshAt=Date.now()+AUTO_INTERVAL;
+    },AUTO_INTERVAL);
     startCountdown();
   }else{
-    isAuto = false;
-    refreshTimer.innerText = "Auto refresh: OFF";
+    isAuto=false;
+    refreshTimer.innerText="Auto refresh: OFF";
   }
 }
-
-async function safeAutoScan(){
-  // 🚫 don't overlap scans
-  if(scanRunning) return;
-
-  scanRunning = true;
-  refreshTimer.innerText = "Auto refreshing...";
-
-  try{
-    await runScan();
-  }catch(err){
-    console.error("Auto scan error:", err);
-  }
-
-  scanRunning = false;
-
-  // ⏱️ reset timer AFTER scan completes
-  nextRefreshAt = Date.now() + AUTO_INTERVAL;
-}
+  
 
 function manualScan(){
   isAuto=false;
