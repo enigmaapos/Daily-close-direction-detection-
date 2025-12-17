@@ -718,6 +718,14 @@ async function runScan(){
   if(scanRunning) return;
   scanRunning = true;
 
+  setTimeout(()=>{
+  if(scanRunning){
+    console.warn("⚠️ Scan watchdog unlock");
+    scanRunning = false;
+    status.innerText = "Scan recovered";
+  }
+}, 55_000);
+
   progressFill.style.width = "0%";
   status.innerText = isAuto ? "Auto refreshing..." : "Scanning...";
 
