@@ -640,6 +640,34 @@ card.dataset.change = d.change >= 0 ? "green" : "red";
   ? "Bullish Volume Control"
   : "Bearish Volume Control";
 
+  /* === DAILY CLOSE EXPECTATION === */
+let dailyCloseBias = "Unclear";
+let dailyCloseColor = "neutral";
+
+// Bull dominant logic
+if(d.overallDominant.includes("Bull")){
+  if(d.levelType === "Resistance Test" && d.levelStrength === "Weak Resistance"){
+    dailyCloseBias = "Bullish Daily Close (Resistance Breakout)";
+    dailyCloseColor = "bull";
+  }
+  if(d.levelType === "Support Test" && d.levelStrength === "Strong Support" && levelState === "broken"){
+    dailyCloseBias = "Bearish Daily Close (Support Failed)";
+    dailyCloseColor = "bear";
+  }
+}
+
+// Bear dominant logic
+if(d.overallDominant.includes("Bear")){
+  if(d.levelType === "Support Test" && d.levelStrength === "Weak Support"){
+    dailyCloseBias = "Bearish Daily Close (Support Breakdown)";
+    dailyCloseColor = "bear";
+  }
+  if(d.levelType === "Resistance Test" && d.levelStrength === "Strong Resistance" && levelState === "broken"){
+    dailyCloseBias = "Bullish Daily Close (Resistance Reclaimed)";
+    dailyCloseColor = "bull";
+  }
+}
+
   card.innerHTML = `
     <b>${d.sym}</b>
 
@@ -682,6 +710,9 @@ card.dataset.change = d.change >= 0 ? "green" : "red";
   <span class="${d.dominantBull ? "bull" : "bear"}">
     ${volumeDominanceLabel}
   </span>
+</div>
+<div class="muted ${dailyCloseColor}" style="margin-top:4px">
+  📅 <b>Daily Close Bias:</b> ${dailyCloseBias}
 </div>
 
     <div class="muted ${levelColor}">
