@@ -698,9 +698,6 @@ card.dataset.dailyrsi = d.dailyRSI?.label || "all";
 }
 
   async function runDailyRSIScan(targetLabel){
-  if(scanLock) return;
-  scanLock = true;
-
   greenGrid.innerHTML = "";
   redGrid.innerHTML = "";
   progressFill.style.width = "0%";
@@ -733,7 +730,6 @@ card.dataset.dailyrsi = d.dailyRSI?.label || "all";
       );
     }
 
-    // 🔄 progress UI
     progressFill.style.width =
       Math.round((dailyRSIScanned / total) * 100) + "%";
 
@@ -742,7 +738,7 @@ card.dataset.dailyrsi = d.dailyRSI?.label || "all";
       `Scanned: ${dailyRSIScanned}/${total} | ` +
       `Matches: ${dailyRSIMatchCount}`;
 
-    await sleep(180); // safe rate
+    await sleep(180);
   }
 
   timestamp.innerText = new Date().toLocaleString();
@@ -750,14 +746,9 @@ card.dataset.dailyrsi = d.dailyRSI?.label || "all";
     `📅 Daily RSI Scan COMPLETE — ${targetLabel} | ` +
     `Total Matches: ${dailyRSIMatchCount}`;
 
-    
   applySort();
   applyFilters();
-
-  scanLock = false;
-    scanBtn.disabled = true;
-    scanBtn.disabled = false;
-}
+    }
   
 /* ================= FAVORITES ================= */
 async function addFav(sym){
@@ -775,19 +766,22 @@ function removeFav(sym){
 
 /* ================= SCAN ================= */
 async function runScan(){
+  if(scanLock) return;
+
   const dailyRSIFilter = filterDailyRSI.value;
 
-if(dailyRSIFilter !== "all"){
-  await runDailyRSIScan(dailyRSIFilter);
-  scanLock = false;
-  scanBtn.disabled = false;
-  isAutoScan = false;
-  return;
-}
-  
-  if(scanLock) return;
+  if(dailyRSIFilter !== "all"){
+    scanLock = true;
+    scanBtn.disabled = true;
+    await runDailyRSIScan(dailyRSIFilter);
+    scanLock = false;
+    scanBtn.disabled = false;
+    return;
+  }
+
   scanLock = true;
   scanBtn.disabled = true;
+  
 
   // ❗ reset ONLY on manual scan
   if(!isAutoScan){
