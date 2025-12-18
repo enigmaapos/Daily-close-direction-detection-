@@ -595,6 +595,7 @@ if(activeSearchSymbol){
 /* ================= SEARCH ================= */
 async function runSearch(){
   const status = document.getElementById("manualStatus");
+  const btn = document.querySelector("button.secondary");
   const s = symbolSearch.value.toUpperCase();
 
   if(!s){
@@ -611,6 +612,10 @@ async function runSearch(){
   }
 
   try{
+    // 🔒 lock button
+    btn.disabled = true;
+    btn.textContent = "Analyzing…";
+
     status.textContent = `Manual status: Analyzing ${sym}…`;
     status.className = "muted status-running";
 
@@ -630,11 +635,13 @@ async function runSearch(){
     console.error(err);
     status.textContent = `Manual status: Analysis failed`;
     status.className = "muted status-error";
+
+  }finally{
+    // 🔓 unlock button
+    btn.disabled = false;
+    btn.textContent = "Analyze";
   }
 }
-  const btn = document.querySelector("button.secondary");
-btn.disabled = true;
-btn.textContent = "Analyzing...";
 </script>
 </body>
 </html>
