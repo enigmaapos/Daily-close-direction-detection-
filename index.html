@@ -481,7 +481,8 @@ async function analyze(sym,change){
 let domVBull = true;
 let domVIndex = -1;
 
-for(let i = k.length - 96; i < k.length; i++){
+
+for(let i = k.length - 96; i < k.length - 1; i++){
   if(v[i] > domV){
     domV = v[i];
     domVBull = k[i][4] > k[i][1];
@@ -497,6 +498,8 @@ const volumeBreakoutType =
   volumeBreakout
     ? (lastBull ? "Bull Volume Breakout" : "Bear Volume Breakout")
     : "No Volume Breakout";
+
+  const bull = domVBull;
 
   const swings = findSwings(h,l,c,v);
 const sw = {
@@ -542,6 +545,7 @@ function applyFilters(){
     if(p > 0 && +c.dataset.prob < p) ok = false;
     if(r !== "all" && c.dataset.dailyrsi !== r) ok = false;
     if(s !== "all" && c.dataset.structure !== s) ok = false;
+    if(vb !== "all" && c.dataset.volbreak !== vb) ok = false;
 
     c.style.display = ok ? "" : "none";
   });
