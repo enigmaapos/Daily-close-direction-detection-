@@ -485,14 +485,6 @@ const id = `card-${scope}-${d.sym}`;
       : `<div class="star" onclick="addFav('${d.sym}')">⭐</div>`
     }
     <b>${d.sym}</b>
-    <div class="muted">Price: ${d.price.toFixed(4)}</div>
-    <div class="muted ${d.change>=0?"bull":"bear"}">
-      24h Change: ${d.change.toFixed(2)}%
-    </div>
-    <div class="muted ${d.bull?"bull":"bear"}">
-      ${d.bull?"Bullish":"Bearish"} Volume Control
-    </div>
-    <div class="muted">Structure: ${d.structure}</div>
     
     ${d.dailyRSI ? `
   <div class="muted ${
@@ -503,6 +495,15 @@ const id = `card-${scope}-${d.sym}`;
     (Δ ${d.dailyRSI.diff})
   </div>
 ` : ""}
+
+    <div class="muted">Price: ${d.price.toFixed(4)}</div>
+    <div class="muted ${d.change>=0?"bull":"bear"}">
+      24h Change: ${d.change.toFixed(2)}%
+    </div>
+    <div class="muted ${d.bull?"bull":"bear"}">
+      ${d.bull?"Bullish":"Bearish"} Volume Control
+    </div>
+    <div class="muted">Structure: ${d.structure}</div>
 
     <div class="prob ${
       d.bias.includes("Bull")?"bull":
