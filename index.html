@@ -215,6 +215,17 @@ button.secondary{
   Reset Filters
   </button>
 
+  <select id="sortField">
+  <option value="prob">Probability</option>
+  <option value="change">24h Change</option>
+  <option value="price">Price</option>
+</select>
+
+<select id="sortOrder">
+  <option value="desc">Descending</option>
+  <option value="asc">Ascending</option>
+</select>
+
 <div class="progress"><div id="progressFill"></div></div>
 
 <h2>⭐ Favorites</h2>
@@ -513,6 +524,26 @@ function applyFilters(){
     btn.classList.remove("reset-flash");
   }, 800);
 }
+
+  function applySort(){
+  const field = document.getElementById("sortField").value;
+  const order = document.getElementById("sortOrder").value;
+
+  ["greenGrid","redGrid","favGrid","searchGrid"].forEach(id=>{
+    const grid = document.getElementById(id);
+    if(!grid) return;
+
+    const cards = [...grid.children];
+
+    cards.sort((a,b)=>{
+      const av = +a.dataset[field];
+      const bv = +b.dataset[field];
+      return order === "asc" ? av - bv : bv - av;
+    });
+
+    cards.forEach(c=>grid.appendChild(c));
+  });
+    }
   
 /* ================= RENDER ================= */
 function renderCard(d, el, isFav=false){
@@ -529,9 +560,11 @@ const id = `card-${scope}-${d.sym}`;
   }
 
   card.dataset.bias = d.bias;
-  card.dataset.vol  = d.bull ? "bull" : "bear";
-  card.dataset.prob = d.prob;
-  card.dataset.dailyrsi = d.dailyRSI?.label || "none";
+card.dataset.vol  = d.bull ? "bull" : "bear";
+card.dataset.prob = d.prob;
+card.dataset.change = d.change;
+card.dataset.price = d.price;
+card.dataset.dailyrsi = d.dailyRSI?.label || "all";
 
   card.innerHTML = `
     ${isFav
@@ -690,6 +723,13 @@ async function runSearch(){
   btn.classList.remove("analyze-running");
   }
 }
+
+  ["sortField","sortOrder"].forEach(id=>{
+  document.getElementById(id).addEventListener("change", ()=>{
+    applySort();
+    applyFilters(); // keep filters applied
+  });
+});
 </script>
 </body>
 </html>
