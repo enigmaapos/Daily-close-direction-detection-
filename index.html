@@ -176,6 +176,9 @@ button.secondary{
 </div>
 
 <div id="manualStatus" class="muted"></div>
+   <button class="secondary" id="resetFiltersBtn" onclick="resetFilters()">
+    Reset Filters
+   </button>
 
 <!-- FILTERS ROW -->
 <div class="row filter-box">
@@ -213,10 +216,6 @@ button.secondary{
 
 <!-- SORT + RESET ROW -->
 <div class="row">
-  <button class="secondary" id="resetFiltersBtn" onclick="resetFilters()">
-    Reset Filters
-  </button>
-
   <select id="sortField">
     <option value="prob">Probability</option>
     <option value="change">24h Change</option>
