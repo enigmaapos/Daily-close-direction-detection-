@@ -311,6 +311,7 @@ function startAutoScan(){
   if(autoTimer) clearInterval(autoTimer);
   autoTimer = setInterval(async ()=>{
     if(scanLock) return;
+    if(filterDailyRSI.value !== "all") return; // ⛔ stop auto scan
     isAutoScan = true;
     await runScan();
   }, AUTO_INTERVAL);
@@ -613,13 +614,6 @@ const id = `card-${scope}-${d.sym}`;
     el.appendChild(card);
   }
 
-  const dailyRSIFilter = filterDailyRSI.value;
-
-if(dailyRSIFilter !== "all"){
-  await runDailyRSIScan(dailyRSIFilter);
-  return;
-}
-
   
   card.dataset.bias = d.bias;
 card.dataset.vol  = d.bull ? "bull" : "bear";
@@ -691,6 +685,9 @@ card.dataset.dailyrsi = d.dailyRSI?.label || "all";
 }
 
   async function runDailyRSIScan(targetLabel){
+  if(scanLock) return;
+  scanLock = true;
+
   greenGrid.innerHTML = "";
   redGrid.innerHTML = "";
   progressFill.style.width = "0%";
@@ -711,14 +708,16 @@ card.dataset.dailyrsi = d.dailyRSI?.label || "all";
 
     done++;
     progressFill.style.width = Math.round(done/total*100) + "%";
-    await sleep(180); // safe rate
+    await sleep(180);
   }
 
   timestamp.innerText = new Date().toLocaleString();
   applySort();
   applyFilters();
-  }
 
+  scanLock = false;
+}
+  
 /* ================= FAVORITES ================= */
 async function addFav(sym){
   if(BLACKSET.has(sym)) return;
@@ -735,6 +734,16 @@ function removeFav(sym){
 
 /* ================= SCAN ================= */
 async function runScan(){
+  const dailyRSIFilter = filterDailyRSI.value;
+
+if(dailyRSIFilter !== "all"){
+  await runDailyRSIScan(dailyRSIFilter);
+  scanLock = false;
+  scanBtn.disabled = false;
+  isAutoScan = false;
+  return;
+}
+  
   if(scanLock) return;
   scanLock = true;
   scanBtn.disabled = true;
