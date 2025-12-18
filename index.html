@@ -203,6 +203,15 @@ button.secondary{
     <option value="80">≥ 80%</option>
   </select>
 
+  <select id="filterStructure">
+  <option value="all">All Structures</option>
+  <option value="support holding">Support Holding</option>
+  <option value="support broken">Support Broken</option>
+  <option value="resistance holding">Resistance Holding</option>
+  <option value="resistance broken">Resistance Broken</option>
+  <option value="none">None</option>
+  </select>
+
   <select id="filterDailyRSI">
     <option value="all">All Daily RSI</option>
     <option value="MAX ZONE PUMP">MAX ZONE PUMP</option>
@@ -495,6 +504,7 @@ function applyFilters(){
   const v = filterVol.value;
   const p = +filterProb.value;
   const r = filterDailyRSI.value;
+  const s = filterStructure.value;
 
   document.querySelectorAll(".card").forEach(c=>{
     let ok = true;
@@ -503,16 +513,23 @@ function applyFilters(){
     if(v !== "all" && c.dataset.vol !== v) ok = false;
     if(p > 0 && +c.dataset.prob < p) ok = false;
     if(r !== "all" && c.dataset.dailyrsi !== r) ok = false;
+    if(s !== "all" && c.dataset.structure !== s) ok = false;
 
     c.style.display = ok ? "" : "none";
   });
 }
+
+  ["filterBias","filterVol","filterProb","filterDailyRSI","filterStructure"]
+.forEach(id=>{
+  document.getElementById(id).addEventListener("change", applyFilters);
+});
 
        function resetFilters(){
   filterBias.value = "all";
   filterVol.value = "all";
   filterProb.value = "0";
   filterDailyRSI.value = "all";
+         filterStructure.value = "all";
 
   applyFilters();
 
@@ -568,6 +585,7 @@ card.dataset.vol  = d.bull ? "bull" : "bear";
 card.dataset.prob = d.prob;
 card.dataset.change = d.change;
 card.dataset.price = d.price;
+card.dataset.structure = d.structure || "none";
 card.dataset.dailyrsi = d.dailyRSI?.label || "all";
 
   card.innerHTML = `
