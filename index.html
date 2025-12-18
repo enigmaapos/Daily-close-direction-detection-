@@ -745,13 +745,14 @@ async function runSearch(){
   }
 }
 
-  ["sortField","sortOrder"].forEach(id=>{
+["sortField","sortOrder"].forEach(id=>{
   document.getElementById(id).addEventListener("change", ()=>{
     applySort();
     applyFilters(); // keep filters applied
   });
+});
 
-    ["filterBias","filterVol","filterProb","filterDailyRSI","filterStructure"]
+["filterBias","filterVol","filterProb","filterDailyRSI","filterStructure"]
 .forEach(id=>{
   document.getElementById(id).addEventListener("change", applyFilters);
 });
