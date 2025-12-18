@@ -750,10 +750,13 @@ card.dataset.dailyrsi = d.dailyRSI?.label || "all";
     `📅 Daily RSI Scan COMPLETE — ${targetLabel} | ` +
     `Total Matches: ${dailyRSIMatchCount}`;
 
+    
   applySort();
   applyFilters();
 
   scanLock = false;
+    scanBtn.disabled = true;
+    scanBtn.disabled = false;
 }
   
 /* ================= FAVORITES ================= */
@@ -896,11 +899,21 @@ async function runSearch(){
   "filterBias",
   "filterVol",
   "filterProb",
-  "filterDailyRSI",
   "filterStructure",
   "filterVolBreak"
 ].forEach(id=>{
   document.getElementById(id).addEventListener("change", applyFilters);
+});
+
+  document.getElementById("filterDailyRSI").addEventListener("change", async ()=>{
+  if(filterDailyRSI.value === "all"){
+    document.getElementById("dailyRSIStatus").textContent =
+      "📅 Daily RSI Scan: —";
+    return;
+  }
+
+  // 🔥 start RSI scan immediately
+  await runScan();
 });
 </script>
 </body>
