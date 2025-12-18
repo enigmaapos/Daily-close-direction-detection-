@@ -206,6 +206,7 @@ button.secondary{
   </select>
 
   <select id="filterVolBreak">
+    <option value="scan">SCAN 24h VOLUME BREAK</option>
   <option value="all">All Volume Breaks</option>
   <option value="yes">24h Volume Breakout</option>
   <option value="no">No Volume Breakout</option>
@@ -302,6 +303,14 @@ let dailyRSIScanned = 0;
 
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const fetchJSON=async u=>(await fetch(u)).json();
+
+  /* ================= SOUND ALERT ================= */
+const volumeAlert = new Audio(
+  "https://actions.google.com/sounds/v1/alarms/beep_short.ogg"
+);
+
+let volumeAlertCooldown = {};
+const ALERT_COOLDOWN = 60 * 1000; // 1 minute per symbol
 
 /* ================= COUNTDOWN ================= */
 function startCountdown(){
@@ -649,6 +658,17 @@ card.dataset.structure = d.structure || "none";
 card.dataset.dailyrsi = d.dailyRSI?.label || "all";
   card.dataset.volbreak = d.volumeBreakout ? "yes" : "no";
 
+  // 🔔 SOUND ALERT — only on 24h volume breakout
+if (d.volumeBreakout) {
+  const now = Date.now();
+
+  // prevent repeat spam per symbol
+  if (!volumeAlertCooldown[d.sym] || now - volumeAlertCooldown[d.sym] > ALERT_COOLDOWN) {
+    volumeAlert.play().catch(()=>{});
+    volumeAlertCooldown[d.sym] = now;
+  }
+}
+
   card.innerHTML = `
     ${isFav
       ? `<div class="close" onclick="removeFav('${d.sym}')">✖</div>`
@@ -768,6 +788,72 @@ card.dataset.dailyrsi = d.dailyRSI?.label || "all";
   applySort();
   applyFilters();
 }
+
+  async function runVolumeBreakScan(){
+  greenGrid.innerHTML = "";
+  redGrid.innerHTML = "";
+  progressFill.style.width = "0%";
+
+  const statusEl = document.getElementById("dailyRSIStatus");
+  statusEl.textContent = "🔥 24h Volume Break Scan — starting…";
+
+  const tickers = await fetchJSON(`${API}/fapi/v1/ticker/24hr`);
+  const usdt = tickers.filter(
+    x => x.symbol.endsWith("USDT") && !BLACKSET.has(x.symbol)
+  );
+
+  const total = usdt.length;
+  let scanned = 0;
+  let matches = [];
+
+  /* === PHASE 1: FAST VOLUME CHECK (NO 15m ANALYSIS) === */
+  for(const x of usdt){
+    scanned++;
+
+    const k = await fetchJSON(
+      `${API}/fapi/v1/klines?symbol=${x.symbol}&interval=15m&limit=97`
+    );
+    await sleep(120);
+
+    const v = k.map(c=>+c[5]);
+
+    let domV = 0;
+    for(let i=0;i<v.length-1;i++){
+      if(v[i] > domV) domV = v[i];
+    }
+
+    const lastVol = v.at(-1);
+    if(lastVol > domV){
+      matches.push({
+        symbol: x.symbol,
+        change: +x.priceChangePercent
+      });
+    }
+
+    progressFill.style.width =
+      Math.round((scanned / total) * 100) + "%";
+
+    statusEl.textContent =
+      `🔥 24h Volume Break Scan | ${scanned}/${total} | Matches: ${matches.length}`;
+  }
+
+  /* === PHASE 2: FULL ANALYSIS (SAFE) === */
+  for(const m of matches){
+    const d = await analyze(m.symbol, m.change);
+    renderCard(
+      d,
+      m.change >= 0 ? greenGrid : redGrid
+    );
+    await sleep(120);
+  }
+
+  timestamp.innerText = new Date().toLocaleString();
+  statusEl.textContent =
+    `🔥 24h Volume Break Scan COMPLETE — Matches: ${matches.length}`;
+
+  applySort();
+  applyFilters();
+  }
   
 /* ================= FAVORITES ================= */
 async function addFav(sym){
@@ -787,6 +873,17 @@ function removeFav(sym){
 async function runScan(){
   if(scanLock) return;
 
+  const volBreakMode = filterVolBreak.value;
+
+if(volBreakMode === "scan"){
+  scanLock = true;
+  scanBtn.disabled = true;
+  await runVolumeBreakScan();
+  scanLock = false;
+  scanBtn.disabled = false;
+  return;
+}
+  
   const dailyRSIFilter = filterDailyRSI.value;
 
   if(dailyRSIFilter !== "all"){
