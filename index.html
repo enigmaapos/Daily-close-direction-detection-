@@ -161,7 +161,6 @@ button.secondary{
 </head>
 
 <body>
-
 <h1>📊 15m Volume → Structure Probability Scanner</h1>
 <div class="muted">Dominant volume + structure confirmation only</div>
 <div class="muted">
@@ -169,15 +168,16 @@ button.secondary{
   Next scan in: <span id="nextScan">—</span>
 </div>
 
+<!-- ACTION ROW -->
 <div class="row">
   <button class="primary" id="scanBtn" onclick="runScan()">Run Scan</button>
   <input id="symbolSearch" placeholder="BTCUSDT"/>
   <button class="secondary" onclick="runSearch()">Analyze</button>
 </div>
-  <div id="manualStatus" class="muted">
-  Manual status: Idle
-  </div>
 
+<div id="manualStatus" class="muted"></div>
+
+<!-- FILTERS ROW -->
 <div class="row filter-box">
   <select id="filterBias">
     <option value="all">All Bias</option>
@@ -199,34 +199,39 @@ button.secondary{
     <option value="70">≥ 70%</option>
     <option value="80">≥ 80%</option>
   </select>
-</div>
 
   <select id="filterDailyRSI">
-  <option value="all">All Daily RSI</option>
-  <option value="MAX ZONE PUMP">MAX ZONE PUMP</option>
-  <option value="MAX ZONE DUMP">MAX ZONE DUMP</option>
-  <option value="BALANCE ZONE PUMP">BALANCE ZONE PUMP</option>
-  <option value="BALANCE ZONE DUMP">BALANCE ZONE DUMP</option>
-  <option value="LOWEST ZONE PUMP">LOWEST ZONE PUMP</option>
-  <option value="LOWEST ZONE DUMP">LOWEST ZONE DUMP</option>
+    <option value="all">All Daily RSI</option>
+    <option value="MAX ZONE PUMP">MAX ZONE PUMP</option>
+    <option value="MAX ZONE DUMP">MAX ZONE DUMP</option>
+    <option value="BALANCE ZONE PUMP">BALANCE ZONE PUMP</option>
+    <option value="BALANCE ZONE DUMP">BALANCE ZONE DUMP</option>
+    <option value="LOWEST ZONE PUMP">LOWEST ZONE PUMP</option>
+    <option value="LOWEST ZONE DUMP">LOWEST ZONE DUMP</option>
   </select>
+</div>
 
+<!-- SORT + RESET ROW -->
+<div class="row">
   <button class="secondary" id="resetFiltersBtn" onclick="resetFilters()">
-  Reset Filters
+    Reset Filters
   </button>
 
   <select id="sortField">
-  <option value="prob">Probability</option>
-  <option value="change">24h Change</option>
-  <option value="price">Price</option>
-</select>
+    <option value="prob">Probability</option>
+    <option value="change">24h Change</option>
+    <option value="price">Price</option>
+  </select>
 
-<select id="sortOrder">
-  <option value="desc">Descending</option>
-  <option value="asc">Ascending</option>
-</select>
+  <select id="sortOrder">
+    <option value="desc">Descending</option>
+    <option value="asc">Ascending</option>
+  </select>
+</div>
 
-<div class="progress"><div id="progressFill"></div></div>
+<div class="progress">
+  <div id="progressFill"></div>
+</div>
 
 <h2>⭐ Favorites</h2>
 <div class="grid" id="favGrid"></div>
