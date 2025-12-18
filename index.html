@@ -315,6 +315,38 @@ const DAILY_RSI_TTL = 6 * 60 * 60 * 1000; // 6 hours
 const DAILY_RSI_INTERVAL = "1d";
 const DAILY_RSI_LIMIT = 200;
 
+  /* ================= RSI ================= */
+function calculateRSI(closes, period=14){
+  if(closes.length <= period) return [];
+  let gains=0,losses=0,rsi=[];
+  for(let i=1;i<=period;i++){
+    const d=closes[i]-closes[i-1];
+    d>0?gains+=d:losses-=d;
+  }
+  let avgG=gains/period, avgL=losses/period;
+  rsi[period]=100-100/(1+(avgL===0?100:avgG/avgL));
+  for(let i=period+1;i<closes.length;i++){
+    const d=closes[i]-closes[i-1];
+    avgG=(avgG*(period-1)+(d>0?d:0))/period;
+    avgL=(avgL*(period-1)+(d<0?-d:0))/period;
+    rsi[i]=100-100/(1+(avgL===0?100:avgG/avgL));
+  }
+  return rsi;
+}
+
+/* ================= RSI DIFF ================= */
+function getRecentRSIDiff(rsi, lookback=14){
+  const s=rsi.slice(-lookback);
+  const hi=Math.max(...s);
+  const lo=Math.min(...s);
+  return {
+    diff: +(hi - lo).toFixed(2),
+    direction:
+      s.at(-1)>s[0]?'pump':
+      s.at(-1)<s[0]?'dump':'neutral'
+  };
+}
+
 async function getDailyRSIContext(sym){
   const cached = DAILY_RSI_CACHE[sym];
   if(cached && Date.now() - cached.ts < DAILY_RSI_TTL){
