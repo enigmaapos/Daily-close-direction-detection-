@@ -172,7 +172,7 @@ button.secondary{
 <div class="row">
   <button class="primary" id="scanBtn" onclick="runScan()">Run Scan</button>
   <input id="symbolSearch" placeholder="BTCUSDT"/>
-  <button class="secondary" onclick="runSearch()">Analyze</button>
+  <button class="secondary" id="analyzeBtn" onclick="runSearch()">Analyze</button>
 </div>
 
 <div id="manualStatus" class="muted"></div>
@@ -689,12 +689,14 @@ if(activeSearchSymbol){
   scanLock = false;
   scanBtn.disabled = false;
   isAutoScan = false;
+  applySort();
+applyFilters();
 }
 
 /* ================= SEARCH ================= */
 async function runSearch(){
   const status = document.getElementById("manualStatus");
-  const btn = document.querySelector("button.secondary");
+  const btn = document.getElementById("analyzeBtn");
   const s = symbolSearch.value.toUpperCase();
 
   if(!s){
@@ -748,7 +750,7 @@ async function runSearch(){
     applySort();
     applyFilters(); // keep filters applied
   });
-});
+
     ["filterBias","filterVol","filterProb","filterDailyRSI","filterStructure"]
 .forEach(id=>{
   document.getElementById(id).addEventListener("change", applyFilters);
