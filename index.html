@@ -309,6 +309,45 @@ function findSwings(h, l, c, v){
   };
 }
 
+    /* ================= DAILY RSI CONTEXT ================= */
+const DAILY_RSI_CACHE = {};
+const DAILY_RSI_INTERVAL = "1d";
+const DAILY_RSI_LIMIT = 200;
+
+async function getDailyRSIContext(sym){
+  if(DAILY_RSI_CACHE[sym]) return DAILY_RSI_CACHE[sym];
+
+  try{
+    const k = await fetchJSON(
+      `${API}/fapi/v1/klines?symbol=${sym}&interval=${DAILY_RSI_INTERVAL}&limit=${DAILY_RSI_LIMIT}`
+    );
+
+    const closes = k.map(x=>+x[4]);
+    const rsi = calculateRSI(closes);
+    if(!rsi.length) return null;
+
+    const d = getRecentRSIDiff(rsi);
+
+    let label = "Neutral";
+    if(d.direction==="pump" && d.diff>=25) label="MAX ZONE PUMP";
+    else if(d.direction==="dump" && d.diff>=25) label="MAX ZONE DUMP";
+    else if(d.direction==="pump" && d.diff>=18) label="BALANCE ZONE PUMP";
+    else if(d.direction==="dump" && d.diff>=18) label="BALANCE ZONE DUMP";
+    else if(d.direction==="pump" && d.diff<=8) label="LOWEST ZONE PUMP";
+    else if(d.direction==="dump" && d.diff<=8) label="LOWEST ZONE DUMP";
+
+    DAILY_RSI_CACHE[sym] = {
+      label,
+      diff: d.diff,
+      dir: d.direction
+    };
+
+    return DAILY_RSI_CACHE[sym];
+  }catch(e){
+    return null;
+  }
+  }
+
 /* ================= ANALYZE ================= */
 async function analyze(sym,change){
   const k=await fetchJSON(`${API}/fapi/v1/klines?symbol=${sym}&interval=15m&limit=240`);
@@ -341,7 +380,9 @@ const sw = {
     else{bias="Bear Trap Risk";prob=40;}
   }
 
-  return {sym,price,change,bull,prob,bias,structure,S:sw.S,R:sw.R};
+    const dailyRSI = await getDailyRSIContext(sym);
+
+  return {sym,price,change,bull,prob,bias,structure,S:sw.S,R:sw.R,dailyRSI};
 }
 
 /* ================= FILTERS ================= */
@@ -391,6 +432,17 @@ const id = `card-${scope}-${d.sym}`;
       ${d.bull?"Bullish":"Bearish"} Volume Control
     </div>
     <div class="muted">Structure: ${d.structure}</div>
+    
+    ${d.dailyRSI ? `
+  <div class="muted ${
+    d.dailyRSI.dir==="pump"?"bull":
+    d.dailyRSI.dir==="dump"?"bear":"neutral"
+  }">
+    📅 Daily RSI: ${d.dailyRSI.label}
+    (Δ ${d.dailyRSI.diff})
+  </div>
+` : ""}
+
     <div class="prob ${
       d.bias.includes("Bull")?"bull":
       d.bias.includes("Bear")?"bear":"neutral"
