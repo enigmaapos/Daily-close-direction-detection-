@@ -806,38 +806,51 @@ if (d.volumeBreakout) {
   let scanned = 0;
   let matches = [];
 
-  /* === PHASE 1: FAST VOLUME CHECK (NO 15m ANALYSIS) === */
-  for(const x of usdt){
-    scanned++;
+  const BATCH_SIZE = 10;   // ✅ SAFE
+  const BATCH_DELAY = 180; // ms between batches
 
-    const k = await fetchJSON(
-      `${API}/fapi/v1/klines?symbol=${x.symbol}&interval=15m&limit=97`
+  /* === PHASE 1: FAST PARALLEL VOLUME SCAN === */
+  for(let i = 0; i < usdt.length; i += BATCH_SIZE){
+    const batch = usdt.slice(i, i + BATCH_SIZE);
+
+    const results = await Promise.all(
+      batch.map(async (x)=>{
+        try{
+          const k = await fetchJSON(
+            `${API}/fapi/v1/klines?symbol=${x.symbol}&interval=15m&limit=97`
+          );
+
+          const v = k.map(c=>+c[5]);
+
+          let domV = 0;
+          for(let j=0;j<v.length-1;j++){
+            if(v[j] > domV) domV = v[j];
+          }
+
+          const lastVol = v.at(-1);
+          return lastVol > domV
+            ? { symbol: x.symbol, change: +x.priceChangePercent }
+            : null;
+
+        }catch(e){
+          return null;
+        }
+      })
     );
-    await sleep(120);
 
-    const v = k.map(c=>+c[5]);
+    results.filter(Boolean).forEach(r => matches.push(r));
 
-    let domV = 0;
-    for(let i=0;i<v.length-1;i++){
-      if(v[i] > domV) domV = v[i];
-    }
-
-    const lastVol = v.at(-1);
-    if(lastVol > domV){
-      matches.push({
-        symbol: x.symbol,
-        change: +x.priceChangePercent
-      });
-    }
-
+    scanned += batch.length;
     progressFill.style.width =
       Math.round((scanned / total) * 100) + "%";
 
     statusEl.textContent =
       `🔥 24h Volume Break Scan | ${scanned}/${total} | Matches: ${matches.length}`;
+
+    await sleep(BATCH_DELAY); // ⛔ rate-limit safety
   }
 
-  /* === PHASE 2: FULL ANALYSIS (SAFE) === */
+  /* === PHASE 2: FULL ANALYSIS (SEQUENTIAL & SAFE) === */
   for(const m of matches){
     const d = await analyze(m.symbol, m.change);
     renderCard(
