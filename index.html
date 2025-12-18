@@ -169,6 +169,10 @@ button.secondary{
   <option value="LOWEST ZONE DUMP">LOWEST ZONE DUMP</option>
   </select>
 
+  <button class="secondary" id="resetFiltersBtn" onclick="resetFilters()">
+  Reset Filters
+  </button>
+
 <div class="progress"><div id="progressFill"></div></div>
 
 <h2>⭐ Favorites</h2>
@@ -446,6 +450,15 @@ function applyFilters(){
     c.style.display = ok ? "" : "none";
   });
 }
+
+       function resetFilters(){
+  filterBias.value = "all";
+  filterVol.value = "all";
+  filterProb.value = "0";
+  filterDailyRSI.value = "all";
+
+  applyFilters();
+       }
   
 /* ================= RENDER ================= */
 function renderCard(d, el, isFav=false){
