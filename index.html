@@ -469,6 +469,10 @@ async function getDailyRSIContext(sym){
   }
 }
 
+  function isDailyRSIActive(){
+  return filterDailyRSI.value !== "all";
+  }
+
 /* ================= ANALYZE ================= */
 async function analyze(sym,change){
   const k=await fetchJSON(`${API}/fapi/v1/klines?symbol=${sym}&interval=15m&limit=240`);
@@ -609,6 +613,14 @@ const id = `card-${scope}-${d.sym}`;
     el.appendChild(card);
   }
 
+  const dailyRSIFilter = filterDailyRSI.value;
+
+if(dailyRSIFilter !== "all"){
+  await runDailyRSIScan(dailyRSIFilter);
+  return;
+}
+
+  
   card.dataset.bias = d.bias;
 card.dataset.vol  = d.bull ? "bull" : "bear";
 card.dataset.prob = d.prob;
@@ -677,6 +689,35 @@ card.dataset.dailyrsi = d.dailyRSI?.label || "all";
 
   applyFilters();
 }
+
+  async function runDailyRSIScan(targetLabel){
+  greenGrid.innerHTML = "";
+  redGrid.innerHTML = "";
+  progressFill.style.width = "0%";
+
+  const tickers = await fetchJSON(`${API}/fapi/v1/ticker/24hr`);
+  const usdt = tickers.filter(x=>x.symbol.endsWith("USDT") && !BLACKSET.has(x.symbol));
+
+  let done = 0;
+  const total = usdt.length;
+
+  for(const x of usdt){
+    const rsi = await getDailyRSIContext(x.symbol);
+
+    if(rsi && rsi.label === targetLabel){
+      const d = await analyze(x.symbol, +x.priceChangePercent);
+      renderCard(d, x.priceChangePercent >= 0 ? greenGrid : redGrid);
+    }
+
+    done++;
+    progressFill.style.width = Math.round(done/total*100) + "%";
+    await sleep(180); // safe rate
+  }
+
+  timestamp.innerText = new Date().toLocaleString();
+  applySort();
+  applyFilters();
+  }
 
 /* ================= FAVORITES ================= */
 async function addFav(sym){
