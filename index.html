@@ -157,6 +157,13 @@ button.secondary{
   0%{background-position:0% 0}
   100%{background-position:200% 0}
 }
+
+  #dailyRSIStatus{
+  padding:6px 8px;
+  border-radius:6px;
+  background:#0b1220;
+  border:1px solid #172033;
+  }
 </style>
 </head>
 
@@ -249,6 +256,10 @@ button.secondary{
   <div id="progressFill"></div>
 </div>
 
+  <div class="muted" id="dailyRSIStatus">
+  📅 Daily RSI Scan: —
+  </div>
+
 <h2>⭐ Favorites</h2>
 <div class="grid" id="favGrid"></div>
 
@@ -286,6 +297,8 @@ let autoEnabled=true;
   let isAutoScan = false;
 let autoTimer = null;
   let activeSearchSymbol = null;
+  let dailyRSIMatchCount = 0;
+let dailyRSIScanned = 0;
 
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const fetchJSON=async u=>(await fetch(u)).json();
@@ -692,26 +705,51 @@ card.dataset.dailyrsi = d.dailyRSI?.label || "all";
   redGrid.innerHTML = "";
   progressFill.style.width = "0%";
 
-  const tickers = await fetchJSON(`${API}/fapi/v1/ticker/24hr`);
-  const usdt = tickers.filter(x=>x.symbol.endsWith("USDT") && !BLACKSET.has(x.symbol));
+  dailyRSIMatchCount = 0;
+  dailyRSIScanned = 0;
 
-  let done = 0;
+  const statusEl = document.getElementById("dailyRSIStatus");
+  statusEl.textContent = `📅 Daily RSI Scan: ${targetLabel} — starting…`;
+
+  const tickers = await fetchJSON(`${API}/fapi/v1/ticker/24hr`);
+  const usdt = tickers.filter(
+    x => x.symbol.endsWith("USDT") && !BLACKSET.has(x.symbol)
+  );
+
   const total = usdt.length;
 
   for(const x of usdt){
+    dailyRSIScanned++;
+
     const rsi = await getDailyRSIContext(x.symbol);
 
     if(rsi && rsi.label === targetLabel){
+      dailyRSIMatchCount++;
+
       const d = await analyze(x.symbol, +x.priceChangePercent);
-      renderCard(d, x.priceChangePercent >= 0 ? greenGrid : redGrid);
+      renderCard(
+        d,
+        x.priceChangePercent >= 0 ? greenGrid : redGrid
+      );
     }
 
-    done++;
-    progressFill.style.width = Math.round(done/total*100) + "%";
-    await sleep(180);
+    // 🔄 progress UI
+    progressFill.style.width =
+      Math.round((dailyRSIScanned / total) * 100) + "%";
+
+    statusEl.textContent =
+      `📅 Daily RSI Scan: ${targetLabel} | ` +
+      `Scanned: ${dailyRSIScanned}/${total} | ` +
+      `Matches: ${dailyRSIMatchCount}`;
+
+    await sleep(180); // safe rate
   }
 
   timestamp.innerText = new Date().toLocaleString();
+  statusEl.textContent =
+    `📅 Daily RSI Scan COMPLETE — ${targetLabel} | ` +
+    `Total Matches: ${dailyRSIMatchCount}`;
+
   applySort();
   applyFilters();
 
