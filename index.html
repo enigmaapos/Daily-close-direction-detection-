@@ -487,6 +487,18 @@ async function getDailyRSIContext(sym){
   return filterDailyRSI.value !== "all";
   }
 
+  async function batchMap(items, batchSize, asyncFn){
+  const results = [];
+  for(let i = 0; i < items.length; i += batchSize){
+    const batch = items.slice(i, i + batchSize);
+    const batchResults = await Promise.all(
+      batch.map(x => asyncFn(x).catch(() => null))
+    );
+    results.push(...batchResults);
+  }
+  return results;
+  }
+
 /* ================= ANALYZE ================= */
 async function analyze(sym,change){
   const k=await fetchJSON(`${API}/fapi/v1/klines?symbol=${sym}&interval=15m&limit=240`);
@@ -715,20 +727,12 @@ card.dataset.dailyrsi = d.dailyRSI?.label || "all";
 
   const total = usdt.length;
 
-  for(const x of usdt){
-    dailyRSIScanned++;
+  /* === PHASE 1: FAST DAILY RSI BATCH SCAN === */
+  const BATCH_SIZE = 10; // 🔥 safe + fast
 
+  const rsiResults = await batchMap(usdt, BATCH_SIZE, async (x)=>{
     const rsi = await getDailyRSIContext(x.symbol);
-
-    if(rsi && rsi.label === targetLabel){
-      dailyRSIMatchCount++;
-
-      const d = await analyze(x.symbol, +x.priceChangePercent);
-      renderCard(
-        d,
-        x.priceChangePercent >= 0 ? greenGrid : redGrid
-      );
-    }
+    dailyRSIScanned++;
 
     progressFill.style.width =
       Math.round((dailyRSIScanned / total) * 100) + "%";
@@ -738,7 +742,22 @@ card.dataset.dailyrsi = d.dailyRSI?.label || "all";
       `Scanned: ${dailyRSIScanned}/${total} | ` +
       `Matches: ${dailyRSIMatchCount}`;
 
-    await sleep(180);
+    return rsi && rsi.label === targetLabel
+      ? { symbol: x.symbol, change: +x.priceChangePercent }
+      : null;
+  });
+
+  const matches = rsiResults.filter(Boolean);
+  dailyRSIMatchCount = matches.length;
+
+  /* === PHASE 2: SAFE 15m ANALYSIS (SEQUENTIAL) === */
+  for(const m of matches){
+    const d = await analyze(m.symbol, m.change);
+    renderCard(
+      d,
+      m.change >= 0 ? greenGrid : redGrid
+    );
+    await sleep(120); // keep this slow & safe
   }
 
   timestamp.innerText = new Date().toLocaleString();
@@ -748,7 +767,7 @@ card.dataset.dailyrsi = d.dailyRSI?.label || "all";
 
   applySort();
   applyFilters();
-    }
+}
   
 /* ================= FAVORITES ================= */
 async function addFav(sym){
