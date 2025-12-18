@@ -159,6 +159,16 @@ button.secondary{
   </select>
 </div>
 
+  <select id="filterDailyRSI">
+  <option value="all">All Daily RSI</option>
+  <option value="MAX ZONE PUMP">MAX ZONE PUMP</option>
+  <option value="MAX ZONE DUMP">MAX ZONE DUMP</option>
+  <option value="BALANCE ZONE PUMP">BALANCE ZONE PUMP</option>
+  <option value="BALANCE ZONE DUMP">BALANCE ZONE DUMP</option>
+  <option value="LOWEST ZONE PUMP">LOWEST ZONE PUMP</option>
+  <option value="LOWEST ZONE DUMP">LOWEST ZONE DUMP</option>
+  </select>
+
 <div class="progress"><div id="progressFill"></div></div>
 
 <h2>⭐ Favorites</h2>
@@ -420,19 +430,23 @@ const sw = {
 
 /* ================= FILTERS ================= */
 function applyFilters(){
-  const b=filterBias.value;
-  const v=filterVol.value;
-  const p=+filterProb.value;
+  const b = filterBias.value;
+  const v = filterVol.value;
+  const p = +filterProb.value;
+  const r = filterDailyRSI.value;
+
   document.querySelectorAll(".card").forEach(c=>{
-    let ok=true;
-    if(b!=="all"&&c.dataset.bias!==b) ok=false;
-    if(v!=="all"&&c.dataset.vol!==v) ok=false;
-    if(p>0&&+c.dataset.prob<p) ok=false;
-    c.style.display=ok?"":"none";
+    let ok = true;
+
+    if(b !== "all" && c.dataset.bias !== b) ok = false;
+    if(v !== "all" && c.dataset.vol !== v) ok = false;
+    if(p > 0 && +c.dataset.prob < p) ok = false;
+    if(r !== "all" && c.dataset.dailyrsi !== r) ok = false;
+
+    c.style.display = ok ? "" : "none";
   });
 }
-filterBias.onchange=filterVol.onchange=filterProb.onchange=applyFilters;
-
+  
 /* ================= RENDER ================= */
 function renderCard(d, el, isFav=false){
   const scope = el.id || "global";
@@ -450,6 +464,7 @@ const id = `card-${scope}-${d.sym}`;
   card.dataset.bias = d.bias;
   card.dataset.vol  = d.bull ? "bull" : "bear";
   card.dataset.prob = d.prob;
+  card.dataset.dailyrsi = d.dailyRSI?.label || "none";
 
   card.innerHTML = `
     ${isFav
