@@ -176,11 +176,30 @@ button.secondary{
 </div>
 
 <!-- ACTION ROW -->
-<div class="row">
-  <button class="primary" id="scanBtn" onclick="runScan()">Run Scan</button>
-  <input id="symbolSearch" placeholder="BTCUSDT"/>
+  <div class="row filter-box">
+
+  <!-- NORMAL SCAN -->
+  <div>
+    <button class="primary" onclick="startNormalScan()">▶ Normal Scan</button>
+    <button class="secondary" onclick="stopNormalScan()">■ Stop</button>
+  </div>
+
+  <!-- DAILY RSI SCAN -->
+  <div>
+    <button class="primary" onclick="startDailyRSIScan()">▶ Daily RSI Scan</button>
+    <button class="secondary" onclick="stopDailyRSIScan()">■ Stop</button>
+  </div>
+
+  <!-- VOLUME BREAK SCAN -->
+  <div>
+    <button class="primary" onclick="startVolumeBreakScan()">▶ Volume Break Scan</button>
+    <button class="secondary" onclick="stopVolumeBreakScan()">■ Stop</button>
+  </div>
+
+      <input id="symbolSearch" placeholder="BTCUSDT"/>
   <button class="secondary" id="analyzeBtn" onclick="runSearch()">Analyze</button>
-</div>
+  </div>
+
 
 <div id="manualStatus" class="muted"></div>
 
@@ -301,6 +320,24 @@ let autoTimer = null;
   let dailyRSIMatchCount = 0;
 let dailyRSIScanned = 0;
 
+  const SCAN_STATE = {
+  normal: {
+    running: false,
+    timer: null,
+    interval: 60 * 1000
+  },
+  dailyRSI: {
+    running: false,
+    timer: null,
+    interval: 10 * 60 * 1000 // heavier scan
+  },
+  volumeBreak: {
+    running: false,
+    timer: null,
+    interval: 2 * 60 * 1000 // event-based
+  }
+};
+  
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const fetchJSON=async u=>(await fetch(u)).json();
 
@@ -734,7 +771,91 @@ if (d.volumeBreakout) {
   applyFilters();
 }
 
+  async function startNormalScan(){
+  if(SCAN_STATE.normal.running) return;
+
+  SCAN_STATE.normal.running = true;
+
+  async function tick(){
+    if(!SCAN_STATE.normal.running) return;
+    await runNormalScanOnce();
+  }
+
+  await tick(); // run immediately
+  SCAN_STATE.normal.timer = setInterval(tick, SCAN_STATE.normal.interval);
+  }
+
+  function stopNormalScan(){
+  SCAN_STATE.normal.running = false;
+  clearInterval(SCAN_STATE.normal.timer);
+  }
+
+  async function runNormalScanOnce(){
+  greenGrid.innerHTML = "";
+  redGrid.innerHTML = "";
+
+  const t = await fetchJSON(`${API}/fapi/v1/ticker/24hr`);
+  const usdt = t.filter(x=>x.symbol.endsWith("USDT") && !BLACKSET.has(x.symbol));
+
+  const g = [...usdt].sort((a,b)=>b.priceChangePercent-a.priceChangePercent).slice(0,30);
+  const r = [...usdt].sort((a,b)=>a.priceChangePercent-b.priceChangePercent).slice(0,30);
+
+  const all = [...g, ...r];
+
+  for(const x of all){
+    if(!SCAN_STATE.normal.running) break;
+
+    const d = await analyze(x.symbol, +x.priceChangePercent);
+    renderCard(d, x.priceChangePercent>=0 ? greenGrid : redGrid);
+    await sleep(120); // ✅ rate safe
+  }
+
+  timestamp.innerText = new Date().toLocaleString();
+  }
+
+  async function startDailyRSIScan(){
+  if(SCAN_STATE.dailyRSI.running) return;
+
+  SCAN_STATE.dailyRSI.running = true;
+
+  async function tick(){
+    if(!SCAN_STATE.dailyRSI.running) return;
+    await runDailyRSIScan(filterDailyRSI.value);
+  }
+
+  await tick();
+  SCAN_STATE.dailyRSI.timer =
+    setInterval(tick, SCAN_STATE.dailyRSI.interval);
+    }
+
+  function stopDailyRSIScan(){
+  SCAN_STATE.dailyRSI.running = false;
+  clearInterval(SCAN_STATE.dailyRSI.timer);
+  }
+
+  async function startVolumeBreakScan(){
+  if(SCAN_STATE.volumeBreak.running) return;
+
+  SCAN_STATE.volumeBreak.running = true;
+
+  async function tick(){
+    if(!SCAN_STATE.volumeBreak.running) return;
+    await runVolumeBreakScan();
+  }
+
+  await tick();
+  SCAN_STATE.volumeBreak.timer =
+    setInterval(tick, SCAN_STATE.volumeBreak.interval);
+  }
+
+  function stopVolumeBreakScan(){
+  SCAN_STATE.volumeBreak.running = false;
+  clearInterval(SCAN_STATE.volumeBreak.timer);
+  }
+
   async function runDailyRSIScan(targetLabel){
+    if(!SCAN_STATE.dailyRSI.running) return;
+    
   greenGrid.innerHTML = "";
   redGrid.innerHTML = "";
   progressFill.style.width = "0%";
