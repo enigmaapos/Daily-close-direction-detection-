@@ -311,11 +311,15 @@ function findSwings(h, l, c, v){
 
     /* ================= DAILY RSI CONTEXT ================= */
 const DAILY_RSI_CACHE = {};
+const DAILY_RSI_TTL = 6 * 60 * 60 * 1000; // 6 hours
 const DAILY_RSI_INTERVAL = "1d";
 const DAILY_RSI_LIMIT = 200;
 
 async function getDailyRSIContext(sym){
-  if(DAILY_RSI_CACHE[sym]) return DAILY_RSI_CACHE[sym];
+  const cached = DAILY_RSI_CACHE[sym];
+  if(cached && Date.now() - cached.ts < DAILY_RSI_TTL){
+    return cached.data;
+  }
 
   try{
     const k = await fetchJSON(
@@ -336,17 +340,14 @@ async function getDailyRSIContext(sym){
     else if(d.direction==="pump" && d.diff<=8) label="LOWEST ZONE PUMP";
     else if(d.direction==="dump" && d.diff<=8) label="LOWEST ZONE DUMP";
 
-    DAILY_RSI_CACHE[sym] = {
-      label,
-      diff: d.diff,
-      dir: d.direction
-    };
+    const data = { label, diff: d.diff, dir: d.direction };
+    DAILY_RSI_CACHE[sym] = { data, ts: Date.now() };
 
-    return DAILY_RSI_CACHE[sym];
+    return data;
   }catch(e){
     return null;
   }
-  }
+}
 
 /* ================= ANALYZE ================= */
 async function analyze(sym,change){
