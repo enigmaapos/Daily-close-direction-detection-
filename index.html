@@ -309,6 +309,11 @@ const volumeAlert = new Audio(
   "https://actions.google.com/sounds/v1/alarms/beep_short.ogg"
 );
 
+  /* ================= VOLUME BREAK MEMORY ================= */
+const VOLUME_BREAK_MEMORY = {
+  // symbol: { lastCandleTime, domV }
+};
+
 let volumeAlertCooldown = {};
 const ALERT_COOLDOWN = 60 * 1000; // 1 minute per symbol
 
@@ -827,9 +832,31 @@ if (d.volumeBreakout) {
             if(v[j] > domV) domV = v[j];
           }
 
-          const lastVol = v.at(-1);
-          return lastVol > domV
-            ? { symbol: x.symbol, change: +x.priceChangePercent }
+          const last = k.at(-1);
+const lastVol = +last[5];
+const lastTime = +last[6]; // candle close time
+
+const mem = VOLUME_BREAK_MEMORY[x.symbol];
+
+// detect NEW break only
+if (
+  lastVol > domV &&
+  (
+    !mem ||                      // never seen before
+    lastTime > mem.lastCandleTime // new candle
+  )
+) {
+  matches.push({
+    symbol: x.symbol,
+    change: +x.priceChangePercent
+  });
+
+  // 🔐 store memory
+  VOLUME_BREAK_MEMORY[x.symbol] = {
+    lastCandleTime: lastTime,
+    domV
+  };
+}
             : null;
 
         }catch(e){
@@ -1038,6 +1065,15 @@ async function runSearch(){
   // 🔥 start RSI scan immediately
   await runScan();
 });
+
+      setInterval(() => {
+  const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+  for (const s in VOLUME_BREAK_MEMORY) {
+    if (VOLUME_BREAK_MEMORY[s].lastCandleTime < cutoff) {
+      delete VOLUME_BREAK_MEMORY[s];
+    }
+  }
+}, 10 * 60 * 1000);
 </script>
 </body>
 </html>
