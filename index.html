@@ -198,6 +198,12 @@ button.secondary{
     <option value="bear">Bear Volume</option>
   </select>
 
+  <select id="filterVolBreak">
+  <option value="all">All Volume Breaks</option>
+  <option value="yes">24h Volume Breakout</option>
+  <option value="no">No Volume Breakout</option>
+  </select>
+
   <select id="filterProb">
     <option value="0">Any Prob</option>
     <option value="60">≥ 60%</option>
@@ -471,10 +477,26 @@ async function analyze(sym,change){
   const c=k.map(x=>+x[4]),h=k.map(x=>+x[2]),l=k.map(x=>+x[3]),v=k.map(x=>+x[5]);
   const price=c.at(-1);
 
-  let domV=0,bull=true;
-  for(let i=k.length-96;i<k.length;i++){
-    if(v[i]>domV){domV=v[i];bull=k[i][4]>k[i][1];}
+  let domV = 0;
+let domVBull = true;
+let domVIndex = -1;
+
+for(let i = k.length - 96; i < k.length; i++){
+  if(v[i] > domV){
+    domV = v[i];
+    domVBull = k[i][4] > k[i][1];
+    domVIndex = i;
   }
+}
+
+const lastVol = v.at(-1);
+const lastBull = k.at(-1)[4] > k.at(-1)[1];
+
+const volumeBreakout = lastVol > domV;
+const volumeBreakoutType =
+  volumeBreakout
+    ? (lastBull ? "Bull Volume Breakout" : "Bear Volume Breakout")
+    : "No Volume Breakout";
 
   const swings = findSwings(h,l,c,v);
 const sw = {
@@ -497,7 +519,10 @@ const sw = {
 
     const dailyRSI = await getDailyRSIContext(sym);
 
-  return {sym,price,change,bull,prob,bias,structure,S:sw.S,R:sw.R,dailyRSI};
+  return {sym,price,change,bull,prob,bias,structure,S:sw.S,R:sw.R,dailyRSI,volumeBreakout,
+  volumeBreakoutType,
+  domV,
+  lastVol};
 }
 
 /* ================= FILTERS ================= */
@@ -507,6 +532,7 @@ function applyFilters(){
   const p = +filterProb.value;
   const r = filterDailyRSI.value;
   const s = filterStructure.value;
+  const vb = filterVolBreak.value;
 
   document.querySelectorAll(".card").forEach(c=>{
     let ok = true;
@@ -527,6 +553,8 @@ function applyFilters(){
   filterProb.value = "0";
   filterDailyRSI.value = "all";
          filterStructure.value = "all";
+           filterVolBreak.value = "all";
+           
 
   applyFilters();
 
@@ -584,6 +612,7 @@ card.dataset.change = d.change;
 card.dataset.price = d.price;
 card.dataset.structure = d.structure || "none";
 card.dataset.dailyrsi = d.dailyRSI?.label || "all";
+  card.dataset.volbreak = d.volumeBreakout ? "yes" : "no";
 
   card.innerHTML = `
     ${isFav
@@ -609,6 +638,25 @@ card.dataset.dailyrsi = d.dailyRSI?.label || "all";
     <div class="muted ${d.bull?"bull":"bear"}">
       ${d.bull?"Bullish":"Bearish"} Volume Control
     </div>
+    
+    ${d.volumeBreakout ? `
+  <div class="muted ${
+    d.volumeBreakoutType.includes("Bull") ? "bull" : "bear"
+  }">
+    🔥 ${d.volumeBreakoutType}
+    <br>
+    <span class="muted">
+      15m: ${d.lastVol.toLocaleString()}
+      &nbsp;›&nbsp;
+      24h High: ${d.domV.toLocaleString()}
+    </span>
+  </div>
+` : `
+  <div class="muted neutral">
+    📊 No 24h Volume Breakout
+  </div>
+`}
+
     <div class="muted">Structure: ${d.structure}</div>
 
     <div class="prob ${
@@ -752,8 +800,14 @@ async function runSearch(){
   });
 });
 
-["filterBias","filterVol","filterProb","filterDailyRSI","filterStructure"]
-.forEach(id=>{
+[
+  "filterBias",
+  "filterVol",
+  "filterProb",
+  "filterDailyRSI",
+  "filterStructure",
+  "filterVolBreak"
+].forEach(id=>{
   document.getElementById(id).addEventListener("change", applyFilters);
 });
 </script>
