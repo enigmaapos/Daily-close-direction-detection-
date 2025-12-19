@@ -738,7 +738,7 @@ if (d.volumeBreakout) {
 }
 
   async function startNormalScan(){
-  if(SCAN_STATE.normal.running) return;
+  stopAllScans(); // 🔥 REQUIRED
 
   SCAN_STATE.normal.running = true;
 
@@ -747,9 +747,9 @@ if (d.volumeBreakout) {
     await runNormalScanOnce();
   }
 
-  await tick(); // run immediately
+  await tick();
   SCAN_STATE.normal.timer = setInterval(tick, SCAN_STATE.normal.interval);
-  }
+}
 
   function stopNormalScan(){
   SCAN_STATE.normal.running = false;
@@ -780,7 +780,7 @@ if (d.volumeBreakout) {
   }
 
   async function startDailyRSIScan(){
-  if(SCAN_STATE.dailyRSI.running) return;
+  stopAllScans(); // 🔥 REQUIRED
 
   SCAN_STATE.dailyRSI.running = true;
 
@@ -792,7 +792,7 @@ if (d.volumeBreakout) {
   await tick();
   SCAN_STATE.dailyRSI.timer =
     setInterval(tick, SCAN_STATE.dailyRSI.interval);
-    }
+}
 
   function stopDailyRSIScan(){
   SCAN_STATE.dailyRSI.running = false;
@@ -800,7 +800,7 @@ if (d.volumeBreakout) {
   }
 
   async function startVolumeBreakScan(){
-  if(SCAN_STATE.volumeBreak.running) return;
+  stopAllScans(); // 🔥 REQUIRED
 
   SCAN_STATE.volumeBreak.running = true;
 
@@ -812,7 +812,7 @@ if (d.volumeBreakout) {
   await tick();
   SCAN_STATE.volumeBreak.timer =
     setInterval(tick, SCAN_STATE.volumeBreak.interval);
-  }
+}
 
   function stopVolumeBreakScan(){
   SCAN_STATE.volumeBreak.running = false;
