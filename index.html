@@ -481,13 +481,19 @@ async function getDailyRSIContext(sym){
     const d = getRecentRSIDiff(rsi);
 
     let label = "Neutral";
-    if(d.direction==="pump" && d.diff>=25) label="MAX ZONE PUMP";
-    else if(d.direction==="dump" && d.diff>=25) label="MAX ZONE DUMP";
-    else if(d.direction==="pump" && d.diff>=18) label="BALANCE ZONE PUMP";
-    else if(d.direction==="dump" && d.diff>=18) label="BALANCE ZONE DUMP";
-    else if(d.direction==="pump" && d.diff<=8) label="LOWEST ZONE PUMP";
-    else if(d.direction==="dump" && d.diff<=8) label="LOWEST ZONE DUMP";
 
+if (d.direction === "pump") {
+  if (pumpAbove30) label = "MAX ZONE PUMP";
+  else if (pumpInRange_21_26) label = "BALANCE ZONE PUMP";
+  else if (pumpInRange_1_10) label = "LOWEST ZONE PUMP";
+}
+
+else if (d.direction === "dump") {
+  if (dumpAbove30) label = "MAX ZONE DUMP";
+  else if (dumpInRange_21_26) label = "BALANCE ZONE DUMP";
+  else if (dumpInRange_1_10) label = "LOWEST ZONE DUMP";
+}
+    
     const data = { label, diff: d.diff, dir: d.direction };
     DAILY_RSI_CACHE[sym] = { data, ts: Date.now() };
 
