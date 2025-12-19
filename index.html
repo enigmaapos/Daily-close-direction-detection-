@@ -310,12 +310,8 @@ const BLACKSET=new Set([
 ]);
 
 const favSet=new Set();
-let nextScanAt=null;
 let countdownTimer=null;
-let scanLock=false;
 let autoEnabled=true;
-  let isAutoScan = false;
-let autoTimer = null;
   let activeSearchSymbol = null;
   let dailyRSIMatchCount = 0;
 let dailyRSIScanned = 0;
@@ -370,26 +366,6 @@ function startCountdown(){
   },1000);
 }
 
-/* ================= AUTO REFRESH ================= */
-function startAutoScan(){
-  if(autoTimer) clearInterval(autoTimer);
-  autoTimer = setInterval(async ()=>{
-    if(scanLock) return;
-    if(filterDailyRSI.value !== "all") return; // ⛔ stop auto scan
-    isAutoScan = true;
-    await runScan();
-  }, AUTO_INTERVAL);
-}
-
-  window.onload = async () => {
-  nextScanAt = Date.now() + AUTO_INTERVAL;
-  startCountdown();
-  startAutoScan();
-
-  // 🔥 run first scan immediately
-  isAutoScan = true;
-  await runScan();
-};
 
 /* === IMPROVED 15m SWING DETECTION (CONFIRMED) === */
 function findSwings(h, l, c, v){
@@ -1030,82 +1006,6 @@ function removeFav(sym){
   favSet.forEach(addFav);
 }
 
-/* ================= SCAN ================= */
-async function runScan(){
-  if(scanLock) return;
-
-  const volBreakMode = filterVolBreak.value;
-
-if(volBreakMode === "scan"){
-  scanLock = true;
-  scanBtn.disabled = true;
-  await runVolumeBreakScan();
-  scanLock = false;
-  scanBtn.disabled = false;
-  return;
-}
-  
-  const dailyRSIFilter = filterDailyRSI.value;
-
-  if(dailyRSIFilter !== "all"){
-    scanLock = true;
-    scanBtn.disabled = true;
-    await runDailyRSIScan(dailyRSIFilter);
-    scanLock = false;
-    scanBtn.disabled = false;
-    return;
-  }
-
-  scanLock = true;
-  scanBtn.disabled = true;
-  
-
-  // ❗ reset ONLY on manual scan
-  if(!isAutoScan){
-    greenGrid.innerHTML = "";
-    redGrid.innerHTML = "";
-    progressFill.style.width = "0%";
-  }
-
-  const t = await fetchJSON(`${API}/fapi/v1/ticker/24hr`);
-  const usdt = t.filter(x=>x.symbol.endsWith("USDT") && !BLACKSET.has(x.symbol));
-
-  const g = [...usdt].sort((a,b)=>b.priceChangePercent-a.priceChangePercent).slice(0,30);
-  const r = [...usdt].sort((a,b)=>a.priceChangePercent-b.priceChangePercent).slice(0,30);
-  const all = [...g, ...r];
-
-  let done = 0;
-  for(const x of all){
-    const d = await analyze(x.symbol, +x.priceChangePercent);
-    renderCard(d, x.priceChangePercent>=0 ? greenGrid : redGrid);
-    done++;
-    progressFill.style.width = Math.round(done/all.length*100)+"%";
-    await sleep(120); // rate-limit safety
-  }
-
-  // 🔄 auto-update search result if active
-if(activeSearchSymbol){
-  try{
-    const t = await fetchJSON(
-      `${API}/fapi/v1/ticker/24hr?symbol=${activeSearchSymbol}`
-    );
-    const d = await analyze(activeSearchSymbol, +t.priceChangePercent);
-    renderCard(d, searchGrid);
-  }catch(e){
-    console.warn("Search auto-update failed", e);
-  }
-}
-
-  timestamp.innerText = new Date().toLocaleString();
-  nextScanAt = Date.now() + AUTO_INTERVAL;
-  startCountdown();
-
-  scanLock = false;
-  scanBtn.disabled = false;
-  isAutoScan = false;
-  applySort();
-applyFilters();
-}
 
 /* ================= SEARCH ================= */
 async function runSearch(){
