@@ -180,7 +180,6 @@ button.secondary{
   <button class="primary" id="scanBtn" onclick="runScan()">Run Scan</button>
   <input id="symbolSearch" placeholder="BTCUSDT"/>
   <button class="secondary" id="analyzeBtn" onclick="runSearch()">Analyze</button>
-<option value="scan">SCAN 24h VOLUME BREAK</option>
 </div>
 
 <div id="manualStatus" class="muted"></div>
@@ -204,6 +203,7 @@ button.secondary{
     <option value="all">All Volume</option>
     <option value="bull">Bull Volume</option>
     <option value="bear">Bear Volume</option>
+    <option value="scan">SCAN 24h VOLUME BREAK</option>
   </select>
 
   <select id="filterVolBreak">
@@ -242,8 +242,8 @@ button.secondary{
 <!-- SORT + RESET ROW -->
 <div class="row">
   <select id="sortField">
-    <option value="prob">Probability</option>
     <option value="change">24h Change</option>
+    <option value="prob">Probability</option>
     <option value="price">Price</option>
   </select>
 
