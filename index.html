@@ -172,7 +172,6 @@ button.secondary{
 <div class="muted">Dominant volume + structure confirmation only</div>
 <div class="muted">
   Last update: <span id="timestamp">—</span><br>
-  Next scan in: <span id="nextScan">—</span>
 </div>
 
 <!-- ACTION ROW -->
@@ -365,6 +364,12 @@ function startCountdown(){
     nextScan.innerText=`${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
   },1000);
 }
+
+  function stopAllScans(){
+  stopNormalScan();
+  stopDailyRSIScan();
+  stopVolumeBreakScan();
+  }
 
 
 /* === IMPROVED 15m SWING DETECTION (CONFIRMED) === */
@@ -1076,16 +1081,7 @@ async function runSearch(){
   document.getElementById(id).addEventListener("change", applyFilters);
 });
 
-  document.getElementById("filterDailyRSI").addEventListener("change", async ()=>{
-  if(filterDailyRSI.value === "all"){
-    document.getElementById("dailyRSIStatus").textContent =
-      "📅 Daily RSI Scan: —";
-    return;
-  }
-
-  // 🔥 start RSI scan immediately
-  await runScan();
-});
+  
 
       setInterval(() => {
   const cutoff = Date.now() - 24 * 60 * 60 * 1000;
