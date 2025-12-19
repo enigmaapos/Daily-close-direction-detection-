@@ -556,15 +556,23 @@ async function getDailyRSIContext(sym){
     let label = "Neutral";
 
 if (d.direction === "pump") {
-  if (pumpAbove30) label = "MAX ZONE PUMP";
-  else if (pumpInRange_21_26) label = "BALANCE ZONE PUMP";
-  else if (pumpInRange_1_10) label = "LOWEST ZONE PUMP";
+  if (d.diff >= 30) {
+    label = "MAX ZONE PUMP";
+  } else if (d.diff >= 18 && d.diff <= 26) {
+    label = "BALANCE ZONE PUMP";
+  } else if (d.diff >= 1 && d.diff <= 10) {
+    label = "LOWEST ZONE PUMP";
+  }
 }
 
 else if (d.direction === "dump") {
-  if (dumpAbove30) label = "MAX ZONE DUMP";
-  else if (dumpInRange_21_26) label = "BALANCE ZONE DUMP";
-  else if (dumpInRange_1_10) label = "LOWEST ZONE DUMP";
+  if (d.diff >= 30) {
+    label = "MAX ZONE DUMP";
+  } else if (d.diff >= 18 && d.diff <= 26) {
+    label = "BALANCE ZONE DUMP";
+  } else if (d.diff >= 1 && d.diff <= 10) {
+    label = "LOWEST ZONE DUMP";
+  }
 }
     
     const data = { label, diff: d.diff, dir: d.direction };
@@ -609,6 +617,70 @@ else if (d.direction === "dump") {
   return ema70[len-1] >= ema200[len-1]
     ? "bullish"
     : "bearish";
+  }
+
+  function detect24hVolumeLocationAI(klines){
+  if (!klines || klines.length < 96) return null;
+
+  const last24h = klines.slice(-96).map(c => ({
+    open: safeNum(c.open),
+    high: safeNum(c.high),
+    low: safeNum(c.low),
+    close: safeNum(c.close),
+    baseVol: safeNum(c.baseVol),
+    openTime: c.openTime
+  }));
+
+  let dayHigh = -Infinity;
+  let dayLow  = Infinity;
+
+  for (const c of last24h) {
+    if (c.high > dayHigh) dayHigh = c.high;
+    if (c.low  < dayLow)  dayLow  = c.low;
+  }
+
+  let top = last24h[0];
+  for (const c of last24h) {
+    if (c.baseVol > top.baseVol) top = c;
+  }
+
+  const isRed   = top.close < top.open;
+  const isGreen = top.close > top.open;
+
+  const range = dayHigh - dayLow;
+  const mid = dayLow + range * 0.5;
+
+  let location = 'MID';
+  if (top.high <= mid) location = 'LOW';
+  else if (top.low >= mid) location = 'HIGH';
+
+  let meaning = 'Neutral';
+  let bias = 'Neutral';
+
+  if (isRed && location === 'LOW') {
+    meaning = 'Sell exhaustion → bullish';
+    bias = 'Bullish';
+  } else if (isRed && location === 'HIGH') {
+    meaning = 'Distribution → bearish';
+    bias = 'Bearish';
+  } else if (isGreen && location === 'LOW') {
+    meaning = 'Initiative buying → bullish';
+    bias = 'Bullish';
+  } else if (isGreen && location === 'HIGH') {
+    meaning = 'Buy climax → caution';
+    bias = 'Caution';
+  }
+
+  return {
+    color: isRed ? 'RED' : 'GREEN',
+    location,
+    meaning,
+    bias,
+    volume: top.baseVol,
+    time: top.openTime,
+    high: top.high,
+    low: top.low
+  };
   }
 
 /* ================= ANALYZE ================= */
