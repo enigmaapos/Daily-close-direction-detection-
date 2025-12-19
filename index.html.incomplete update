@@ -348,6 +348,22 @@ const VOLUME_BREAK_MEMORY = {
 let volumeAlertCooldown = {};
 const ALERT_COOLDOWN = 60 * 1000; // 1 minute per symbol
 
+  function setScanStatus(text){
+  const el = document.getElementById("dailyRSIStatus");
+  if(el) el.textContent = text;
+}
+
+function setProgress(current, total){
+  const fill = document.getElementById("progressFill");
+  if(!fill || !total) return;
+  fill.style.width = Math.round((current / total) * 100) + "%";
+}
+
+function resetProgress(){
+  const fill = document.getElementById("progressFill");
+  if(fill) fill.style.width = "0%";
+}
+
 
 
   function stopAllScans(){
@@ -738,9 +754,11 @@ if (d.volumeBreakout) {
 }
 
   async function startNormalScan(){
-  stopAllScans(); // 🔥 REQUIRED
+  stopAllScans();
 
   SCAN_STATE.normal.running = true;
+  resetProgress();
+  setScanStatus("▶ Normal Scan: starting…");
 
   async function tick(){
     if(!SCAN_STATE.normal.running) return;
@@ -754,30 +772,40 @@ if (d.volumeBreakout) {
   function stopNormalScan(){
   SCAN_STATE.normal.running = false;
   clearInterval(SCAN_STATE.normal.timer);
-  }
+  setScanStatus("▶ Normal Scan: stopped");
+}
 
   async function runNormalScanOnce(){
   greenGrid.innerHTML = "";
   redGrid.innerHTML = "";
+  resetProgress();
 
   const t = await fetchJSON(`${API}/fapi/v1/ticker/24hr`);
   const usdt = t.filter(x=>x.symbol.endsWith("USDT") && !BLACKSET.has(x.symbol));
 
   const g = [...usdt].sort((a,b)=>b.priceChangePercent-a.priceChangePercent).slice(0,30);
   const r = [...usdt].sort((a,b)=>a.priceChangePercent-b.priceChangePercent).slice(0,30);
-
   const all = [...g, ...r];
+
+  let scanned = 0;
+  const total = all.length;
 
   for(const x of all){
     if(!SCAN_STATE.normal.running) break;
 
     const d = await analyze(x.symbol, +x.priceChangePercent);
     renderCard(d, x.priceChangePercent>=0 ? greenGrid : redGrid);
-    await sleep(120); // ✅ rate safe
+
+    scanned++;
+    setProgress(scanned, total);
+    setScanStatus(`▶ Normal Scan: ${scanned}/${total}`);
+
+    await sleep(120);
   }
 
   timestamp.innerText = new Date().toLocaleString();
-  }
+  setScanStatus("▶ Normal Scan: completed ✓");
+}
 
   async function startDailyRSIScan(){
   stopAllScans(); // 🔥 REQUIRED
