@@ -349,21 +349,7 @@ const VOLUME_BREAK_MEMORY = {
 let volumeAlertCooldown = {};
 const ALERT_COOLDOWN = 60 * 1000; // 1 minute per symbol
 
-/* ================= COUNTDOWN ================= */
-function startCountdown(){
-  clearInterval(countdownTimer);
-  countdownTimer=setInterval(()=>{
-    if(!nextScanAt) return;
-    const d=nextScanAt-Date.now();
-    if(d<=0){
-      nextScan.innerText="Ready";
-      return;
-    }
-    const m=Math.floor(d/60000);
-    const s=Math.floor((d%60000)/1000);
-    nextScan.innerText=`${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
-  },1000);
-}
+
 
   function stopAllScans(){
   stopNormalScan();
