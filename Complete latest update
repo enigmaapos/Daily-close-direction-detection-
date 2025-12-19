@@ -157,6 +157,13 @@ button.secondary{
   0%{background-position:0% 0}
   100%{background-position:200% 0}
 }
+
+  #dailyRSIStatus{
+  padding:6px 8px;
+  border-radius:6px;
+  background:#0b1220;
+  border:1px solid #172033;
+  }
 </style>
 </head>
 
@@ -196,6 +203,12 @@ button.secondary{
     <option value="all">All Volume</option>
     <option value="bull">Bull Volume</option>
     <option value="bear">Bear Volume</option>
+  </select>
+
+  <select id="filterVolBreak">
+  <option value="all">All Volume Breaks</option>
+  <option value="yes">24h Volume Breakout</option>
+  <option value="no">No Volume Breakout</option>
   </select>
 
   <select id="filterProb">
@@ -243,6 +256,10 @@ button.secondary{
   <div id="progressFill"></div>
 </div>
 
+  <div class="muted" id="dailyRSIStatus">
+  📅 Daily RSI Scan: —
+  </div>
+
 <h2>⭐ Favorites</h2>
 <div class="grid" id="favGrid"></div>
 
@@ -280,6 +297,8 @@ let autoEnabled=true;
   let isAutoScan = false;
 let autoTimer = null;
   let activeSearchSymbol = null;
+  let dailyRSIMatchCount = 0;
+let dailyRSIScanned = 0;
 
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const fetchJSON=async u=>(await fetch(u)).json();
@@ -305,6 +324,7 @@ function startAutoScan(){
   if(autoTimer) clearInterval(autoTimer);
   autoTimer = setInterval(async ()=>{
     if(scanLock) return;
+    if(filterDailyRSI.value !== "all") return; // ⛔ stop auto scan
     isAutoScan = true;
     await runScan();
   }, AUTO_INTERVAL);
@@ -463,6 +483,22 @@ async function getDailyRSIContext(sym){
   }
 }
 
+  function isDailyRSIActive(){
+  return filterDailyRSI.value !== "all";
+  }
+
+  async function batchMap(items, batchSize, asyncFn){
+  const results = [];
+  for(let i = 0; i < items.length; i += batchSize){
+    const batch = items.slice(i, i + batchSize);
+    const batchResults = await Promise.all(
+      batch.map(x => asyncFn(x).catch(() => null))
+    );
+    results.push(...batchResults);
+  }
+  return results;
+  }
+
 /* ================= ANALYZE ================= */
 async function analyze(sym,change){
   const k=await fetchJSON(`${API}/fapi/v1/klines?symbol=${sym}&interval=15m&limit=240`);
@@ -471,10 +507,29 @@ async function analyze(sym,change){
   const c=k.map(x=>+x[4]),h=k.map(x=>+x[2]),l=k.map(x=>+x[3]),v=k.map(x=>+x[5]);
   const price=c.at(-1);
 
-  let domV=0,bull=true;
-  for(let i=k.length-96;i<k.length;i++){
-    if(v[i]>domV){domV=v[i];bull=k[i][4]>k[i][1];}
+  let domV = 0;
+let domVBull = true;
+let domVIndex = -1;
+
+
+for(let i = k.length - 96; i < k.length - 1; i++){
+  if(v[i] > domV){
+    domV = v[i];
+    domVBull = k[i][4] > k[i][1];
+    domVIndex = i;
   }
+}
+
+const lastVol = v.at(-1);
+const lastBull = k.at(-1)[4] > k.at(-1)[1];
+
+const volumeBreakout = lastVol > domV;
+const volumeBreakoutType =
+  volumeBreakout
+    ? (lastBull ? "Bull Volume Breakout" : "Bear Volume Breakout")
+    : "No Volume Breakout";
+
+  const bull = domVBull;
 
   const swings = findSwings(h,l,c,v);
 const sw = {
@@ -497,7 +552,10 @@ const sw = {
 
     const dailyRSI = await getDailyRSIContext(sym);
 
-  return {sym,price,change,bull,prob,bias,structure,S:sw.S,R:sw.R,dailyRSI};
+  return {sym,price,change,bull,prob,bias,structure,S:sw.S,R:sw.R,dailyRSI,volumeBreakout,
+  volumeBreakoutType,
+  domV,
+  lastVol};
 }
 
 /* ================= FILTERS ================= */
@@ -507,6 +565,7 @@ function applyFilters(){
   const p = +filterProb.value;
   const r = filterDailyRSI.value;
   const s = filterStructure.value;
+  const vb = filterVolBreak.value;
 
   document.querySelectorAll(".card").forEach(c=>{
     let ok = true;
@@ -516,6 +575,7 @@ function applyFilters(){
     if(p > 0 && +c.dataset.prob < p) ok = false;
     if(r !== "all" && c.dataset.dailyrsi !== r) ok = false;
     if(s !== "all" && c.dataset.structure !== s) ok = false;
+    if(vb !== "all" && c.dataset.volbreak !== vb) ok = false;
 
     c.style.display = ok ? "" : "none";
   });
@@ -527,6 +587,8 @@ function applyFilters(){
   filterProb.value = "0";
   filterDailyRSI.value = "all";
          filterStructure.value = "all";
+           filterVolBreak.value = "all";
+           
 
   applyFilters();
 
@@ -577,6 +639,7 @@ const id = `card-${scope}-${d.sym}`;
     el.appendChild(card);
   }
 
+  
   card.dataset.bias = d.bias;
 card.dataset.vol  = d.bull ? "bull" : "bear";
 card.dataset.prob = d.prob;
@@ -584,6 +647,7 @@ card.dataset.change = d.change;
 card.dataset.price = d.price;
 card.dataset.structure = d.structure || "none";
 card.dataset.dailyrsi = d.dailyRSI?.label || "all";
+  card.dataset.volbreak = d.volumeBreakout ? "yes" : "no";
 
   card.innerHTML = `
     ${isFav
@@ -609,6 +673,25 @@ card.dataset.dailyrsi = d.dailyRSI?.label || "all";
     <div class="muted ${d.bull?"bull":"bear"}">
       ${d.bull?"Bullish":"Bearish"} Volume Control
     </div>
+    
+    ${d.volumeBreakout ? `
+  <div class="muted ${
+    d.volumeBreakoutType.includes("Bull") ? "bull" : "bear"
+  }">
+    🔥 ${d.volumeBreakoutType}
+    <br>
+    <span class="muted">
+      15m: ${d.lastVol.toLocaleString()}
+      &nbsp;›&nbsp;
+      24h High: ${d.domV.toLocaleString()}
+    </span>
+  </div>
+` : `
+  <div class="muted neutral">
+    📊 No 24h Volume Breakout
+  </div>
+`}
+
     <div class="muted">Structure: ${d.structure}</div>
 
     <div class="prob ${
@@ -626,6 +709,66 @@ card.dataset.dailyrsi = d.dailyRSI?.label || "all";
   applyFilters();
 }
 
+  async function runDailyRSIScan(targetLabel){
+  greenGrid.innerHTML = "";
+  redGrid.innerHTML = "";
+  progressFill.style.width = "0%";
+
+  dailyRSIMatchCount = 0;
+  dailyRSIScanned = 0;
+
+  const statusEl = document.getElementById("dailyRSIStatus");
+  statusEl.textContent = `📅 Daily RSI Scan: ${targetLabel} — starting…`;
+
+  const tickers = await fetchJSON(`${API}/fapi/v1/ticker/24hr`);
+  const usdt = tickers.filter(
+    x => x.symbol.endsWith("USDT") && !BLACKSET.has(x.symbol)
+  );
+
+  const total = usdt.length;
+
+  /* === PHASE 1: FAST DAILY RSI BATCH SCAN === */
+  const BATCH_SIZE = 10; // 🔥 safe + fast
+
+  const rsiResults = await batchMap(usdt, BATCH_SIZE, async (x)=>{
+    const rsi = await getDailyRSIContext(x.symbol);
+    dailyRSIScanned++;
+
+    progressFill.style.width =
+      Math.round((dailyRSIScanned / total) * 100) + "%";
+
+    statusEl.textContent =
+      `📅 Daily RSI Scan: ${targetLabel} | ` +
+      `Scanned: ${dailyRSIScanned}/${total} | ` +
+      `Matches: ${dailyRSIMatchCount}`;
+
+    return rsi && rsi.label === targetLabel
+      ? { symbol: x.symbol, change: +x.priceChangePercent }
+      : null;
+  });
+
+  const matches = rsiResults.filter(Boolean);
+  dailyRSIMatchCount = matches.length;
+
+  /* === PHASE 2: SAFE 15m ANALYSIS (SEQUENTIAL) === */
+  for(const m of matches){
+    const d = await analyze(m.symbol, m.change);
+    renderCard(
+      d,
+      m.change >= 0 ? greenGrid : redGrid
+    );
+    await sleep(120); // keep this slow & safe
+  }
+
+  timestamp.innerText = new Date().toLocaleString();
+  statusEl.textContent =
+    `📅 Daily RSI Scan COMPLETE — ${targetLabel} | ` +
+    `Total Matches: ${dailyRSIMatchCount}`;
+
+  applySort();
+  applyFilters();
+}
+  
 /* ================= FAVORITES ================= */
 async function addFav(sym){
   if(BLACKSET.has(sym)) return;
@@ -643,8 +786,21 @@ function removeFav(sym){
 /* ================= SCAN ================= */
 async function runScan(){
   if(scanLock) return;
+
+  const dailyRSIFilter = filterDailyRSI.value;
+
+  if(dailyRSIFilter !== "all"){
+    scanLock = true;
+    scanBtn.disabled = true;
+    await runDailyRSIScan(dailyRSIFilter);
+    scanLock = false;
+    scanBtn.disabled = false;
+    return;
+  }
+
   scanLock = true;
   scanBtn.disabled = true;
+  
 
   // ❗ reset ONLY on manual scan
   if(!isAutoScan){
@@ -752,9 +908,25 @@ async function runSearch(){
   });
 });
 
-["filterBias","filterVol","filterProb","filterDailyRSI","filterStructure"]
-.forEach(id=>{
+[
+  "filterBias",
+  "filterVol",
+  "filterProb",
+  "filterStructure",
+  "filterVolBreak"
+].forEach(id=>{
   document.getElementById(id).addEventListener("change", applyFilters);
+});
+
+  document.getElementById("filterDailyRSI").addEventListener("change", async ()=>{
+  if(filterDailyRSI.value === "all"){
+    document.getElementById("dailyRSIStatus").textContent =
+      "📅 Daily RSI Scan: —";
+    return;
+  }
+
+  // 🔥 start RSI scan immediately
+  await runScan();
 });
 </script>
 </body>
