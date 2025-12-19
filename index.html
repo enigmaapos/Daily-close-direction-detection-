@@ -489,6 +489,21 @@ const DAILY_RSI_TTL = 6 * 60 * 60 * 1000; // 6 hours
 const DAILY_RSI_INTERVAL = "1d";
 const DAILY_RSI_LIMIT = 200;
 
+  function mapKlines(klines){
+  return klines.map(k => ({
+    openTime: +k[0],
+    open: +k[1],
+    high: +k[2],
+    low: +k[3],
+    close: +k[4],
+    baseVol: +k[5]
+  }));
+}
+
+function safeNum(n){
+  return isNaN(n) ? 0 : n;
+}
+
   /* ================= RSI ================= */
 function calculateRSI(closes, period=14){
   if(closes.length <= period) return [];
@@ -601,6 +616,11 @@ async function analyze(sym,change){
   const k=await fetchJSON(`${API}/fapi/v1/klines?symbol=${sym}&interval=15m&limit=240`);
   await sleep(DELAY);
 
+  const mappedK = mapKlines(k);
+
+// 🧠 24h Volume Location AI
+const volAI = detect24hVolumeLocationAI(mappedK);
+
   const c=k.map(x=>+x[4]),h=k.map(x=>+x[2]),l=k.map(x=>+x[3]),v=k.map(x=>+x[5]);
   const price=c.at(-1);
 
@@ -664,7 +684,7 @@ const sw = {
   return {sym,price,change,bull,prob,bias,structure,S:sw.S,R:sw.R,dailyRSI,volumeBreakout,
   volumeBreakoutType,
   domV,
-  lastVol,mainTrend};
+  lastVol,mainTrend,volAI};
 }
 
 /* ================= FILTERS ================= */
@@ -822,6 +842,23 @@ if (d.volumeBreakout) {
     📊 No 24h Volume Breakout
   </div>
 `}
+
+${d.volAI ? `
+  <div class="muted ${
+    d.volAI.bias === "Bullish" ? "bull" :
+    d.volAI.bias === "Bearish" ? "bear" : "neutral"
+  }">
+    🧠 24h Volume AI
+    <br>
+    <span class="muted">
+      ${d.volAI.color} candle · ${d.volAI.location} range
+    </span>
+    <br>
+    <span class="muted">
+      ${d.volAI.meaning}
+    </span>
+  </div>
+` : ""}
 
     <div class="muted">Structure: ${d.structure}</div>
 
