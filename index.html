@@ -267,13 +267,12 @@ button.secondary{
   </div>
 
   <div class="row filter-box">
-  <div class="muted">
-    📊 Market 24h Dominance
-  </div>
+  <div class="muted">📊 Market 24h Symbol Dominance</div>
   <div id="marketGreen" class="bull">🟢 Green: —</div>
   <div id="marketRed" class="bear">🔴 Red: —</div>
   <div id="marketNet" class="neutral">⚖ Net: —</div>
-  </div>
+</div>
+  
 
 <h2>⭐ Favorites</h2>
 <div class="grid" id="favGrid"></div>
@@ -368,30 +367,7 @@ function startAutoScan(){
   await runScan();
 };
 
-  function computeMarketDominance(tickers){
-  let green = 0;
-  let red = 0;
-
-  tickers.forEach(t=>{
-    const ch = +t.priceChangePercent;
-    if(isNaN(ch)) return;
-
-    if(ch > 0) green += ch;
-    else if(ch < 0) red += Math.abs(ch);
-  });
-
-  const net = green - red;
-
-  return {
-    green: +green.toFixed(2),
-    red: +red.toFixed(2),
-    net: +net.toFixed(2),
-    bias:
-      net > 0 ? "Bull Dominant" :
-      net < 0 ? "Bear Dominant" :
-      "Neutral"
-  };
-  }
+  
 
   function computeMarketSymbolDominance(tickers){
   let green = 0;
@@ -1100,16 +1076,6 @@ marketNet.className =
   dom.net < 0 ? "bear" :
   "neutral";
 
-const dom = computeMarketDominance(usdtAll);
-
-marketGreen.textContent = `🟢 Green: ${dom.green.toLocaleString()}%`;
-marketRed.textContent   = `🔴 Red: ${dom.red.toLocaleString()}%`;
-marketNet.textContent   = `⚖ Net: ${dom.net.toLocaleString()}% — ${dom.bias}`;
-
-marketNet.className =
-  dom.net > 0 ? "bull" :
-  dom.net < 0 ? "bear" :
-  "neutral";
   
   const usdt = t.filter(x=>x.symbol.endsWith("USDT") && !BLACKSET.has(x.symbol));
 
