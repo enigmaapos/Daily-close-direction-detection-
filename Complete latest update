@@ -206,6 +206,7 @@ button.secondary{
   </select>
 
   <select id="filterVolBreak">
+  <option value="scan">SCAN 24h VOLUME BREAK</option>
   <option value="all">All Volume Breaks</option>
   <option value="yes">24h Volume Breakout</option>
   <option value="no">No Volume Breakout</option>
@@ -241,8 +242,8 @@ button.secondary{
 <!-- SORT + RESET ROW -->
 <div class="row">
   <select id="sortField">
-    <option value="prob">Probability</option>
     <option value="change">24h Change</option>
+    <option value="prob">Probability</option>
     <option value="price">Price</option>
   </select>
 
@@ -302,6 +303,19 @@ let dailyRSIScanned = 0;
 
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const fetchJSON=async u=>(await fetch(u)).json();
+
+  /* ================= SOUND ALERT ================= */
+const volumeAlert = new Audio(
+  "https://actions.google.com/sounds/v1/alarms/beep_short.ogg"
+);
+
+  /* ================= VOLUME BREAK MEMORY ================= */
+const VOLUME_BREAK_MEMORY = {
+  // symbol: { lastCandleTime, domV }
+};
+
+let volumeAlertCooldown = {};
+const ALERT_COOLDOWN = 60 * 1000; // 1 minute per symbol
 
 /* ================= COUNTDOWN ================= */
 function startCountdown(){
@@ -411,6 +425,25 @@ function findSwings(h, l, c, v){
   };
 }
 
+  function ema(values, period){
+  const k = 2 / (period + 1);
+  const result = Array(values.length).fill(null);
+
+  let sum = 0;
+  for(let i = 0; i < values.length; i++){
+    const v = values[i];
+    if(i < period){
+      sum += v;
+      if(i === period - 1){
+        result[i] = sum / period; // SMA seed
+      }
+      continue;
+    }
+    result[i] = v * k + result[i - 1] * (1 - k);
+  }
+  return result;
+  }
+
     /* ================= DAILY RSI CONTEXT ================= */
 const DAILY_RSI_CACHE = {};
 const DAILY_RSI_TTL = 6 * 60 * 60 * 1000; // 6 hours
@@ -467,13 +500,19 @@ async function getDailyRSIContext(sym){
     const d = getRecentRSIDiff(rsi);
 
     let label = "Neutral";
-    if(d.direction==="pump" && d.diff>=25) label="MAX ZONE PUMP";
-    else if(d.direction==="dump" && d.diff>=25) label="MAX ZONE DUMP";
-    else if(d.direction==="pump" && d.diff>=18) label="BALANCE ZONE PUMP";
-    else if(d.direction==="dump" && d.diff>=18) label="BALANCE ZONE DUMP";
-    else if(d.direction==="pump" && d.diff<=8) label="LOWEST ZONE PUMP";
-    else if(d.direction==="dump" && d.diff<=8) label="LOWEST ZONE DUMP";
 
+if (d.direction === "pump") {
+  if (pumpAbove30) label = "MAX ZONE PUMP";
+  else if (pumpInRange_21_26) label = "BALANCE ZONE PUMP";
+  else if (pumpInRange_1_10) label = "LOWEST ZONE PUMP";
+}
+
+else if (d.direction === "dump") {
+  if (dumpAbove30) label = "MAX ZONE DUMP";
+  else if (dumpInRange_21_26) label = "BALANCE ZONE DUMP";
+  else if (dumpInRange_1_10) label = "LOWEST ZONE DUMP";
+}
+    
     const data = { label, diff: d.diff, dir: d.direction };
     DAILY_RSI_CACHE[sym] = { data, ts: Date.now() };
 
@@ -499,6 +538,25 @@ async function getDailyRSIContext(sym){
   return results;
   }
 
+  function getMainTrendOnly(ema70, ema200, closes, opens, highs, lows){
+  const len = ema70.length;
+  if(len < 2) return "neutral";
+
+  for(let i = len - 2; i >= 1; i--){
+    if(ema70[i] <= ema200[i] && ema70[i+1] > ema200[i+1]){
+      return "bullish";
+    }
+    if(ema70[i] >= ema200[i] && ema70[i+1] < ema200[i+1]){
+      return "bearish";
+    }
+  }
+
+  // fallback
+  return ema70[len-1] >= ema200[len-1]
+    ? "bullish"
+    : "bearish";
+  }
+
 /* ================= ANALYZE ================= */
 async function analyze(sym,change){
   const k=await fetchJSON(`${API}/fapi/v1/klines?symbol=${sym}&interval=15m&limit=240`);
@@ -519,6 +577,18 @@ for(let i = k.length - 96; i < k.length - 1; i++){
     domVIndex = i;
   }
 }
+
+  const ema70 = ema(c.slice(-300), 70);
+const ema200 = ema(c.slice(-300), 200);
+
+const mainTrend = getMainTrendOnly(
+  ema70,
+  ema200,
+  c,
+  k.map(x=>+x[1]), // opens
+  h,
+  l
+);
 
 const lastVol = v.at(-1);
 const lastBull = k.at(-1)[4] > k.at(-1)[1];
@@ -555,7 +625,7 @@ const sw = {
   return {sym,price,change,bull,prob,bias,structure,S:sw.S,R:sw.R,dailyRSI,volumeBreakout,
   volumeBreakoutType,
   domV,
-  lastVol};
+  lastVol,mainTrend};
 }
 
 /* ================= FILTERS ================= */
@@ -648,6 +718,19 @@ card.dataset.price = d.price;
 card.dataset.structure = d.structure || "none";
 card.dataset.dailyrsi = d.dailyRSI?.label || "all";
   card.dataset.volbreak = d.volumeBreakout ? "yes" : "no";
+  card.dataset.trend = d.mainTrend || "neutral";
+  
+
+  // 🔔 SOUND ALERT — only on 24h volume breakout
+if (d.volumeBreakout) {
+  const now = Date.now();
+
+  // prevent repeat spam per symbol
+  if (!volumeAlertCooldown[d.sym] || now - volumeAlertCooldown[d.sym] > ALERT_COOLDOWN) {
+    volumeAlert.play().catch(()=>{});
+    volumeAlertCooldown[d.sym] = now;
+  }
+}
 
   card.innerHTML = `
     ${isFav
@@ -655,6 +738,15 @@ card.dataset.dailyrsi = d.dailyRSI?.label || "all";
       : `<div class="star" onclick="addFav('${d.sym}')">⭐</div>`
     }
     <b>${d.sym}</b>
+    
+    <div class="muted ${
+  d.mainTrend === "bullish" ? "bull" :
+  d.mainTrend === "bearish" ? "bear" : "neutral"
+}">
+  ${d.mainTrend === "bullish" ? "📈" :
+    d.mainTrend === "bearish" ? "📉" : "➖"}
+  Main Trend: ${d.mainTrend.toUpperCase()}
+</div>
     
     ${d.dailyRSI ? `
   <div class="muted ${
@@ -768,6 +860,107 @@ card.dataset.dailyrsi = d.dailyRSI?.label || "all";
   applySort();
   applyFilters();
 }
+
+  async function runVolumeBreakScan(){
+  greenGrid.innerHTML = "";
+  redGrid.innerHTML = "";
+  progressFill.style.width = "0%";
+
+  const statusEl = document.getElementById("dailyRSIStatus");
+  statusEl.textContent = "🔥 24h Volume Break Scan — starting…";
+
+  const tickers = await fetchJSON(`${API}/fapi/v1/ticker/24hr`);
+  const usdt = tickers.filter(
+    x => x.symbol.endsWith("USDT") && !BLACKSET.has(x.symbol)
+  );
+
+  const total = usdt.length;
+  let scanned = 0;
+  let matches = [];
+
+  const BATCH_SIZE = 10;   // ✅ SAFE
+  const BATCH_DELAY = 180; // ms between batches
+
+  /* === PHASE 1: FAST PARALLEL VOLUME SCAN === */
+  for(let i = 0; i < usdt.length; i += BATCH_SIZE){
+    const batch = usdt.slice(i, i + BATCH_SIZE);
+
+    const results = await Promise.all(
+      batch.map(async (x)=>{
+        try{
+          const k = await fetchJSON(
+            `${API}/fapi/v1/klines?symbol=${x.symbol}&interval=15m&limit=97`
+          );
+
+          const v = k.map(c=>+c[5]);
+
+          let domV = 0;
+          for(let j=0;j<v.length-1;j++){
+            if(v[j] > domV) domV = v[j];
+          }
+
+          const last = k.at(-1);
+const lastVol = +last[5];
+const lastTime = +last[6]; // candle close time
+
+const mem = VOLUME_BREAK_MEMORY[x.symbol];
+
+// detect NEW break only
+if (
+  lastVol > domV &&
+  (
+    !mem ||                      // never seen before
+    lastTime > mem.lastCandleTime // new candle
+  )
+) {
+  matches.push({
+    symbol: x.symbol,
+    change: +x.priceChangePercent
+  });
+
+  // 🔐 store memory
+  VOLUME_BREAK_MEMORY[x.symbol] = {
+    lastCandleTime: lastTime,
+    domV
+  };
+}
+       return null;
+
+        }catch(e){
+          return null;
+        }
+      })
+    );
+
+    results.filter(Boolean).forEach(r => matches.push(r));
+
+    scanned += batch.length;
+    progressFill.style.width =
+      Math.round((scanned / total) * 100) + "%";
+
+    statusEl.textContent =
+      `🔥 24h Volume Break Scan | ${scanned}/${total} | Matches: ${matches.length}`;
+
+    await sleep(BATCH_DELAY); // ⛔ rate-limit safety
+  }
+
+  /* === PHASE 2: FULL ANALYSIS (SEQUENTIAL & SAFE) === */
+  for(const m of matches){
+    const d = await analyze(m.symbol, m.change);
+    renderCard(
+      d,
+      m.change >= 0 ? greenGrid : redGrid
+    );
+    await sleep(120);
+  }
+
+  timestamp.innerText = new Date().toLocaleString();
+  statusEl.textContent =
+    `🔥 24h Volume Break Scan COMPLETE — Matches: ${matches.length}`;
+
+  applySort();
+  applyFilters();
+  }
   
 /* ================= FAVORITES ================= */
 async function addFav(sym){
@@ -787,6 +980,17 @@ function removeFav(sym){
 async function runScan(){
   if(scanLock) return;
 
+  const volBreakMode = filterVolBreak.value;
+
+if(volBreakMode === "scan"){
+  scanLock = true;
+  scanBtn.disabled = true;
+  await runVolumeBreakScan();
+  scanLock = false;
+  scanBtn.disabled = false;
+  return;
+}
+  
   const dailyRSIFilter = filterDailyRSI.value;
 
   if(dailyRSIFilter !== "all"){
@@ -928,6 +1132,15 @@ async function runSearch(){
   // 🔥 start RSI scan immediately
   await runScan();
 });
+
+      setInterval(() => {
+  const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+  for (const s in VOLUME_BREAK_MEMORY) {
+    if (VOLUME_BREAK_MEMORY[s].lastCandleTime < cutoff) {
+      delete VOLUME_BREAK_MEMORY[s];
+    }
+  }
+}, 10 * 60 * 1000);
 </script>
 </body>
 </html>
