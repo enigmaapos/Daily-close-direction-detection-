@@ -998,9 +998,6 @@ const volumeBreakoutType =
     ? (lastBull ? "Bull Volume Breakout" : "Bear Volume Breakout")
     : "No Volume Breakout";
 
-  const hasVolumeBreak =
-  d.volumeBreakout === true && d.breakoutAge === true;
-
   // ⏱ breakout validity window (45 minutes = 3 x 15m candles)
 const breakoutAge =
   volumeBreakout &&
