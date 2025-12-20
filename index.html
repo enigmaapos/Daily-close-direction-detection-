@@ -683,32 +683,27 @@ else if (d.direction === "dump") {
   };
   }
 
-  // === SUSTAINED VOLUME BREAK LOGIC ===
-const volBreak = detectSustainedVolumeBreak(mappedK);
+function detectSustainedVolumeBreak(k, lookback=96, confirmCandles=3, mult=1.1){
+  const v = k.map(c => +c[5]);
+  const o = k.map(c => +c[1]);
+  const cPrice = k.map(c => +c[4]);
 
-let volumeBreakout = false;
-let volumeBreakoutType = "No Volume Breakout";
-let fakeVolumeBreak = false;
+  let domV = Math.max(...v.slice(-lookback, -1));
+  let count = 0;
+  let direction = null;
 
-const last = mappedK.at(-1);
-const lastVol = last.baseVol;
+  for(let i = v.length - confirmCandles; i < v.length; i++){
+    if(v[i] > domV * mult){
+      count++;
+      direction ??= cPrice[i] > o[i] ? "bull" : "bear";
+    }
+  }
 
-// body acceptance
-const body = Math.abs(last.close - last.open);
-const range = last.high - last.low;
-const bodyRatio = range > 0 ? body / range : 0;
-
-if (volBreak.sustained && bodyRatio >= 0.5) {
-  volumeBreakout = true;
-  volumeBreakoutType =
-    volBreak.direction === "bull"
-      ? "SUSTAINED BULL VOLUME BREAK"
-      : "SUSTAINED BEAR VOLUME BREAK";
-}
-
-// ⚠️ FAKE SPIKE (volume > dominant but no acceptance)
-if (!volumeBreakout && lastVol > volBreak.domV) {
-  fakeVolumeBreak = true;
+  return {
+    sustained: count >= confirmCandles,
+    direction,
+    domV
+  };
 }
 
 /* ================= ANALYZE ================= */
