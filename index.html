@@ -363,6 +363,8 @@ let autoTimer = null;
 let dailyRSIScanned = 0;
   let last24hVolumeBreakAt = 0;
   let pending24hVolumeScan = false;
+  let statusLocked = false;
+  
 
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const fetchJSON=async u=>(await fetch(u)).json();
@@ -421,10 +423,9 @@ function startAutoScan(){
 }
 
   function setScanStatus(text){
-  // ⛔ do NOT overwrite pending 24h status
-  if (pending24hVolumeScan && text.includes("Idle")) return;
+  if (statusLocked) return;
   dailyRSIStatus.textContent = text;
-  }
+}
   
 
   async function getFundingRate(sym){
@@ -1499,7 +1500,8 @@ ${d.volAI ? `
 
     scanVolBreakBtn.textContent = "🔥 Scan 24h Volume Break";
     scanVolBreakBtn.classList.remove("analyze-running");
-
+    
+statusLocked = false;
     startAutoScan();
   }
 }
@@ -1603,19 +1605,19 @@ if (now - last24hVolumeBreakAt >= AUTO_VOLUME_BREAK_INTERVAL) {
   last24hVolumeBreakAt = now;
 
   pending24hVolumeScan = true;
+statusLocked = true;
 
-  setScanStatus(
-    "⏳ 24h Volume Break scheduled (auto)"
-  );
+setScanStatus("⏳ 24h Volume Break scheduled (auto)");
 
-  setTimeout(async () => {
-    try {
-      await run24hVolumeBreak();
-    } finally {
-      pending24hVolumeScan = false;
+setTimeout(async () => {
+  try {
+    await run24hVolumeBreak();
+  } finally {
+    pending24hVolumeScan = false;
+    statusLocked = false;   // 🔓 unlock AFTER run
+  }
+}, 800);
     }
-  }, 800);
-}
   
   applySort();
 applyFilters();
