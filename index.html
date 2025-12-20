@@ -498,6 +498,15 @@ function startAutoScan(){
     );
   }
 
+  /* ================= PRIORITY 1.5 — AGING BREAKOUT ================= */
+
+if (hasVolumeBreak && !d.breakoutAge) {
+  return withTier(
+    AI_VERDICTS.WAIT_FOR_PULLBACK,
+    "Volume breakout is aging; waiting for confirmation.", d
+  );
+}
+
   /* ================= PRIORITY 2 — STRONG CONTINUATION ================= */
 
   if (
@@ -989,6 +998,14 @@ const volumeBreakoutType =
     ? (lastBull ? "Bull Volume Breakout" : "Bear Volume Breakout")
     : "No Volume Breakout";
 
+  const hasVolumeBreak =
+  d.volumeBreakout === true && d.breakoutAge === true;
+
+  // ⏱ breakout validity window (45 minutes = 3 x 15m candles)
+const breakoutAge =
+  volumeBreakout &&
+  (Date.now() - k.at(-1)[6] < 45 * 60 * 1000);
+
   // direction conflict with main trend
 const directionConflict =
   (mainTrend === "bullish" && lastBull === false) ||
@@ -1039,8 +1056,8 @@ const sw = {
 
     const dailyRSI = await getDailyRSIContext(sym);
 
-  return {sym,price,change,bull,prob,bias,structure,S:sw.S,R:sw.R,dailyRSI,volumeBreakout,
-  volumeBreakoutType,fakeVolumeBreak,
+  return {sym,price,change,bull,prob,bias,structure,S:sw.S,R:sw.R,dailyRSI,volumeBreakout,hasVolumeBreak,
+  breakoutAge,volumeBreakoutType,fakeVolumeBreak,
   domV,
   lastVol,mainTrend,volAI};
 }
