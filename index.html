@@ -391,15 +391,16 @@ const ALERT_COOLDOWN = 60 * 1000; // 1 minute per symbol
   }, AUTO_VOLUME_BREAK_INTERVAL);
   }
 
-  window.onload = async () => {
+  window.addEventListener("load", async () => {
   nextScanAt = Date.now() + AUTO_INTERVAL;
   startCountdown();
-  startAutoScan();              // normal scan
-  startAutoVolumeBreakScan();   // 🔥 volume break scan
+
+  startAutoScan();              // normal scan (1 min)
+  startAutoVolumeBreakScan();   // 🔥 24h volume break (15 min)
 
   isAutoScan = true;
   await runScan();
-};
+});
 
   
 /* ================= COUNTDOWN ================= */
@@ -429,15 +430,7 @@ function startAutoScan(){
   }, AUTO_INTERVAL);
 }
 
-  window.onload = async () => {
-  nextScanAt = Date.now() + AUTO_INTERVAL;
-  startCountdown();
-  startAutoScan();
-
-  // 🔥 run first scan immediately
-  isAutoScan = true;
-  await runScan();
-};
+  
 
   async function getFundingRate(sym){
   try{
