@@ -169,6 +169,10 @@ button.secondary{
   font-weight:700;
   margin-right:12px;
   }
+
+  .verdict-strong { color: var(--accent); }   /* confident */
+.verdict-watch  { color: var(--neutral); }  /* timing */
+.verdict-avoid  { color: var(--muted); }    /* no edge */
 </style>
 </head>
 
@@ -421,42 +425,42 @@ function startAutoScan(){
   "STRONG CONTINUATION": {
     tier: 1,
     label: "TIER 1 — HIGH PROBABILITY",
-    color: "bull"
+    verdictClass: "verdict-strong"
   },
   "CONTROLLED CONTINUATION": {
     tier: 2,
     label: "TIER 2 — HIGH PROBABILITY (CONTROLLED)",
-    color: "bull"
+    verdictClass: "verdict-strong"
   },
   "WAIT FOR PULLBACK": {
     tier: 3,
     label: "TIER 3 — WAIT / TIMING",
-    color: "neutral"
+    verdictClass: "verdict-watch"
   },
   "COUNTER-TREND BREAKOUT": {
     tier: 4,
     label: "TIER 4 — COUNTER-TREND",
-    color: "neutral"
+    verdictClass: "verdict-watch"
   },
   "HIGH RISK / LATE MOVE": {
     tier: 5,
     label: "TIER 5 — HIGH RISK",
-    color: "bear"
+    verdictClass: "verdict-avoid"
   },
   "STRUCTURE WEAK / NO EDGE": {
     tier: 6,
     label: "TIER 6 — NO EDGE",
-    color: "bear"
+    verdictClass: "verdict-avoid"
   },
   "TRAP RISK": {
     tier: 6,
     label: "TIER 6 — TRAP RISK",
-    color: "bear"
+    verdictClass: "verdict-avoid"
   },
   "AVOID / NO TRADE": {
     tier: 6,
     label: "TIER 6 — AVOID",
-    color: "bear"
+    verdictClass: "verdict-avoid"
   }
 };
 
@@ -589,17 +593,15 @@ function startAutoScan(){
   const t = AI_VERDICT_TIERS[verdict] || {
     tier: 6,
     label: "TIER 6 — UNKNOWN",
-    color: "neutral"
+    verdictClass: "verdict-avoid"
   };
-
-  const tradeSide = getTradeSide(d);
 
   return {
     verdict,
     tier: t.tier,
     tierLabel: t.label,
-    tierColor: t.color,
-    tradeSide,   // 👈 NEW
+    verdictClass: t.verdictClass,
+    tradeSide: getTradeSide(d),
     reason
   };
 }
@@ -1274,7 +1276,7 @@ ${d.volAI ? `
 
     <hr style="opacity:.15">
 
-<div class="muted ${aiVerdict.tierColor}">
+<div class="muted ${aiVerdict.verdictClass}">
   🧠 AI Verdict: <b>${aiVerdict.verdict}</b>
 </div>
 
