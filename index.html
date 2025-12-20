@@ -1013,7 +1013,7 @@ const sw = {
     const dailyRSI = await getDailyRSIContext(sym);
 
   return {sym,price,change,bull,prob,bias,structure,S:sw.S,R:sw.R,dailyRSI,volumeBreakout,
-  volumeBreakoutType,fakeVolumeBreak,
+  volumeBreakoutType,
   domV,
   lastVol,mainTrend,volAI};
 }
@@ -1230,7 +1230,7 @@ ${d.volAI ? `
   🧠 AI Verdict: <b>${aiVerdict.verdict}</b>
 </div>
 
-<div class="muted ${aiVerdict.tierColor}">
+<div class="muted ${aiVerdict.verdictClass}">
   ${aiVerdict.tierLabel}
 </div>
 
