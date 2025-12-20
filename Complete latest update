@@ -1054,7 +1054,7 @@ const sw = {
 
     const dailyRSI = await getDailyRSIContext(sym);
 
-  return {sym,price,change,bull,prob,bias,structure,S:sw.S,R:sw.R,dailyRSI,volumeBreakout,hasVolumeBreak,
+  return {sym,price,change,bull,prob,bias,structure,S:sw.S,R:sw.R,dailyRSI,volumeBreakout,
   breakoutAge,volumeBreakoutType,fakeVolumeBreak,
   domV,
   lastVol,mainTrend,volAI};
