@@ -479,7 +479,7 @@ function startAutoScan(){
   if (bias.includes("Trap") || fakeVol) {
     return withTier(
       AI_VERDICTS.TRAP_RISK,
-      "Volume spike lacks acceptance and structure stability is weak."
+      "Volume spike lacks acceptance and structure stability is weak.",d
     );
   }
 
@@ -490,7 +490,7 @@ function startAutoScan(){
   ) {
     return withTier(
       AI_VERDICTS.AVOID,
-      "No structural edge and volume positioning is against continuation."
+      "No structural edge and volume positioning is against continuation.",d
     );
   }
 
@@ -503,7 +503,7 @@ function startAutoScan(){
     if (hasVolumeBreak && !rsiLabel.includes("MAX")) {
       return withTier(
         AI_VERDICTS.STRONG_CONTINUATION,
-        "Structure, trend, and sustained participation are aligned."
+        "Structure, trend, and sustained participation are aligned.",d
       );
     }
   }
@@ -517,7 +517,7 @@ function startAutoScan(){
     if (!hasVolumeBreak && volAIBias !== "Bearish" && !rsiLabel.includes("MAX")) {
       return withTier(
         AI_VERDICTS.CONTROLLED_CONTINUATION,
-        "Structure aligns with trend, but participation remains selective."
+        "Structure aligns with trend, but participation remains selective.",d
       );
     }
   }
@@ -532,7 +532,7 @@ function startAutoScan(){
   ) {
     return withTier(
       AI_VERDICTS.WAIT_FOR_PULLBACK,
-      "Trend intact but momentum is stretched without volume expansion."
+      "Trend intact but momentum is stretched without volume expansion.",d
     );
   }
 
@@ -548,7 +548,7 @@ function startAutoScan(){
   ) {
     return withTier(
       AI_VERDICTS.HIGH_RISK_LATE_MOVE,
-      "Structure valid but momentum shows exhaustion characteristics."
+      "Structure valid but momentum shows exhaustion characteristics.",d
     );
   }
 
@@ -563,7 +563,7 @@ function startAutoScan(){
   ) {
     return withTier(
       AI_VERDICTS.COUNTER_TREND,
-      "Structure break occurred against dominant trend."
+      "Structure break occurred against dominant trend.",d
     );
   }
 
@@ -572,7 +572,7 @@ function startAutoScan(){
   if (structure === "none" || prob < 60) {
     return withTier(
       AI_VERDICTS.STRUCTURE_WEAK,
-      "No confirmed structure or probability edge present."
+      "No confirmed structure or probability edge present.",d
     );
   }
 
@@ -580,27 +580,47 @@ function startAutoScan(){
 
   return withTier(
     AI_VERDICTS.AVOID,
-    "Conditions are mixed and lack a statistical edge."
+    "Conditions are mixed and lack a statistical edge.",d
   );
       }
   
 
-  function withTier(verdict, reason){
+  function withTier(verdict, reason, d){
   const t = AI_VERDICT_TIERS[verdict] || {
     tier: 6,
     label: "TIER 6 — UNKNOWN",
     color: "neutral"
   };
 
+  const tradeSide = getTradeSide(d);
+
   return {
     verdict,
     tier: t.tier,
     tierLabel: t.label,
     tierColor: t.color,
+    tradeSide,   // 👈 NEW
     reason
   };
+}
+
+  function getTradeSide(d){
+  if (
+    d.mainTrend === "bullish" &&
+    (d.structure === "resistance broken" || d.structure === "support holding")
+  ) {
+    return "LONG";
   }
 
+  if (
+    d.mainTrend === "bearish" &&
+    (d.structure === "support broken" || d.structure === "resistance failed")
+  ) {
+    return "SHORT";
+  }
+
+  return "WAIT";
+  }
   
 
   function computeMarketDominance(tickers){
@@ -1124,6 +1144,13 @@ const id = `card-${scope}-${d.sym}`;
 
   const aiVerdict = getAIFinalVerdict(d);
 
+  const tradeSideClass =
+  aiVerdict.tradeSide === "LONG"
+    ? "bull"
+    : aiVerdict.tradeSide === "SHORT"
+    ? "bear"
+    : "neutral";
+
   
   card.dataset.bias = d.bias;
 card.dataset.vol  = d.bull ? "bull" : "bear";
@@ -1258,7 +1285,10 @@ ${d.volAI ? `
 <div class="muted">
   ${aiVerdict.reason}
 </div>
-  `;
+
+<div class="muted ${tradeSideClass}">
+  🎯 Trade Side: <b>${aiVerdict.tradeSide}</b>
+</div>
 
   applyFilters();
 }
