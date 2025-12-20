@@ -410,6 +410,17 @@ function startAutoScan(){
   await runScan();
 };
 
+  async function getFundingRate(sym){
+  try{
+    const d = await fetchJSON(
+      `${API}/fapi/v1/premiumIndex?symbol=${sym}`
+    );
+    return +d.lastFundingRate * 100; // convert to %
+  }catch(e){
+    return null;
+  }
+  }
+
   const AI_VERDICTS = {
   STRONG_CONTINUATION: "STRONG CONTINUATION",
   CONTROLLED_CONTINUATION: "CONTROLLED CONTINUATION",
@@ -471,6 +482,12 @@ function startAutoScan(){
   const trend = d.mainTrend;
   const prob = d.prob;
 
+        const funding = d.fundingRate ?? 0;
+
+const extremeLongCrowd  = funding >= 0.03;
+const extremeShortCrowd = funding <= -0.03;
+const elevatedFunding   = Math.abs(funding) >= 0.015;
+
   const hasVolumeBreak = d.volumeBreakout === true;
   const fakeVol = d.fakeVolumeBreak === true;
 
@@ -498,6 +515,17 @@ function startAutoScan(){
     );
   }
 
+  if(
+  (bias.includes("Trap") || d.fakeVolumeBreak) &&
+  elevatedFunding
+){
+  return withTier(
+    AI_VERDICTS.TRAP_RISK,
+    "Crowded funding confirms trap probability.",
+    d
+  );
+    }
+
   /* ================= PRIORITY 1.5 — AGING BREAKOUT ================= */
 
 if (hasVolumeBreak && !d.breakoutAge) {
@@ -521,6 +549,20 @@ if (hasVolumeBreak && !d.breakoutAge) {
     }
   }
 
+        if(
+  verdict === AI_VERDICTS.STRONG_CONTINUATION &&
+  (
+    (d.mainTrend === "bullish" && extremeLongCrowd) ||
+    (d.mainTrend === "bearish" && extremeShortCrowd)
+  )
+){
+  return withTier(
+    AI_VERDICTS.CONTROLLED_CONTINUATION,
+    "Structure intact but funding shows crowded positioning.",
+    d
+  );
+        }
+
   /* ================= PRIORITY 3 — CONTROLLED CONTINUATION ================= */
 
   if (
@@ -533,6 +575,18 @@ if (hasVolumeBreak && !d.breakoutAge) {
         "Structure aligns with trend, but participation remains selective.",d
       );
     }
+  }
+
+        if(
+  verdict === AI_VERDICTS.CONTROLLED_CONTINUATION &&
+  elevatedFunding &&
+  !d.volumeBreakout
+){
+  return withTier(
+    AI_VERDICTS.WAIT_FOR_PULLBACK,
+    "Continuation exists but funding cost is elevated without volume support.",
+    d
+  );
   }
 
   /* ================= PRIORITY 4 — WAIT FOR PULLBACK ================= */
@@ -579,6 +633,20 @@ if (hasVolumeBreak && !d.breakoutAge) {
       "Structure break occurred against dominant trend.",d
     );
   }
+
+        if(
+  verdict === AI_VERDICTS.COUNTER_TREND &&
+  (
+    (d.mainTrend === "bullish" && extremeLongCrowd) ||
+    (d.mainTrend === "bearish" && extremeShortCrowd)
+  )
+){
+  return withTier(
+    AI_VERDICTS.COUNTER_TREND,
+    "Counter-trend break against crowded funding side.",
+    d
+  );
+        }
 
   /* ================= PRIORITY 7 — STRUCTURE WEAK ================= */
 
@@ -949,6 +1017,16 @@ async function getDailyRSIContext(sym){
   };
   }
 
+  function getFundingInfo(rate){
+  if(rate === null) return { label: "Funding: —", cls: "neutral" };
+
+  if(rate >= 0.03) return { label: `Funding: +${rate.toFixed(3)}% (Crowded Longs)`, cls: "bear" };
+  if(rate <= -0.03) return { label: `${rate.toFixed(3)}% (Crowded Shorts)`, cls: "bull" };
+  if(Math.abs(rate) >= 0.015) return { label: `${rate.toFixed(3)}% (Elevated)`, cls: "neutral" };
+
+  return { label: `${rate.toFixed(3)}% (Balanced)`, cls: "neutral" };
+  }
+
 
 
 /* ================= ANALYZE ================= */
@@ -1053,10 +1131,12 @@ const sw = {
 
     const dailyRSI = await getDailyRSIContext(sym);
 
+  const fundingRate = await getFundingRate(sym);
+
   return {sym,price,change,bull,prob,bias,structure,S:sw.S,R:sw.R,dailyRSI,volumeBreakout,
   breakoutAge,volumeBreakoutType,fakeVolumeBreak,
   domV,
-  lastVol,mainTrend,volAI};
+  lastVol,mainTrend,volAI,fundingRate};
 }
 
 /* ================= FILTERS ================= */
@@ -1145,6 +1225,8 @@ const id = `card-${scope}-${d.sym}`;
     el.appendChild(card);
   }
 
+  const fundingInfo = getFundingInfo(d.fundingRate);
+
   const aiVerdict = getAIFinalVerdict(d);
 
   const tradeSideClass =
@@ -1187,6 +1269,10 @@ if (d.volumeBreakout) {
     }
     <b>${d.sym}</b>
     <div class="muted">Price: ${d.price.toFixed(4)}</div>
+    
+    <div class="muted ${fundingInfo.cls}">
+  💸 Funding Fee: ${fundingInfo.label}
+</div>
     
     <div class="muted ${
   d.mainTrend === "bullish" ? "bull" :
