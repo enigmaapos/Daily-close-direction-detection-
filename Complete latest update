@@ -164,6 +164,15 @@ button.secondary{
   background:#0b1220;
   border:1px solid #172033;
   }
+
+  #marketGreen, #marketRed, #marketNet{
+  font-weight:700;
+  margin-right:12px;
+  }
+
+  .verdict-strong { color: var(--accent); }   /* confident */
+.verdict-watch  { color: var(--neutral); }  /* timing */
+.verdict-avoid  { color: var(--muted); }    /* no edge */
 </style>
 </head>
 
@@ -192,12 +201,24 @@ button.secondary{
    </button>
   
   <select id="filterBias">
-    <option value="all">All Bias</option>
+  <option value="all">All Bias</option>
+
+  <optgroup label="Bullish">
     <option>Bullish Continuation</option>
     <option>Bullish Defense</option>
+    <option>Bull Trap Risk</option>
+  </optgroup>
+
+  <optgroup label="Bearish">
     <option>Bearish Continuation</option>
     <option>Bearish Defense</option>
-  </select>
+    <option>Bear Trap Risk</option>
+  </optgroup>
+
+  <optgroup label="Neutral">
+    <option>Neutral</option>
+  </optgroup>
+</select>
 
   <select id="filterVol">
     <option value="all">All Volume</option>
@@ -206,10 +227,10 @@ button.secondary{
   </select>
 
   <select id="filterVolBreak">
-  <option value="scan">SCAN 24h VOLUME BREAK</option>
   <option value="all">All Volume Breaks</option>
   <option value="yes">24h Volume Breakout</option>
   <option value="no">No Volume Breakout</option>
+    <option value="scan">SCAN 24h VOLUME BREAK</option>
   </select>
 
   <select id="filterProb">
@@ -239,6 +260,29 @@ button.secondary{
   </select>
 </div>
 
+  <div class="row filter-box">
+  <select id="filterAIVerdict">
+  <option value="all">All AI Verdicts</option>
+
+  <optgroup label="High Probability">
+    <option>STRONG CONTINUATION</option>
+    <option>CONTROLLED CONTINUATION</option>
+  </optgroup>
+
+  <optgroup label="Watch / Timing">
+    <option>WAIT FOR PULLBACK</option>
+    <option>COUNTER-TREND BREAKOUT</option>
+  </optgroup>
+
+  <optgroup label="Risk / Avoid">
+    <option>HIGH RISK / LATE MOVE</option>
+    <option>TRAP RISK</option>
+    <option>STRUCTURE WEAK / NO EDGE</option>
+    <option>AVOID / NO TRADE</option>
+  </optgroup>
+  </select>
+  </div>
+
 <!-- SORT + RESET ROW -->
 <div class="row">
   <select id="sortField">
@@ -259,6 +303,15 @@ button.secondary{
 
   <div class="muted" id="dailyRSIStatus">
   📅 Daily RSI Scan: —
+  </div>
+
+  <div class="row filter-box">
+  <div class="muted">
+    📊 Market 24h Dominance
+  </div>
+  <div id="marketGreen" class="bull">🟢 Green: —</div>
+  <div id="marketRed" class="bear">🔴 Red: —</div>
+  <div id="marketNet" class="neutral">⚖ Net: —</div>
   </div>
 
 <h2>⭐ Favorites</h2>
@@ -287,7 +340,10 @@ const BLACKSET=new Set([
 "NULSUSDT","HIFIUSDT","LEVERUSDT","XEMUSDT","STRAXUSDT",
 "COMBOUSDT","AI16ZUSDT","MILKUSDT","TOKENUSDT","SXPUSDT",
 "MYROUSDT","1000XUSDT","DARUSDT","PORT3USDT","SKATEUSDT",
-"AIAUSDT","AMBUSDT","FLMUSDT","PERPUSDT","OBOLUSDT","SWELLUSDT","FTMUSDT"
+"AIAUSDT","AMBUSDT","FLMUSDT","PERPUSDT","OBOLUSDT","SWELLUSDT","FTMUSDT","XCNUSDT",
+  "RADUSDT","IDEXUSDT","SNTUSDT","BADGERUSDT","GLMRUSDT","ORBSUSDT","BALUSDT","KLAYUSDT",
+  "UNFIUSDT","REEFUSDT","STPTUSDT","OMGUSDT","VOXELUSDT","QUICKUSDT","FISUSDT","MKRUSDT",
+  "REIUSDT","KDAUSDT"
 ]);
 
 const favSet=new Set();
@@ -353,6 +409,255 @@ function startAutoScan(){
   isAutoScan = true;
   await runScan();
 };
+
+  const AI_VERDICTS = {
+  STRONG_CONTINUATION: "STRONG CONTINUATION",
+  CONTROLLED_CONTINUATION: "CONTROLLED CONTINUATION",
+  WAIT_FOR_PULLBACK: "WAIT FOR PULLBACK",
+  HIGH_RISK_LATE_MOVE: "HIGH RISK / LATE MOVE",
+  STRUCTURE_WEAK: "STRUCTURE WEAK / NO EDGE",
+  COUNTER_TREND: "COUNTER-TREND BREAKOUT",
+  TRAP_RISK: "TRAP RISK",
+  AVOID: "AVOID / NO TRADE"
+};
+
+  const AI_VERDICT_TIERS = {
+  "STRONG CONTINUATION": {
+    tier: 1,
+    label: "TIER 1 — HIGH PROBABILITY",
+    verdictClass: "verdict-strong"
+  },
+  "CONTROLLED CONTINUATION": {
+    tier: 2,
+    label: "TIER 2 — HIGH PROBABILITY (CONTROLLED)",
+    verdictClass: "verdict-strong"
+  },
+  "WAIT FOR PULLBACK": {
+    tier: 3,
+    label: "TIER 3 — WAIT / TIMING",
+    verdictClass: "verdict-watch"
+  },
+  "COUNTER-TREND BREAKOUT": {
+    tier: 4,
+    label: "TIER 4 — COUNTER-TREND",
+    verdictClass: "verdict-watch"
+  },
+  "HIGH RISK / LATE MOVE": {
+    tier: 5,
+    label: "TIER 5 — HIGH RISK",
+    verdictClass: "verdict-avoid"
+  },
+  "STRUCTURE WEAK / NO EDGE": {
+    tier: 6,
+    label: "TIER 6 — NO EDGE",
+    verdictClass: "verdict-avoid"
+  },
+  "TRAP RISK": {
+    tier: 6,
+    label: "TIER 6 — TRAP RISK",
+    verdictClass: "verdict-avoid"
+  },
+  "AVOID / NO TRADE": {
+    tier: 6,
+    label: "TIER 6 — AVOID",
+    verdictClass: "verdict-avoid"
+  }
+};
+
+  
+      function getAIFinalVerdict(d) {
+  const structure = d.structure;
+  const bias = d.bias;
+  const trend = d.mainTrend;
+  const prob = d.prob;
+
+  const hasVolumeBreak = d.volumeBreakout === true;
+  const fakeVol = d.fakeVolumeBreak === true;
+
+  const rsiLabel = d.dailyRSI?.label || "Neutral";
+  const volAIMeaning = d.volAI?.meaning || "";
+  const volAIBias = d.volAI?.bias || "Neutral";
+
+  /* ================= PRIORITY 1 — TRAP & AVOID ================= */
+
+  if (bias.includes("Trap") || fakeVol) {
+    return withTier(
+      AI_VERDICTS.TRAP_RISK,
+      "Volume spike lacks acceptance and structure stability is weak.",d
+    );
+  }
+
+  if (
+    bias === "Neutral" &&
+    volAIBias === "Bearish" &&
+    trend === "bearish"
+  ) {
+    return withTier(
+      AI_VERDICTS.AVOID,
+      "No structural edge and volume positioning is against continuation.",d
+    );
+  }
+
+  /* ================= PRIORITY 1.5 — AGING BREAKOUT ================= */
+
+if (hasVolumeBreak && !d.breakoutAge) {
+  return withTier(
+    AI_VERDICTS.WAIT_FOR_PULLBACK,
+    "Volume breakout is aging; waiting for confirmation.", d
+  );
+}
+
+  /* ================= PRIORITY 2 — STRONG CONTINUATION ================= */
+
+  if (
+    (structure === "resistance broken" && trend === "bullish") ||
+    (structure === "support broken" && trend === "bearish")
+  ) {
+    if (hasVolumeBreak && !rsiLabel.includes("MAX")) {
+      return withTier(
+        AI_VERDICTS.STRONG_CONTINUATION,
+        "Structure, trend, and sustained participation are aligned.",d
+      );
+    }
+  }
+
+  /* ================= PRIORITY 3 — CONTROLLED CONTINUATION ================= */
+
+  if (
+    (structure === "resistance broken" && trend === "bullish") ||
+    (structure === "support broken" && trend === "bearish")
+  ) {
+    if (!hasVolumeBreak && volAIBias !== "Bearish" && !rsiLabel.includes("MAX")) {
+      return withTier(
+        AI_VERDICTS.CONTROLLED_CONTINUATION,
+        "Structure aligns with trend, but participation remains selective.",d
+      );
+    }
+  }
+
+  /* ================= PRIORITY 4 — WAIT FOR PULLBACK ================= */
+
+  if (
+    structure === "resistance broken" &&
+    trend === "bullish" &&
+    rsiLabel.includes("MAX") &&
+    !hasVolumeBreak
+  ) {
+    return withTier(
+      AI_VERDICTS.WAIT_FOR_PULLBACK,
+      "Trend intact but momentum is stretched without volume expansion.",d
+    );
+  }
+
+  /* ================= PRIORITY 5 — HIGH RISK / LATE MOVE ================= */
+
+  if (
+    structure.includes("broken") &&
+    rsiLabel.includes("MAX") &&
+    (
+      volAIMeaning.includes("climax") ||
+      volAIMeaning.includes("Distribution")
+    )
+  ) {
+    return withTier(
+      AI_VERDICTS.HIGH_RISK_LATE_MOVE,
+      "Structure valid but momentum shows exhaustion characteristics.",d
+    );
+  }
+
+  /* ================= PRIORITY 6 — COUNTER-TREND ================= */
+
+  if (
+    structure.includes("broken") &&
+    (
+      (structure === "resistance broken" && trend === "bearish") ||
+      (structure === "support broken" && trend === "bullish")
+    )
+  ) {
+    return withTier(
+      AI_VERDICTS.COUNTER_TREND,
+      "Structure break occurred against dominant trend.",d
+    );
+  }
+
+  /* ================= PRIORITY 7 — STRUCTURE WEAK ================= */
+
+  if (structure === "none" || prob < 60) {
+    return withTier(
+      AI_VERDICTS.STRUCTURE_WEAK,
+      "No confirmed structure or probability edge present.",d
+    );
+  }
+
+  /* ================= FALLBACK ================= */
+
+  return withTier(
+    AI_VERDICTS.AVOID,
+    "Conditions are mixed and lack a statistical edge.",d
+  );
+      }
+  
+
+  function withTier(verdict, reason, d){
+  const t = AI_VERDICT_TIERS[verdict] || {
+    tier: 6,
+    label: "TIER 6 — UNKNOWN",
+    verdictClass: "verdict-avoid"
+  };
+
+  return {
+    verdict,
+    tier: t.tier,
+    tierLabel: t.label,
+    verdictClass: t.verdictClass,
+    tradeSide: getTradeSide(d),
+    reason
+  };
+}
+
+  function getTradeSide(d){
+  if (
+    d.mainTrend === "bullish" &&
+    (d.structure === "resistance broken" || d.structure === "support holding")
+  ) {
+    return "LONG";
+  }
+
+  if (
+    d.mainTrend === "bearish" &&
+    (d.structure === "support broken" || d.structure === "resistance failed")
+  ) {
+    return "SHORT";
+  }
+
+  return "WAIT";
+  }
+  
+
+  function computeMarketDominance(tickers){
+  let green = 0;
+  let red = 0;
+
+  tickers.forEach(t=>{
+    const ch = +t.priceChangePercent;
+    if(isNaN(ch)) return;
+
+    if(ch > 0) green += ch;
+    else if(ch < 0) red += Math.abs(ch);
+  });
+
+  const net = green - red;
+
+  return {
+    green: +green.toFixed(2),
+    red: +red.toFixed(2),
+    net: +net.toFixed(2),
+    bias:
+      net > 0 ? "Bull Dominant" :
+      net < 0 ? "Bear Dominant" :
+      "Neutral"
+  };
+  }
 
 /* === IMPROVED 15m SWING DETECTION (CONFIRMED) === */
 function findSwings(h, l, c, v){
@@ -450,6 +755,21 @@ const DAILY_RSI_TTL = 6 * 60 * 60 * 1000; // 6 hours
 const DAILY_RSI_INTERVAL = "1d";
 const DAILY_RSI_LIMIT = 200;
 
+  function mapKlines(klines){
+  return klines.map(k => ({
+    openTime: +k[0],
+    open: +k[1],
+    high: +k[2],
+    low: +k[3],
+    close: +k[4],
+    baseVol: +k[5]
+  }));
+}
+
+function safeNum(n){
+  return isNaN(n) ? 0 : n;
+}
+
   /* ================= RSI ================= */
 function calculateRSI(closes, period=14){
   if(closes.length <= period) return [];
@@ -497,31 +817,39 @@ async function getDailyRSIContext(sym){
     const rsi = calculateRSI(closes);
     if(!rsi.length) return null;
 
+    const rsiValue = rsi.at(-1); // ✅ NOW SAFE
+
     const d = getRecentRSIDiff(rsi);
 
     let label = "Neutral";
 
-if (d.direction === "pump") {
-  if (pumpAbove30) label = "MAX ZONE PUMP";
-  else if (pumpInRange_21_26) label = "BALANCE ZONE PUMP";
-  else if (pumpInRange_1_10) label = "LOWEST ZONE PUMP";
-}
+    if (d.direction === "pump") {
+      if (d.diff >= 30) label = "MAX ZONE PUMP";
+      else if (d.diff >= 18 && d.diff <= 26) label = "BALANCE ZONE PUMP";
+      else if (d.diff >= 1 && d.diff <= 10) label = "LOWEST ZONE PUMP";
+    }
+    else if (d.direction === "dump") {
+      if (d.diff >= 30) label = "MAX ZONE DUMP";
+      else if (d.diff >= 18 && d.diff <= 26) label = "BALANCE ZONE DUMP";
+      else if (d.diff >= 1 && d.diff <= 10) label = "LOWEST ZONE DUMP";
+    }
 
-else if (d.direction === "dump") {
-  if (dumpAbove30) label = "MAX ZONE DUMP";
-  else if (dumpInRange_21_26) label = "BALANCE ZONE DUMP";
-  else if (dumpInRange_1_10) label = "LOWEST ZONE DUMP";
-}
-    
-    const data = { label, diff: d.diff, dir: d.direction };
+    const data = {
+      label,
+      diff: d.diff,
+      dir: d.direction,
+      value: +rsiValue.toFixed(2)
+    };
+
     DAILY_RSI_CACHE[sym] = { data, ts: Date.now() };
-
     return data;
+
   }catch(e){
+    console.error("Daily RSI failed:", sym, e);
     return null;
   }
 }
-
+  
   function isDailyRSIActive(){
   return filterDailyRSI.value !== "all";
   }
@@ -557,10 +885,81 @@ else if (d.direction === "dump") {
     : "bearish";
   }
 
+  function detect24hVolumeLocationAI(klines){
+  if (!klines || klines.length < 96) return null;
+
+  const last24h = klines.slice(-96).map(c => ({
+    open: safeNum(c.open),
+    high: safeNum(c.high),
+    low: safeNum(c.low),
+    close: safeNum(c.close),
+    baseVol: safeNum(c.baseVol),
+    openTime: c.openTime
+  }));
+
+  let dayHigh = -Infinity;
+  let dayLow  = Infinity;
+
+  for (const c of last24h) {
+    if (c.high > dayHigh) dayHigh = c.high;
+    if (c.low  < dayLow)  dayLow  = c.low;
+  }
+
+  let top = last24h[0];
+  for (const c of last24h) {
+    if (c.baseVol > top.baseVol) top = c;
+  }
+
+  const isRed   = top.close < top.open;
+  const isGreen = top.close > top.open;
+
+  const range = dayHigh - dayLow;
+  const mid = dayLow + range * 0.5;
+
+  let location = 'MID';
+  if (top.high <= mid) location = 'LOW';
+  else if (top.low >= mid) location = 'HIGH';
+
+  let meaning = 'Neutral';
+  let bias = 'Neutral';
+
+  if (isRed && location === 'LOW') {
+    meaning = 'Sell exhaustion → bullish';
+    bias = 'Bullish';
+  } else if (isRed && location === 'HIGH') {
+    meaning = 'Distribution → bearish';
+    bias = 'Bearish';
+  } else if (isGreen && location === 'LOW') {
+    meaning = 'Initiative buying → bullish';
+    bias = 'Bullish';
+  } else if (isGreen && location === 'HIGH') {
+    meaning = 'Buy climax → caution';
+    bias = 'Caution';
+  }
+
+  return {
+    color: isRed ? 'RED' : 'GREEN',
+    location,
+    meaning,
+    bias,
+    volume: top.baseVol,
+    time: top.openTime,
+    high: top.high,
+    low: top.low
+  };
+  }
+
+
+
 /* ================= ANALYZE ================= */
 async function analyze(sym,change){
   const k=await fetchJSON(`${API}/fapi/v1/klines?symbol=${sym}&interval=15m&limit=240`);
   await sleep(DELAY);
+
+  const mappedK = mapKlines(k);
+
+// 🧠 24h Volume Location AI
+const volAI = detect24hVolumeLocationAI(mappedK);
 
   const c=k.map(x=>+x[4]),h=k.map(x=>+x[2]),l=k.map(x=>+x[3]),v=k.map(x=>+x[5]);
   const price=c.at(-1);
@@ -599,6 +998,41 @@ const volumeBreakoutType =
     ? (lastBull ? "Bull Volume Breakout" : "Bear Volume Breakout")
     : "No Volume Breakout";
 
+  const hasVolumeBreak =
+  d.volumeBreakout === true && d.breakoutAge === true;
+
+  // ⏱ breakout validity window (45 minutes = 3 x 15m candles)
+const breakoutAge =
+  volumeBreakout &&
+  (Date.now() - k.at(-1)[6] < 45 * 60 * 1000);
+
+  // direction conflict with main trend
+const directionConflict =
+  (mainTrend === "bullish" && lastBull === false) ||
+  (mainTrend === "bearish" && lastBull === true);
+
+// follow-through failure (current breakout candle closes against direction)
+const followThroughFail =
+  volumeBreakout &&
+  (
+    (lastBull && k.at(-1)[4] < k.at(-1)[1]) ||  // bull breakout but red close
+    (!lastBull && k.at(-1)[4] > k.at(-1)[1])   // bear breakout but green close
+  );
+
+// climactic / distribution behavior
+const climax =
+  volAI &&
+  (
+    volAI.meaning.includes("climax") ||
+    volAI.meaning.includes("Distribution")
+  );
+
+// FINAL fake volume breakout flag
+const fakeVolumeBreak =
+  volumeBreakout &&
+  (directionConflict || climax) &&
+  followThroughFail;
+  
   const bull = domVBull;
 
   const swings = findSwings(h,l,c,v);
@@ -622,20 +1056,21 @@ const sw = {
 
     const dailyRSI = await getDailyRSIContext(sym);
 
-  return {sym,price,change,bull,prob,bias,structure,S:sw.S,R:sw.R,dailyRSI,volumeBreakout,
-  volumeBreakoutType,
+  return {sym,price,change,bull,prob,bias,structure,S:sw.S,R:sw.R,dailyRSI,volumeBreakout,hasVolumeBreak,
+  breakoutAge,volumeBreakoutType,fakeVolumeBreak,
   domV,
-  lastVol,mainTrend};
+  lastVol,mainTrend,volAI};
 }
 
 /* ================= FILTERS ================= */
 function applyFilters(){
-  const b = filterBias.value;
-  const v = filterVol.value;
-  const p = +filterProb.value;
-  const r = filterDailyRSI.value;
-  const s = filterStructure.value;
+  const b  = filterBias.value;
+  const v  = filterVol.value;
+  const p  = +filterProb.value;
+  const r  = filterDailyRSI.value;
+  const s  = filterStructure.value;
   const vb = filterVolBreak.value;
+  const av = document.getElementById("filterAIVerdict")?.value || "all";
 
   document.querySelectorAll(".card").forEach(c=>{
     let ok = true;
@@ -647,18 +1082,22 @@ function applyFilters(){
     if(s !== "all" && c.dataset.structure !== s) ok = false;
     if(vb !== "all" && c.dataset.volbreak !== vb) ok = false;
 
+    // 🤖 AI Verdict filter
+    if(av !== "all" && c.dataset.aiverdict !== av) ok = false;
+
     c.style.display = ok ? "" : "none";
   });
 }
+  
 
-       function resetFilters(){
+         function resetFilters(){
   filterBias.value = "all";
   filterVol.value = "all";
   filterProb.value = "0";
   filterDailyRSI.value = "all";
-         filterStructure.value = "all";
-           filterVolBreak.value = "all";
-           
+  filterStructure.value = "all";
+  filterVolBreak.value = "all";
+  document.getElementById("filterAIVerdict").value = "all"; // 👈 ADD
 
   applyFilters();
 
@@ -709,6 +1148,15 @@ const id = `card-${scope}-${d.sym}`;
     el.appendChild(card);
   }
 
+  const aiVerdict = getAIFinalVerdict(d);
+
+  const tradeSideClass =
+  aiVerdict.tradeSide === "LONG"
+    ? "bull"
+    : aiVerdict.tradeSide === "SHORT"
+    ? "bear"
+    : "neutral";
+
   
   card.dataset.bias = d.bias;
 card.dataset.vol  = d.bull ? "bull" : "bear";
@@ -719,6 +1167,8 @@ card.dataset.structure = d.structure || "none";
 card.dataset.dailyrsi = d.dailyRSI?.label || "all";
   card.dataset.volbreak = d.volumeBreakout ? "yes" : "no";
   card.dataset.trend = d.mainTrend || "neutral";
+  card.dataset.aitier = aiVerdict.tier;
+card.dataset.aiverdict = aiVerdict.verdict;
   
 
   // 🔔 SOUND ALERT — only on 24h volume breakout
@@ -732,12 +1182,14 @@ if (d.volumeBreakout) {
   }
 }
 
+  
   card.innerHTML = `
     ${isFav
       ? `<div class="close" onclick="removeFav('${d.sym}')">✖</div>`
       : `<div class="star" onclick="addFav('${d.sym}')">⭐</div>`
     }
     <b>${d.sym}</b>
+    <div class="muted">Price: ${d.price.toFixed(4)}</div>
     
     <div class="muted ${
   d.mainTrend === "bullish" ? "bull" :
@@ -750,15 +1202,17 @@ if (d.volumeBreakout) {
     
     ${d.dailyRSI ? `
   <div class="muted ${
-    d.dailyRSI.dir==="pump"?"bull":
-    d.dailyRSI.dir==="dump"?"bear":"neutral"
+    d.dailyRSI.value >= 60 ? "bull" :
+    d.dailyRSI.value <= 40 ? "bear" : "neutral"
   }">
-    📅 Daily RSI: ${d.dailyRSI.label}
-    (Δ ${d.dailyRSI.diff})
+    📅 Daily RSI14: ${d.dailyRSI.value}
+    <br>
+    <span class="muted">
+      ${d.dailyRSI.label} (Δ ${d.dailyRSI.diff})
+    </span>
   </div>
 ` : ""}
 
-    <div class="muted">Price: ${d.price.toFixed(4)}</div>
     <div class="muted ${d.change>=0?"bull":"bear"}">
       24h Change: ${d.change.toFixed(2)}%
     </div>
@@ -766,7 +1220,7 @@ if (d.volumeBreakout) {
       ${d.bull?"Bullish":"Bearish"} Volume Control
     </div>
     
-    ${d.volumeBreakout ? `
+      ${d.volumeBreakout ? `
   <div class="muted ${
     d.volumeBreakoutType.includes("Bull") ? "bull" : "bear"
   }">
@@ -784,6 +1238,23 @@ if (d.volumeBreakout) {
   </div>
 `}
 
+${d.volAI ? `
+  <div class="muted ${
+    d.volAI.bias === "Bullish" ? "bull" :
+    d.volAI.bias === "Bearish" ? "bear" : "neutral"
+  }">
+    🧠 24h Volume AI
+    <br>
+    <span class="muted">
+      ${d.volAI.color} candle · ${d.volAI.location} range
+    </span>
+    <br>
+    <span class="muted">
+      ${d.volAI.meaning}
+    </span>
+  </div>
+` : ""}
+
     <div class="muted">Structure: ${d.structure}</div>
 
     <div class="prob ${
@@ -796,7 +1267,25 @@ if (d.volumeBreakout) {
     ${d.S[1]?`<div class="muted bear">S2: ${d.S[1].toFixed(4)}</div>`:""}
     ${d.R[0]?`<div class="muted bull">R1: ${d.R[0].toFixed(4)}</div>`:""}
     ${d.R[1]?`<div class="muted bull">R2: ${d.R[1].toFixed(4)}</div>`:""}
-  `;
+
+    <hr style="opacity:.15">
+
+<div class="muted ${aiVerdict.verdictClass}">
+  🧠 AI Verdict: <b>${aiVerdict.verdict}</b>
+</div>
+
+<div class="muted ${aiVerdict.verdictClass}">
+  ${aiVerdict.tierLabel}
+</div>
+
+<div class="muted">
+  ${aiVerdict.reason}
+</div>
+
+<div class="muted ${tradeSideClass}">
+  🎯 Trade Side: <b>${aiVerdict.tradeSide}</b>
+</div>
+`;
 
   applyFilters();
 }
@@ -1014,6 +1503,21 @@ if(volBreakMode === "scan"){
   }
 
   const t = await fetchJSON(`${API}/fapi/v1/ticker/24hr`);
+  const usdtAll = t.filter(
+  x => x.symbol.endsWith("USDT") && !BLACKSET.has(x.symbol)
+);
+
+const dom = computeMarketDominance(usdtAll);
+
+marketGreen.textContent = `🟢 Green: ${dom.green.toLocaleString()}%`;
+marketRed.textContent   = `🔴 Red: ${dom.red.toLocaleString()}%`;
+marketNet.textContent   = `⚖ Net: ${dom.net.toLocaleString()}% — ${dom.bias}`;
+
+marketNet.className =
+  dom.net > 0 ? "bull" :
+  dom.net < 0 ? "bear" :
+  "neutral";
+  
   const usdt = t.filter(x=>x.symbol.endsWith("USDT") && !BLACKSET.has(x.symbol));
 
   const g = [...usdt].sort((a,b)=>b.priceChangePercent-a.priceChangePercent).slice(0,30);
@@ -1117,7 +1621,8 @@ async function runSearch(){
   "filterVol",
   "filterProb",
   "filterStructure",
-  "filterVolBreak"
+  "filterVolBreak",
+  "filterAIVerdict"   // 👈 ADD THIS
 ].forEach(id=>{
   document.getElementById(id).addEventListener("change", applyFilters);
 });
