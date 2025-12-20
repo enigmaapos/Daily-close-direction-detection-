@@ -420,6 +420,11 @@ function startAutoScan(){
   }, AUTO_INTERVAL);
 }
 
+  function setScanStatus(text){
+  // ⛔ do NOT overwrite pending 24h status
+  if (pending24hVolumeScan && text.includes("Idle")) return;
+  dailyRSIStatus.textContent = text;
+  }
   
 
   async function getFundingRate(sym){
@@ -1363,14 +1368,11 @@ ${d.volAI ? `
   applyFilters();
 }
 
-  async function runVolumeBreakScan(){
+ async function runVolumeBreakScan(){
+
   greenGrid.innerHTML = "";
   redGrid.innerHTML = "";
-  progressFill.style.width = "0%";
   progressFill.style.width = "3%";
-
-  const statusEl = document.getElementById("dailyRSIStatus");
-  statusEl.textContent = "🔥 MANUAL 24h Volume Break Scan — starting…";
 
   const tickers = await fetchJSON(`${API}/fapi/v1/ticker/24hr`);
   const usdt = tickers.filter(
@@ -1381,108 +1383,94 @@ ${d.volAI ? `
   let scanned = 0;
   let matches = [];
 
-  const BATCH_SIZE = 10;   // ✅ SAFE
-  const BATCH_DELAY = 180; // ms between batches
+  const BATCH_SIZE = 10;
+  const BATCH_DELAY = 180;
 
-  /* === PHASE 1: FAST PARALLEL VOLUME SCAN === */
-  for(let i = 0; i < usdt.length; i += BATCH_SIZE){
+  /* === PHASE 1: FAST DISCOVERY === */
+  for (let i = 0; i < usdt.length; i += BATCH_SIZE) {
     const batch = usdt.slice(i, i + BATCH_SIZE);
 
-    const results = await Promise.all(
-      batch.map(async (x)=>{
-        try{
+    await Promise.all(
+      batch.map(async x => {
+        try {
           const k = await fetchJSON(
             `${API}/fapi/v1/klines?symbol=${x.symbol}&interval=15m&limit=97`
           );
 
-          const v = k.map(c=>+c[5]);
+          const v = k.map(c => +c[5]);
 
           let domV = 0;
-          for(let j=0;j<v.length-2;j++){
-  if(v[j] > domV) domV = v[j];
-}
+          for (let j = 0; j < v.length - 2; j++) {
+            if (v[j] > domV) domV = v[j];
+          }
 
           const last = k.at(-1);
-const lastVol = +last[5];
-const lastTime = +last[6]; // candle close time
+          const lastVol = +last[5];
+          const lastTime = +last[6];
 
-const mem = VOLUME_BREAK_MEMORY[x.symbol];
+          const mem = VOLUME_BREAK_MEMORY[x.symbol];
 
-// detect NEW break only
-if (
-  lastVol > domV &&
-  (
-    !mem ||                      // never seen before
-    lastTime > mem.lastCandleTime // new candle
-  )
-) {
-  matches.push({
-    symbol: x.symbol,
-    change: +x.priceChangePercent
-  });
+          if (
+            lastVol > domV &&
+            (!mem || lastTime > mem.lastCandleTime)
+          ) {
+            matches.push({
+              symbol: x.symbol,
+              change: +x.priceChangePercent
+            });
 
-  // 🔐 store memory
-  VOLUME_BREAK_MEMORY[x.symbol] = {
-    lastCandleTime: lastTime,
-    domV
-  };
-}
-       return null;
-
-        }catch(e){
-          return null;
-        }
+            VOLUME_BREAK_MEMORY[x.symbol] = {
+              lastCandleTime: lastTime,
+              domV
+            };
+          }
+        } catch {}
       })
     );
-
-    results.filter(Boolean).forEach(r => matches.push(r));
 
     scanned += batch.length;
     progressFill.style.width =
       Math.round((scanned / total) * 100) + "%";
 
-    statusEl.textContent =
-      `🔥 24h Volume Break Scan | ${scanned}/${total} | Matches: ${matches.length}`;
+    setScanStatus(
+      `🔥 24h Volume Break Scan | ${scanned}/${total} | Matches: ${matches.length}`
+    );
 
-    await sleep(BATCH_DELAY); // ⛔ rate-limit safety
+    await sleep(BATCH_DELAY);
   }
 
-  /* === PHASE 2: FULL ANALYSIS (SEQUENTIAL & SAFE) === */
-  for(const m of matches){
+  /* === PHASE 2: FULL ANALYSIS === */
+  for (const m of matches) {
     const d = await analyze(m.symbol, m.change);
-    renderCard(
-      d,
-      m.change >= 0 ? greenGrid : redGrid
-    );
+    renderCard(d, m.change >= 0 ? greenGrid : redGrid);
     await sleep(120);
   }
 
   timestamp.innerText = new Date().toLocaleString();
-  statusEl.textContent =
-    `🔥 24h Volume Break Scan COMPLETE — Matches: ${matches.length}`;
+
+  setScanStatus(
+    `🔥 24h Volume Break Scan COMPLETE — Matches: ${matches.length}`
+  );
 
   applySort();
   applyFilters();
   }
 
+  
   async function run24hVolumeBreak(){
 
   // ⛔ cannot run yet → queue
   if (scanLock) {
     pending24hVolumeScan = true;
-
-    dailyRSIStatus.textContent =
-      "⏳ Normal scan running — 24h Volume Break queued";
-
+    setScanStatus(
+      "⏳ Normal scan running — 24h Volume Break queued"
+    );
     return;
   }
 
   // ✅ now we can run
   pending24hVolumeScan = false;
-
-  dailyRSIStatus.textContent =
-    "🔥 24h Volume Break Scan — running…";
-
+  setScanStatus("🔥 24h Volume Break Scan — running…");
 
   // ⛔ stop auto scans
   if(autoTimer) clearInterval(autoTimer);
@@ -1498,22 +1486,22 @@ if (
   scanVolBreakBtn.textContent = "🔥 Scanning 24h Volume…";
   scanVolBreakBtn.classList.add("analyze-running");
 
-  dailyRSIStatus.textContent = "🔥 Manual 24h Volume Break Scan — running…";
   progressFill.style.width = "0%";
 
-  // 🔍 run scan
-  await runVolumeBreakScan();
+  try {
+    // 🔍 run scan
+    await runVolumeBreakScan();
+  } finally {
+    // ✅ restore UI (always runs)
+    scanLock = false;
+    scanBtn.disabled = false;
+    scanVolBreakBtn.disabled = false;
 
-  // ✅ restore UI
-  scanLock = false;
-  scanBtn.disabled = false;
-  scanVolBreakBtn.disabled = false;
+    scanVolBreakBtn.textContent = "🔥 Scan 24h Volume Break";
+    scanVolBreakBtn.classList.remove("analyze-running");
 
-  scanVolBreakBtn.textContent = "🔥 Scan 24h Volume Break";
-  scanVolBreakBtn.classList.remove("analyze-running");
-
-  // 🔁 resume autos
-  startAutoScan();
+    startAutoScan();
+  }
 }
   
 /* ================= FAVORITES ================= */
@@ -1614,14 +1602,18 @@ if(activeSearchSymbol){
 if (now - last24hVolumeBreakAt >= AUTO_VOLUME_BREAK_INTERVAL) {
   last24hVolumeBreakAt = now;
 
-  // 📌 mark as pending immediately (AUTO)
   pending24hVolumeScan = true;
 
-  dailyRSIStatus.textContent =
-    "⏳ Normal scan running — 24h Volume Break scheduled (auto)";
+  setScanStatus(
+    "⏳ 24h Volume Break scheduled (auto)"
+  );
 
-  setTimeout(() => {
-    run24hVolumeBreak();
+  setTimeout(async () => {
+    try {
+      await run24hVolumeBreak();
+    } finally {
+      pending24hVolumeScan = false;
+    }
   }, 800);
 }
   
