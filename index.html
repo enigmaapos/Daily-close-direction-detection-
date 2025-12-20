@@ -1163,12 +1163,14 @@ ${d.volAI ? `
     ${d.R[0]?`<div class="muted bull">R1: ${d.R[0].toFixed(4)}</div>`:""}
     ${d.R[1]?`<div class="muted bull">R2: ${d.R[1].toFixed(4)}</div>`:""}
 
+    <hr style="opacity:.15">
+
     <div class="muted">
-  🤖 AI Verdict: <b>${aiVerdict.verdict}</b>
-</div>
-<div class="muted">
-  ${aiVerdict.reason}
-</div>
+      🤖 <b>AI Verdict:</b> ${aiVerdict.verdict}
+    </div>
+    <div class="muted">
+      ${aiVerdict.reason}
+    </div>
   `;
 
   applyFilters();
