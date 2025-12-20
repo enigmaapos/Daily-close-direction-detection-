@@ -1051,16 +1051,6 @@ const rsi15Rising =
 
   const rsi50State = analyzeRSI50Behavior(rsi15Arr);
 
-  const bullishBreakAccepted =
-  rb &&
-  !rsi50State.consistentlyBelow50 &&
-  rsi15Rising;
-
-const bearishBreakAccepted =
-  sb &&
-  !rsi50State.consistentlyAbove50 &&
-  !rsi15Rising;
-
 
   let domV = 0;
 let domVBull = true;
@@ -1146,6 +1136,18 @@ const sw = {
 };
   const sb=sw.S.some(x=>price<x);
   const rb=sw.R.some(x=>price>x);
+
+  const bullishBreakAccepted =
+  rb &&
+  rsi15 !== null &&
+  !rsi50State.consistentlyBelow50 &&
+  rsi15Rising;
+
+const bearishBreakAccepted =
+  sb &&
+  rsi15 !== null &&
+  !rsi50State.consistentlyAbove50 &&
+  !rsi15Rising;
 
   let bias="Neutral",prob=50,structure="none";
   if(bull){
