@@ -683,6 +683,34 @@ else if (d.direction === "dump") {
   };
   }
 
+  // === SUSTAINED VOLUME BREAK LOGIC ===
+const volBreak = detectSustainedVolumeBreak(mappedK);
+
+let volumeBreakout = false;
+let volumeBreakoutType = "No Volume Breakout";
+let fakeVolumeBreak = false;
+
+const last = mappedK.at(-1);
+const lastVol = last.baseVol;
+
+// body acceptance
+const body = Math.abs(last.close - last.open);
+const range = last.high - last.low;
+const bodyRatio = range > 0 ? body / range : 0;
+
+if (volBreak.sustained && bodyRatio >= 0.5) {
+  volumeBreakout = true;
+  volumeBreakoutType =
+    volBreak.direction === "bull"
+      ? "SUSTAINED BULL VOLUME BREAK"
+      : "SUSTAINED BEAR VOLUME BREAK";
+}
+
+// ⚠️ FAKE SPIKE (volume > dominant but no acceptance)
+if (!volumeBreakout && lastVol > volBreak.domV) {
+  fakeVolumeBreak = true;
+}
+
 /* ================= ANALYZE ================= */
 async function analyze(sym,change){
   const k=await fetchJSON(`${API}/fapi/v1/klines?symbol=${sym}&interval=15m&limit=240`);
@@ -721,15 +749,34 @@ const mainTrend = getMainTrendOnly(
   l
 );
 
-const lastVol = v.at(-1);
-const lastBull = k.at(-1)[4] > k.at(-1)[1];
+// === SUSTAINED VOLUME BREAK LOGIC ===
+const volBreak = detectSustainedVolumeBreak(mappedK);
 
-const volumeBreakout = lastVol > domV;
-const volumeBreakoutType =
-  volumeBreakout
-    ? (lastBull ? "Bull Volume Breakout" : "Bear Volume Breakout")
-    : "No Volume Breakout";
+let volumeBreakout = false;
+let volumeBreakoutType = "No Volume Breakout";
+let fakeVolumeBreak = false;
 
+const last = mappedK.at(-1);
+const lastVol = last.baseVol;
+
+// body acceptance
+const body = Math.abs(last.close - last.open);
+const range = last.high - last.low;
+const bodyRatio = range > 0 ? body / range : 0;
+
+if (volBreak.sustained && bodyRatio >= 0.5) {
+  volumeBreakout = true;
+  volumeBreakoutType =
+    volBreak.direction === "bull"
+      ? "SUSTAINED BULL VOLUME BREAK"
+      : "SUSTAINED BEAR VOLUME BREAK";
+}
+
+// ⚠️ FAKE SPIKE (volume > dominant but no acceptance)
+if (!volumeBreakout && lastVol > volBreak.domV) {
+  fakeVolumeBreak = true;
+}
+  
   const bull = domVBull;
 
   const swings = findSwings(h,l,c,v);
@@ -754,7 +801,7 @@ const sw = {
     const dailyRSI = await getDailyRSIContext(sym);
 
   return {sym,price,change,bull,prob,bias,structure,S:sw.S,R:sw.R,dailyRSI,volumeBreakout,
-  volumeBreakoutType,
+  volumeBreakoutType,fakeVolumeBreak,
   domV,
   lastVol,mainTrend,volAI};
 }
@@ -899,9 +946,19 @@ if (d.volumeBreakout) {
     
     ${d.volumeBreakout ? `
   <div class="muted ${
-    d.volumeBreakoutType.includes("Bull") ? "bull" : "bear"
+    d.volumeBreakoutType.includes("BULL") ? "bull" : "bear"
   }">
     🔥 ${d.volumeBreakoutType}
+    <br>
+    <span class="muted">
+      15m: ${d.lastVol.toLocaleString()}
+      &nbsp;›&nbsp;
+      24h High: ${d.domV.toLocaleString()}
+    </span>
+  </div>
+` : d.fakeVolumeBreak ? `
+  <div class="muted neutral">
+    ⚠️ Volume Spike (No Acceptance)
     <br>
     <span class="muted">
       15m: ${d.lastVol.toLocaleString()}
