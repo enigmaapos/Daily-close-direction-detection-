@@ -213,6 +213,16 @@ button.secondary{
 <button class="secondary" id="scanVolBreakBtn">
   🔥 Scan 24h Volume Break
 </button>
+  <div class="row filter-box">
+  <label class="muted" style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+    <input
+      type="checkbox"
+      id="toggle24hVolume"
+      checked
+    />
+    🔥 Auto 24h Volume Break Scan
+  </label>
+  </div>
   <input id="symbolSearch" placeholder="BTCUSDT"/>
   <button class="secondary" id="analyzeBtn" onclick="runSearch()">Analyze</button>
 </div>
@@ -389,6 +399,7 @@ let dailyRSIScanned = 0;
   let last24hVolumeBreakAt = 0;
   let pending24hVolumeScan = false;
   let statusLocked = false;
+  let auto24hVolumeEnabled = true; // ✅ default ON
   
 
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
@@ -1772,6 +1783,18 @@ scrollTopBtn.addEventListener("click", () => {
   scanVolBreakBtn.addEventListener("click", () => {
   if (scanLock) return;   // ⛔ block during scans
   run24hVolumeBreak();
+});
+
+  document.getElementById("toggle24hVolume").addEventListener("change", (e) => {
+  auto24hVolumeEnabled = e.target.checked;
+
+  if (!auto24hVolumeEnabled) {
+    pending24hVolumeScan = false;
+    statusLocked = false;
+    setScanStatus("⏸ Auto 24h Volume Break: OFF");
+  } else {
+    setScanStatus("▶ Auto 24h Volume Break: ON");
+  }
 });
 </script>
 </body>
