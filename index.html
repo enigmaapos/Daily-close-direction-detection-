@@ -1466,7 +1466,9 @@ if (
   }
 
   async function run24hVolumeBreak(){
-    if (scanLock) {
+
+  // ⛔ cannot run yet → queue
+  if (scanLock) {
     pending24hVolumeScan = true;
 
     dailyRSIStatus.textContent =
@@ -1474,6 +1476,13 @@ if (
 
     return;
   }
+
+  // ✅ now we can run
+  pending24hVolumeScan = false;
+
+  dailyRSIStatus.textContent =
+    "🔥 24h Volume Break Scan — running…";
+
 
   // ⛔ stop auto scans
   if(autoTimer) clearInterval(autoTimer);
@@ -1605,18 +1614,16 @@ if(activeSearchSymbol){
 if (now - last24hVolumeBreakAt >= AUTO_VOLUME_BREAK_INTERVAL) {
   last24hVolumeBreakAt = now;
 
+  // 📌 mark as pending immediately (AUTO)
+  pending24hVolumeScan = true;
+
+  dailyRSIStatus.textContent =
+    "⏳ Normal scan running — 24h Volume Break scheduled (auto)";
+
   setTimeout(() => {
     run24hVolumeBreak();
-  }, 800); // small gap after normal scan
+  }, 800);
 }
-
-    if (pending24hVolumeScan) {
-  pending24hVolumeScan = false;
-
-  setTimeout(() => {
-    run24hVolumeBreak();
-  }, 600); // small buffer
-    }
   
   applySort();
 applyFilters();
