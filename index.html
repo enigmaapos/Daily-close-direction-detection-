@@ -361,7 +361,7 @@ let autoTimer = null;
   let activeSearchSymbol = null;
   let dailyRSIMatchCount = 0;
 let dailyRSIScanned = 0;
-  let pendingVolumeBreakScan = false;
+  let last24hVolumeBreakAt = 0;
 
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const fetchJSON=async u=>(await fetch(u)).json();
@@ -379,27 +379,13 @@ const VOLUME_BREAK_MEMORY = {
 let volumeAlertCooldown = {};
 const ALERT_COOLDOWN = 60 * 1000; // 1 minute per symbol
 
-  function startAutoVolumeBreakScan(){
-  if(autoVolBreakTimer) clearInterval(autoVolBreakTimer);
-
-  autoVolBreakTimer = setInterval(async ()=>{
-    if(scanLock) return;
-
-    // avoid conflict with daily RSI scans
-    if(filterDailyRSI.value !== "all") return;
-
-    scanLock = true;
-    await runVolumeBreakScan();
-    scanLock = false;
-  }, AUTO_VOLUME_BREAK_INTERVAL);
-  }
+  
 
   window.addEventListener("load", async () => {
   nextScanAt = Date.now() + AUTO_INTERVAL;
   startCountdown();
 
   startAutoScan();              // normal scan (1 min)
-  startAutoVolumeBreakScan();   // 🔥 24h volume break (15 min)
 
   isAutoScan = true;
   await runScan();
@@ -1479,13 +1465,7 @@ if (
   }
 
   async function run24hVolumeBreak(){
-    if (pendingVolumeBreakScan) return;
-  if (scanLock) {
-  pendingVolumeBreakScan = true;
-  dailyRSIStatus.textContent =
-    "⏳ Normal scan running — 24h Volume Break queued";
-  return;
-}
+    if (scanLock) return;
 
   // ⛔ stop auto scans
   if(autoTimer) clearInterval(autoTimer);
@@ -1517,7 +1497,6 @@ if (
 
   // 🔁 resume autos
   startAutoScan();
-  startAutoVolumeBreakScan();
 }
   
 /* ================= FAVORITES ================= */
@@ -1612,14 +1591,16 @@ if(activeSearchSymbol){
   scanBtn.disabled = false;
   isAutoScan = false;
 
-  if (pendingVolumeBreakScan) {
-  pendingVolumeBreakScan = false;
+  const now = Date.now();
 
-  // slight delay to avoid burst
+// 🔥 AUTO 24h VOLUME BREAK (SCHEDULED)
+if (now - last24hVolumeBreakAt >= AUTO_VOLUME_BREAK_INTERVAL) {
+  last24hVolumeBreakAt = now;
+
   setTimeout(() => {
     run24hVolumeBreak();
-  }, 500);
-  }
+  }, 800); // small gap after normal scan
+}
   
   applySort();
 applyFilters();
