@@ -421,6 +421,16 @@ function startAutoScan(){
   }
   }
 
+  function getFundingInfo(rate){
+  if(rate === null) return { label: "Funding: —", cls: "neutral" };
+
+  if(rate >= 0.03) return { label: `Funding: +${rate.toFixed(3)}% (Crowded Longs)`, cls: "bull" };
+  if(rate <= -0.03) return { label: `${rate.toFixed(3)}% (Crowded Shorts)`, cls: "bear" };
+  if(Math.abs(rate) >= 0.015) return { label: `${rate.toFixed(3)}% (Elevated)`, cls: "neutral" };
+
+  return { label: `${rate.toFixed(3)}% (Balanced)`, cls: "neutral" };
+  }
+
   const AI_VERDICTS = {
   STRONG_CONTINUATION: "STRONG CONTINUATION",
   CONTROLLED_CONTINUATION: "CONTROLLED CONTINUATION",
@@ -935,17 +945,6 @@ async function getDailyRSIContext(sym){
     low: top.low
   };
   }
-
-  function getFundingInfo(rate){
-  if(rate === null) return { label: "Funding: —", cls: "neutral" };
-
-  if(rate >= 0.03) return { label: `Funding: +${rate.toFixed(3)}% (Crowded Longs)`, cls: "bear" };
-  if(rate <= -0.03) return { label: `${rate.toFixed(3)}% (Crowded Shorts)`, cls: "bull" };
-  if(Math.abs(rate) >= 0.015) return { label: `${rate.toFixed(3)}% (Elevated)`, cls: "neutral" };
-
-  return { label: `${rate.toFixed(3)}% (Balanced)`, cls: "neutral" };
-  }
-
 
 
 /* ================= ANALYZE ================= */
