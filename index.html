@@ -1051,6 +1051,16 @@ const rsi15Rising =
 
   const rsi50State = analyzeRSI50Behavior(rsi15Arr);
 
+  const bullishBreakAccepted =
+  rb &&
+  !rsi50State.consistentlyBelow50 &&
+  rsi15Rising;
+
+const bearishBreakAccepted =
+  sb &&
+  !rsi50State.consistentlyAbove50 &&
+  !rsi15Rising;
+
 
   let domV = 0;
 let domVBull = true;
@@ -1139,7 +1149,17 @@ const sw = {
 
   let bias="Neutral",prob=50,structure="none";
   if(bull){
-    if(rb){bias="Bullish Continuation";prob=85;structure="resistance broken";}
+   if (rb) {
+  if (bullishBreakAccepted) {
+    bias = "Bullish Continuation";
+    prob = 90;
+    structure = "resistance broken (accepted)";
+  } else {
+    bias = "Bull Trap Risk";
+    prob = 55;
+    structure = "resistance broken (unaccepted)";
+  }
+}
     else if (sw.S.length) {
   if (!rsi50State.consistentlyBelow50) {
     bias = "Bullish Defense";
@@ -1152,7 +1172,17 @@ const sw = {
   }
 }
   }else{
-    if(sb){bias="Bearish Continuation";prob=85;structure="support broken";}
+    if (sb) {
+  if (bearishBreakAccepted) {
+    bias = "Bearish Continuation";
+    prob = 90;
+    structure = "support broken (accepted)";
+  } else {
+    bias = "Bear Trap Risk";
+    prob = 55;
+    structure = "support broken (unaccepted)";
+  }
+}
     else if (sw.R.length) {
   if (!rsi50State.consistentlyAbove50) {
     bias = "Bearish Defense";
