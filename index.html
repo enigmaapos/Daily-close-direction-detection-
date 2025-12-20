@@ -1526,7 +1526,6 @@ ${d.volAI ? `
     scanVolBreakBtn.textContent = "🔥 Scan 24h Volume Break";
     scanVolBreakBtn.classList.remove("analyze-running");
     
-statusLocked = false;
     startAutoScan();
   }
 }
@@ -1751,11 +1750,12 @@ async function runSearch(){
 
 // show / hide button
 window.addEventListener("scroll", () => {
-  if (window.scrollY > 300) {
-    scrollTopBtn.style.display = "block";
-  } else {
+  if (scanLock) {
     scrollTopBtn.style.display = "none";
+    return;
   }
+  scrollTopBtn.style.display =
+    window.scrollY > 300 ? "block" : "none";
 });
 
 // smooth scroll to top
