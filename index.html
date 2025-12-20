@@ -1379,9 +1379,10 @@ ${d.volAI ? `
   greenGrid.innerHTML = "";
   redGrid.innerHTML = "";
   progressFill.style.width = "0%";
+  progressFill.style.width = "3%";
 
   const statusEl = document.getElementById("dailyRSIStatus");
-  statusEl.textContent = "🔥 24h Volume Break Scan — starting…";
+  statusEl.textContent = "🔥 MANUAL 24h Volume Break Scan — starting…";
 
   const tickers = await fetchJSON(`${API}/fapi/v1/ticker/24hr`);
   const usdt = tickers.filter(
@@ -1477,29 +1478,40 @@ if (
   }
 
   async function run24hVolumeBreak(){
-  // 🔥 manual override
   if(scanLock){
-    console.warn("Manual 24h scan waiting for lock…");
+    dailyRSIStatus.textContent = "⏳ Waiting for current scan to finish…";
     return;
   }
 
-  // pause auto scans
+  // ⛔ stop auto scans
   if(autoTimer) clearInterval(autoTimer);
   if(autoVolBreakTimer) clearInterval(autoVolBreakTimer);
 
   scanLock = true;
   isAutoScan = false;
 
-  scanBtn.disabled = true;
+  // 🔥 IMMEDIATE UI FEEDBACK
   scanVolBreakBtn.disabled = true;
+  scanBtn.disabled = true;
 
+  scanVolBreakBtn.textContent = "🔥 Scanning 24h Volume…";
+  scanVolBreakBtn.classList.add("analyze-running");
+
+  dailyRSIStatus.textContent = "🔥 Manual 24h Volume Break Scan — running…";
+  progressFill.style.width = "0%";
+
+  // 🔍 run scan
   await runVolumeBreakScan();
 
+  // ✅ restore UI
   scanLock = false;
   scanBtn.disabled = false;
   scanVolBreakBtn.disabled = false;
 
-  // 🔁 resume auto scans
+  scanVolBreakBtn.textContent = "🔥 Scan 24h Volume Break";
+  scanVolBreakBtn.classList.remove("analyze-running");
+
+  // 🔁 resume autos
   startAutoScan();
   startAutoVolumeBreakScan();
 }
