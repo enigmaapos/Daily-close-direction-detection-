@@ -1103,8 +1103,7 @@ const postVolBreakRSIConfirm =
   volumeBreakout &&          // 24h volume break happened
   rsi15 !== null &&
   rsi15 < 50 &&              // RSI reset
-  rsi15Rising &&             // RSI turning up
-  !fakeVolumeBreak;          // avoid traps
+  rsi15Rising;            // RSI turning up 
   
   
   const bull = domVBull;
