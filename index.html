@@ -1477,9 +1477,19 @@ if (
   }
 
   async function run24hVolumeBreak(){
-  if(scanLock) return;
+  // 🔥 manual override
+  if(scanLock){
+    console.warn("Manual 24h scan waiting for lock…");
+    return;
+  }
+
+  // pause auto scans
+  if(autoTimer) clearInterval(autoTimer);
+  if(autoVolBreakTimer) clearInterval(autoVolBreakTimer);
 
   scanLock = true;
+  isAutoScan = false;
+
   scanBtn.disabled = true;
   scanVolBreakBtn.disabled = true;
 
@@ -1488,7 +1498,11 @@ if (
   scanLock = false;
   scanBtn.disabled = false;
   scanVolBreakBtn.disabled = false;
-  }
+
+  // 🔁 resume auto scans
+  startAutoScan();
+  startAutoVolumeBreakScan();
+}
   
 /* ================= FAVORITES ================= */
 async function addFav(sym){
