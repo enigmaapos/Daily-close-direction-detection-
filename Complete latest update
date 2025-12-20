@@ -410,6 +410,27 @@ function startAutoScan(){
   await runScan();
 };
 
+  async function getFundingRate(sym){
+  try{
+    const d = await fetchJSON(
+      `${API}/fapi/v1/premiumIndex?symbol=${sym}`
+    );
+    return +d.lastFundingRate * 100; // convert to %
+  }catch(e){
+    return null;
+  }
+  }
+
+  function getFundingInfo(rate){
+  if(rate === null) return { label: "Funding: —", cls: "neutral" };
+
+  if(rate >= 0.03) return { label: `Funding: +${rate.toFixed(3)}% (Crowded Longs)`, cls: "bull" };
+  if(rate <= -0.03) return { label: `${rate.toFixed(3)}% (Crowded Shorts)`, cls: "bear" };
+  if(Math.abs(rate) >= 0.015) return { label: `${rate.toFixed(3)}% (Elevated)`, cls: "neutral" };
+
+  return { label: `${rate.toFixed(3)}% (Balanced)`, cls: "neutral" };
+  }
+
   const AI_VERDICTS = {
   STRONG_CONTINUATION: "STRONG CONTINUATION",
   CONTROLLED_CONTINUATION: "CONTROLLED CONTINUATION",
@@ -465,11 +486,18 @@ function startAutoScan(){
 };
 
   
-      function getAIFinalVerdict(d) {
+      
+
+ function getAIFinalVerdict(d) {
   const structure = d.structure;
   const bias = d.bias;
   const trend = d.mainTrend;
   const prob = d.prob;
+
+  const funding = d.fundingRate ?? 0;
+  const extremeLongCrowd  = funding >= 0.03;
+  const extremeShortCrowd = funding <= -0.03;
+  const elevatedFunding   = Math.abs(funding) >= 0.015;
 
   const hasVolumeBreak = d.volumeBreakout === true;
   const fakeVol = d.fakeVolumeBreak === true;
@@ -478,124 +506,93 @@ function startAutoScan(){
   const volAIMeaning = d.volAI?.meaning || "";
   const volAIBias = d.volAI?.bias || "Neutral";
 
-  /* ================= PRIORITY 1 — TRAP & AVOID ================= */
+  /* ================= BASE VERDICT ================= */
+  let verdict = AI_VERDICTS.AVOID;
+  let reason = "Conditions are mixed and lack a statistical edge.";
 
+  /* PRIORITY 1 — TRAP */
   if (bias.includes("Trap") || fakeVol) {
-    return withTier(
-      AI_VERDICTS.TRAP_RISK,
-      "Volume spike lacks acceptance and structure stability is weak.",d
-    );
+    verdict = AI_VERDICTS.TRAP_RISK;
+    reason = "Volume spike lacks acceptance and structure stability is weak.";
   }
 
-  if (
-    bias === "Neutral" &&
-    volAIBias === "Bearish" &&
-    trend === "bearish"
+  /* PRIORITY 2 — STRONG CONTINUATION */
+  else if (
+    ((structure === "resistance broken" && trend === "bullish") ||
+     (structure === "support broken" && trend === "bearish")) &&
+    hasVolumeBreak &&
+    !rsiLabel.includes("MAX")
   ) {
-    return withTier(
-      AI_VERDICTS.AVOID,
-      "No structural edge and volume positioning is against continuation.",d
-    );
+    verdict = AI_VERDICTS.STRONG_CONTINUATION;
+    reason = "Structure, trend, and sustained participation are aligned.";
   }
 
-  /* ================= PRIORITY 1.5 — AGING BREAKOUT ================= */
-
-if (hasVolumeBreak && !d.breakoutAge) {
-  return withTier(
-    AI_VERDICTS.WAIT_FOR_PULLBACK,
-    "Volume breakout is aging; waiting for confirmation.", d
-  );
-}
-
-  /* ================= PRIORITY 2 — STRONG CONTINUATION ================= */
-
-  if (
-    (structure === "resistance broken" && trend === "bullish") ||
-    (structure === "support broken" && trend === "bearish")
+  /* PRIORITY 3 — CONTROLLED CONTINUATION */
+  else if (
+    ((structure === "resistance broken" && trend === "bullish") ||
+     (structure === "support broken" && trend === "bearish")) &&
+    !hasVolumeBreak &&
+    !rsiLabel.includes("MAX")
   ) {
-    if (hasVolumeBreak && !rsiLabel.includes("MAX")) {
-      return withTier(
-        AI_VERDICTS.STRONG_CONTINUATION,
-        "Structure, trend, and sustained participation are aligned.",d
-      );
-    }
+    verdict = AI_VERDICTS.CONTROLLED_CONTINUATION;
+    reason = "Structure aligns with trend, but participation remains selective.";
   }
 
-  /* ================= PRIORITY 3 — CONTROLLED CONTINUATION ================= */
+  /* PRIORITY 4 — WAIT */
+  else if (structure.includes("broken") && rsiLabel.includes("MAX")) {
+    verdict = AI_VERDICTS.WAIT_FOR_PULLBACK;
+    reason = "Momentum is stretched after a structure break.";
+  }
 
-  if (
-    (structure === "resistance broken" && trend === "bullish") ||
-    (structure === "support broken" && trend === "bearish")
+  /* PRIORITY 5 — COUNTER TREND */
+  else if (
+    structure.includes("broken") &&
+    ((structure === "resistance broken" && trend === "bearish") ||
+     (structure === "support broken" && trend === "bullish"))
   ) {
-    if (!hasVolumeBreak && volAIBias !== "Bearish" && !rsiLabel.includes("MAX")) {
-      return withTier(
-        AI_VERDICTS.CONTROLLED_CONTINUATION,
-        "Structure aligns with trend, but participation remains selective.",d
-      );
-    }
+    verdict = AI_VERDICTS.COUNTER_TREND;
+    reason = "Structure break occurred against dominant trend.";
   }
 
-  /* ================= PRIORITY 4 — WAIT FOR PULLBACK ================= */
+  /* PRIORITY 6 — STRUCTURE WEAK */
+  else if (structure === "none" || prob < 60) {
+    verdict = AI_VERDICTS.STRUCTURE_WEAK;
+    reason = "No confirmed structure or probability edge present.";
+  }
 
+  /* ================= FUNDING MODIFIERS ================= */
+
+  // Downgrade expensive continuation
   if (
-    structure === "resistance broken" &&
-    trend === "bullish" &&
-    rsiLabel.includes("MAX") &&
+    verdict === AI_VERDICTS.STRONG_CONTINUATION &&
+    ((trend === "bullish" && extremeLongCrowd) ||
+     (trend === "bearish" && extremeShortCrowd))
+  ) {
+    verdict = AI_VERDICTS.CONTROLLED_CONTINUATION;
+    reason += " Funding shows crowded positioning.";
+  }
+
+  // Force wait if funding elevated + no volume
+  if (
+    verdict === AI_VERDICTS.CONTROLLED_CONTINUATION &&
+    elevatedFunding &&
     !hasVolumeBreak
   ) {
-    return withTier(
-      AI_VERDICTS.WAIT_FOR_PULLBACK,
-      "Trend intact but momentum is stretched without volume expansion.",d
-    );
+    verdict = AI_VERDICTS.WAIT_FOR_PULLBACK;
+    reason += " Elevated funding increases entry risk.";
   }
 
-  /* ================= PRIORITY 5 — HIGH RISK / LATE MOVE ================= */
-
+  // Confirm trap with funding
   if (
-    structure.includes("broken") &&
-    rsiLabel.includes("MAX") &&
-    (
-      volAIMeaning.includes("climax") ||
-      volAIMeaning.includes("Distribution")
-    )
+    verdict === AI_VERDICTS.TRAP_RISK &&
+    elevatedFunding
   ) {
-    return withTier(
-      AI_VERDICTS.HIGH_RISK_LATE_MOVE,
-      "Structure valid but momentum shows exhaustion characteristics.",d
-    );
+    reason += " Crowded funding confirms trap probability.";
   }
 
-  /* ================= PRIORITY 6 — COUNTER-TREND ================= */
-
-  if (
-    structure.includes("broken") &&
-    (
-      (structure === "resistance broken" && trend === "bearish") ||
-      (structure === "support broken" && trend === "bullish")
-    )
-  ) {
-    return withTier(
-      AI_VERDICTS.COUNTER_TREND,
-      "Structure break occurred against dominant trend.",d
-    );
-  }
-
-  /* ================= PRIORITY 7 — STRUCTURE WEAK ================= */
-
-  if (structure === "none" || prob < 60) {
-    return withTier(
-      AI_VERDICTS.STRUCTURE_WEAK,
-      "No confirmed structure or probability edge present.",d
-    );
-  }
-
-  /* ================= FALLBACK ================= */
-
-  return withTier(
-    AI_VERDICTS.AVOID,
-    "Conditions are mixed and lack a statistical edge.",d
-  );
-      }
+  return withTier(verdict, reason, d);
+ }
+  
   
 
   function withTier(verdict, reason, d){
@@ -950,7 +947,6 @@ async function getDailyRSIContext(sym){
   }
 
 
-
 /* ================= ANALYZE ================= */
 async function analyze(sym,change){
   const k=await fetchJSON(`${API}/fapi/v1/klines?symbol=${sym}&interval=15m&limit=240`);
@@ -997,7 +993,6 @@ const volumeBreakoutType =
   volumeBreakout
     ? (lastBull ? "Bull Volume Breakout" : "Bear Volume Breakout")
     : "No Volume Breakout";
-
 
   // ⏱ breakout validity window (45 minutes = 3 x 15m candles)
 const breakoutAge =
@@ -1054,10 +1049,12 @@ const sw = {
 
     const dailyRSI = await getDailyRSIContext(sym);
 
+  const fundingRate = await getFundingRate(sym);
+
   return {sym,price,change,bull,prob,bias,structure,S:sw.S,R:sw.R,dailyRSI,volumeBreakout,
   breakoutAge,volumeBreakoutType,fakeVolumeBreak,
   domV,
-  lastVol,mainTrend,volAI};
+  lastVol,mainTrend,volAI,fundingRate};
 }
 
 /* ================= FILTERS ================= */
@@ -1146,6 +1143,8 @@ const id = `card-${scope}-${d.sym}`;
     el.appendChild(card);
   }
 
+  const fundingInfo = getFundingInfo(d.fundingRate);
+
   const aiVerdict = getAIFinalVerdict(d);
 
   const tradeSideClass =
@@ -1188,6 +1187,10 @@ if (d.volumeBreakout) {
     }
     <b>${d.sym}</b>
     <div class="muted">Price: ${d.price.toFixed(4)}</div>
+    
+    <div class="muted ${fundingInfo.cls}">
+  💸 Funding Fee: ${fundingInfo.label}
+</div>
     
     <div class="muted ${
   d.mainTrend === "bullish" ? "bull" :
