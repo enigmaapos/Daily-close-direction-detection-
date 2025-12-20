@@ -1014,6 +1014,12 @@ const volAI = detect24hVolumeLocationAI(mappedK);
   const c=k.map(x=>+x[4]),h=k.map(x=>+x[2]),l=k.map(x=>+x[3]),v=k.map(x=>+x[5]);
   const price=c.at(-1);
 
+    // 📊 15m RSI(14)
+const rsi15Arr = calculateRSI(c, 14);
+const rsi15 = rsi15Arr.length
+  ? +rsi15Arr.at(-1).toFixed(2)
+  : null;
+
   let domV = 0;
 let domVBull = true;
 let domVIndex = -1;
@@ -1038,6 +1044,7 @@ const mainTrend = getMainTrendOnly(
   h,
   l
 );
+
 
 const lastVol = v.at(-1);
 const lastBull = k.at(-1)[4] > k.at(-1)[1];
@@ -1105,7 +1112,7 @@ const sw = {
 
   const fundingRate = await getFundingRate(sym);
 
-  return {sym,price,change,bull,prob,bias,structure,S:sw.S,R:sw.R,dailyRSI,volumeBreakout,
+  return {sym,price,change,bull,prob,bias,structure,S:sw.S,R:sw.R,dailyRSI,rsi15,volumeBreakout,
   breakoutAge,volumeBreakoutType,fakeVolumeBreak,
   domV,
   lastVol,mainTrend,volAI,fundingRate};
@@ -1241,6 +1248,9 @@ if (d.volumeBreakout) {
     }
     <b>${d.sym}</b>
     <div class="muted">Price: ${d.price.toFixed(4)}</div>
+    <div class="muted ${d.change>=0?"bull":"bear"}">
+      24h Change: ${d.change.toFixed(2)}%
+    </div>
     
     <div class="muted ${fundingInfo.cls}">
   💸 Funding Fee: ${fundingInfo.label}
@@ -1268,9 +1278,15 @@ if (d.volumeBreakout) {
   </div>
 ` : ""}
 
-    <div class="muted ${d.change>=0?"bull":"bear"}">
-      24h Change: ${d.change.toFixed(2)}%
-    </div>
+${d.rsi15 !== null ? `
+  <div class="muted ${
+    d.rsi15 >= 60 ? "bull" :
+    d.rsi15 <= 40 ? "bear" : "neutral"
+  }">
+    ⏱ 15m RSI14: ${d.rsi15}
+  </div>
+` : ""}
+
     <div class="muted ${d.bull?"bull":"bear"}">
       ${d.bull?"Bullish":"Bearish"} Volume Control
     </div>
