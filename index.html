@@ -1020,6 +1020,17 @@ const rsi15 = rsi15Arr.length
   ? +rsi15Arr.at(-1).toFixed(2)
   : null;
 
+  // 📈 RSI slope (15m)
+const rsi15Prev = rsi15Arr.length >= 2
+  ? rsi15Arr.at(-2)
+  : null;
+
+const rsi15Rising =
+  rsi15 !== null &&
+  rsi15Prev !== null &&
+  rsi15 > rsi15Prev;
+
+
   let domV = 0;
 let domVBull = true;
 let domVIndex = -1;
@@ -1086,6 +1097,15 @@ const fakeVolumeBreak =
   volumeBreakout &&
   (directionConflict || climax) &&
   followThroughFail;
+
+    // ✅ Post-24h Volume Break RSI confirmation
+const postVolBreakRSIConfirm =
+  volumeBreakout &&          // 24h volume break happened
+  rsi15 !== null &&
+  rsi15 < 50 &&              // RSI reset
+  rsi15Rising &&             // RSI turning up
+  !fakeVolumeBreak;          // avoid traps
+  
   
   const bull = domVBull;
 
@@ -1108,12 +1128,19 @@ const sw = {
     else{bias="Bear Trap Risk";prob=40;}
   }
 
+  const structureHolding =
+  (mainTrend === "bullish" && structure !== "support broken") ||
+  (mainTrend === "bearish" && structure !== "resistance broken");
+
+const postVolBreakRSIConfirmSafe =
+  postVolBreakRSIConfirm && structureHolding;
+
     const dailyRSI = await getDailyRSIContext(sym);
 
   const fundingRate = await getFundingRate(sym);
 
   return {sym,price,change,bull,prob,bias,structure,S:sw.S,R:sw.R,dailyRSI,rsi15,volumeBreakout,
-  breakoutAge,volumeBreakoutType,fakeVolumeBreak,
+  breakoutAge,volumeBreakoutType,fakeVolumeBreak,postVolBreakRSIConfirm: postVolBreakRSIConfirmSafe,
   domV,
   lastVol,mainTrend,volAI,fundingRate};
 }
@@ -1308,6 +1335,16 @@ ${d.rsi15 !== null ? `
     📊 No 24h Volume Breakout
   </div>
 `}
+
+${d.postVolBreakRSIConfirm ? `
+  <div class="muted verdict-strong">
+    ✅ Post-Volume RSI Confirmation
+    <br>
+    <span class="muted">
+      RSI14 < 50 and turning up after 24h volume break
+    </span>
+  </div>
+` : ""}
 
 ${d.volAI ? `
   <div class="muted ${
