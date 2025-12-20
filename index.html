@@ -988,24 +988,35 @@ const volumeBreakoutType =
   volumeBreakout
     ? (lastBull ? "Bull Volume Breakout" : "Bear Volume Breakout")
     : "No Volume Breakout";
-  
-  const bull = domVBull;
 
-  const fakeVolumeBreak =
+  // direction conflict with main trend
+const directionConflict =
+  (mainTrend === "bullish" && lastBull === false) ||
+  (mainTrend === "bearish" && lastBull === true);
+
+// follow-through failure (current breakout candle closes against direction)
+const followThroughFail =
   volumeBreakout &&
   (
-    // breakout against trend
-    (mainTrend === "bullish" && lastBull === false) ||
-    (mainTrend === "bearish" && lastBull === true) ||
-
-    // climactic / distribution behavior
-    (volAI &&
-      (
-        volAI.meaning.includes("climax") ||
-        volAI.meaning.includes("Distribution")
-      )
-    )
+    (lastBull && k.at(-1)[4] < k.at(-1)[1]) ||  // bull breakout but red close
+    (!lastBull && k.at(-1)[4] > k.at(-1)[1])   // bear breakout but green close
   );
+
+// climactic / distribution behavior
+const climax =
+  volAI &&
+  (
+    volAI.meaning.includes("climax") ||
+    volAI.meaning.includes("Distribution")
+  );
+
+// FINAL fake volume breakout flag
+const fakeVolumeBreak =
+  volumeBreakout &&
+  (directionConflict || climax) &&
+  followThroughFail;
+  
+  const bull = domVBull;
 
   const swings = findSwings(h,l,c,v);
 const sw = {
