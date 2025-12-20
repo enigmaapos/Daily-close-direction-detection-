@@ -905,6 +905,25 @@ async function getDailyRSIContext(sym){
   return filterDailyRSI.value !== "all";
   }
 
+  function analyzeRSI50Behavior(rsiArr, lookback = 5) {
+  if (!rsiArr || rsiArr.length < lookback) {
+    return {
+      consistentlyAbove50: false,
+      consistentlyBelow50: false
+    };
+  }
+
+  const recent = rsiArr.slice(-lookback);
+
+  const above50 = recent.filter(v => v >= 50).length;
+  const below50 = recent.filter(v => v < 50).length;
+
+  return {
+    consistentlyAbove50: above50 >= 3,
+    consistentlyBelow50: below50 >= 3
+  };
+  }
+
   async function batchMap(items, batchSize, asyncFn){
   const results = [];
   for(let i = 0; i < items.length; i += batchSize){
@@ -1030,6 +1049,8 @@ const rsi15Rising =
   rsi15Prev !== null &&
   rsi15 > rsi15Prev;
 
+  const rsi50State = analyzeRSI50Behavior(rsi15Arr);
+
 
   let domV = 0;
 let domVBull = true;
@@ -1119,11 +1140,30 @@ const sw = {
   let bias="Neutral",prob=50,structure="none";
   if(bull){
     if(rb){bias="Bullish Continuation";prob=85;structure="resistance broken";}
-    else if(sw.S.length){bias="Bullish Defense";prob=70;structure="support holding";}
-    else{bias="Bull Trap Risk";prob=40;}
+    else if (sw.S.length) {
+  if (!rsi50State.consistentlyBelow50) {
+    bias = "Bullish Defense";
+    prob = 75;
+    structure = "support holding (confirmed)";
+  } else {
+    bias = "Bull Trap Risk";
+    prob = 45;
+    structure = "support weak (RSI pressure)";
+  }
+}
   }else{
     if(sb){bias="Bearish Continuation";prob=85;structure="support broken";}
-    else if(sw.R.length){bias="Bearish Defense";prob=70;structure="resistance failed";}
+    else if (sw.R.length) {
+  if (!rsi50State.consistentlyAbove50) {
+    bias = "Bearish Defense";
+    prob = 75;
+    structure = "resistance failed (confirmed)";
+  } else {
+    bias = "Bear Trap Risk";
+    prob = 45;
+    structure = "resistance weak (RSI pressure)";
+  	}
+  }
     else{bias="Bear Trap Risk";prob=40;}
   }
 
