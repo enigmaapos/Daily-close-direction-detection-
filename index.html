@@ -331,7 +331,10 @@ button.secondary{
 const API="https://fapi.binance.com";
 const DELAY=300;
 const AUTO_INTERVAL=60*1000;
+const AUTO_VOLUME_BREAK_INTERVAL = 15 * 60 * 1000; // 15 minutes
+let autoVolBreakTimer = null;
 
+  
 const BLACKSET=new Set([
 "ALPACAUSDT","BNXUSDT","ALPHAUSDT","OCEANUSDT","DGBUSDT","AGIXUSDT",
 "LINAUSDT","LOKAUSDT","KEYUSDT","MDTUSDT","LOOMUSDT","RENUSDT",
@@ -373,6 +376,32 @@ const VOLUME_BREAK_MEMORY = {
 let volumeAlertCooldown = {};
 const ALERT_COOLDOWN = 60 * 1000; // 1 minute per symbol
 
+  function startAutoVolumeBreakScan(){
+  if(autoVolBreakTimer) clearInterval(autoVolBreakTimer);
+
+  autoVolBreakTimer = setInterval(async ()=>{
+    if(scanLock) return;
+
+    // avoid conflict with daily RSI scans
+    if(filterDailyRSI.value !== "all") return;
+
+    scanLock = true;
+    await runVolumeBreakScan();
+    scanLock = false;
+  }, AUTO_VOLUME_BREAK_INTERVAL);
+  }
+
+  window.onload = async () => {
+  nextScanAt = Date.now() + AUTO_INTERVAL;
+  startCountdown();
+  startAutoScan();              // normal scan
+  startAutoVolumeBreakScan();   // 🔥 volume break scan
+
+  isAutoScan = true;
+  await runScan();
+};
+
+  
 /* ================= COUNTDOWN ================= */
 function startCountdown(){
   clearInterval(countdownTimer);
