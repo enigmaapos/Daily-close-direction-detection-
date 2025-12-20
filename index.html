@@ -383,6 +383,152 @@ function startAutoScan(){
   await runScan();
 };
 
+  const AI_VERDICTS = {
+  STRONG_CONTINUATION: "STRONG CONTINUATION",
+  CONTROLLED_CONTINUATION: "CONTROLLED CONTINUATION",
+  WAIT_FOR_PULLBACK: "WAIT FOR PULLBACK",
+  HIGH_RISK_LATE_MOVE: "HIGH RISK / LATE MOVE",
+  STRUCTURE_WEAK: "STRUCTURE WEAK / NO EDGE",
+  COUNTER_TREND: "COUNTER-TREND BREAKOUT",
+  TRAP_RISK: "TRAP RISK",
+  AVOID: "AVOID / NO TRADE"
+};
+
+  function getAIFinalVerdict(d) {
+  const structure = d.structure;
+  const bias = d.bias;
+  const trend = d.mainTrend;
+  const prob = d.prob;
+
+  const hasVolumeBreak = d.volumeBreakout === true;
+  const fakeVol = d.fakeVolumeBreak === true;
+
+  const dailyRSI = d.dailyRSI;
+  const rsiLabel = dailyRSI?.label || "Neutral";
+
+  const volAI = d.volAI;
+  const volAIBias = volAI?.bias || "Neutral";
+  const volAIMeaning = volAI?.meaning || "";
+
+  /* ================= PRIORITY 1 — TRAP & AVOID ================= */
+
+  if (
+    bias.includes("Trap") ||
+    fakeVol
+  ) {
+    return {
+      verdict: AI_VERDICTS.TRAP_RISK,
+      reason: "Volume spike lacks acceptance and structure stability is weak."
+    };
+  }
+
+  if (
+    bias === "Neutral" &&
+    volAIBias === "Bearish" &&
+    trend === "bearish"
+  ) {
+    return {
+      verdict: AI_VERDICTS.AVOID,
+      reason: "No structural edge and volume positioning is against continuation."
+    };
+  }
+
+  /* ================= PRIORITY 2 — STRONG CONTINUATION ================= */
+
+  if (
+    (structure === "resistance broken" && trend === "bullish") ||
+    (structure === "support broken" && trend === "bearish")
+  ) {
+    if (hasVolumeBreak && !rsiLabel.includes("MAX")) {
+      return {
+        verdict: AI_VERDICTS.STRONG_CONTINUATION,
+        reason: "Structure, trend, and sustained participation are aligned."
+      };
+    }
+  }
+
+  /* ================= PRIORITY 3 — CONTROLLED CONTINUATION ================= */
+
+  if (
+    (structure === "resistance broken" && trend === "bullish") ||
+    (structure === "support broken" && trend === "bearish")
+  ) {
+    if (!hasVolumeBreak && volAIBias !== "Bearish") {
+      if (!rsiLabel.includes("MAX")) {
+        return {
+          verdict: AI_VERDICTS.CONTROLLED_CONTINUATION,
+          reason: "Structure aligns with trend, but participation remains selective."
+        };
+      }
+    }
+  }
+
+  /* ================= PRIORITY 4 — WAIT FOR PULLBACK ================= */
+
+  if (
+    (structure === "resistance broken" && trend === "bullish") &&
+    rsiLabel.includes("MAX") &&
+    !hasVolumeBreak
+  ) {
+    return {
+      verdict: AI_VERDICTS.WAIT_FOR_PULLBACK,
+      reason: "Trend intact but momentum is stretched without volume expansion."
+    };
+  }
+
+  /* ================= PRIORITY 5 — HIGH RISK / LATE MOVE ================= */
+
+  if (
+    structure.includes("broken") &&
+    rsiLabel.includes("MAX") &&
+    (
+      volAIMeaning.includes("climax") ||
+      volAIMeaning.includes("Distribution")
+    )
+  ) {
+    return {
+      verdict: AI_VERDICTS.HIGH_RISK_LATE_MOVE,
+      reason: "Structure valid but momentum shows exhaustion characteristics."
+    };
+  }
+
+  /* ================= PRIORITY 6 — COUNTER-TREND BREAKOUT ================= */
+
+  if (
+    structure.includes("broken") &&
+    (
+      (structure === "resistance broken" && trend === "bearish") ||
+      (structure === "support broken" && trend === "bullish")
+    )
+  ) {
+    return {
+      verdict: AI_VERDICTS.COUNTER_TREND,
+      reason: "Structure break occurred against dominant trend."
+    };
+  }
+
+  /* ================= PRIORITY 7 — STRUCTURE WEAK ================= */
+
+  if (
+    structure === "none" ||
+    prob < 60
+  ) {
+    return {
+      verdict: AI_VERDICTS.STRUCTURE_WEAK,
+      reason: "No confirmed structure or probability edge present."
+    };
+  }
+
+  /* ================= FALLBACK ================= */
+
+  return {
+    verdict: AI_VERDICTS.AVOID,
+    reason: "Conditions are mixed and lack a statistical edge."
+  };
+  }
+
+  
+
   function computeMarketDominance(tickers){
   let green = 0;
   let red = 0;
@@ -920,6 +1066,8 @@ if (d.volumeBreakout) {
   }
 }
 
+  const aiVerdict = getAIFinalVerdict(d);
+
   card.innerHTML = `
     ${isFav
       ? `<div class="close" onclick="removeFav('${d.sym}')">✖</div>`
@@ -1015,6 +1163,13 @@ ${d.volAI ? `
     ${d.R[0]?`<div class="muted bull">R1: ${d.R[0].toFixed(4)}</div>`:""}
     ${d.R[1]?`<div class="muted bull">R2: ${d.R[1].toFixed(4)}</div>`:""}
   `;
+
+        <div class="muted">
+  🤖 AI Verdict: <b>${aiVerdict.verdict}</b>
+</div>
+<div class="muted">
+  ${aiVerdict.reason}
+</div>
 
   applyFilters();
 }
