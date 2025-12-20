@@ -256,6 +256,7 @@ button.secondary{
   </select>
 </div>
 
+  <div class="row filter-box">
   <select id="filterAIVerdict">
   <option value="all">All AI Verdicts</option>
 
@@ -276,6 +277,7 @@ button.secondary{
     <option>AVOID / NO TRADE</option>
   </optgroup>
   </select>
+  </div>
 
 <!-- SORT + RESET ROW -->
 <div class="row">
@@ -1120,6 +1122,8 @@ const id = `card-${scope}-${d.sym}`;
     el.appendChild(card);
   }
 
+  const aiVerdict = getAIFinalVerdict(d);
+
   
   card.dataset.bias = d.bias;
 card.dataset.vol  = d.bull ? "bull" : "bear";
@@ -1145,8 +1149,7 @@ if (d.volumeBreakout) {
   }
 }
 
-  const aiVerdict = getAIFinalVerdict(d);
-
+  
   card.innerHTML = `
     ${isFav
       ? `<div class="close" onclick="removeFav('${d.sym}')">✖</div>`
