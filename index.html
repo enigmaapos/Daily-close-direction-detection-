@@ -1643,7 +1643,10 @@ async function runScan() {
 
   // 🔥 AUTO 24h VOLUME BREAK
   const now = Date.now();
-  if (now - last24hVolumeBreakAt >= AUTO_VOLUME_BREAK_INTERVAL) {
+  if (
+  auto24hVolumeEnabled &&
+  now - last24hVolumeBreakAt >= AUTO_VOLUME_BREAK_INTERVAL
+) {
     last24hVolumeBreakAt = now;
     pending24hVolumeScan = true;
 
