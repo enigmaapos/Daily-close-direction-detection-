@@ -362,6 +362,7 @@ let autoTimer = null;
   let dailyRSIMatchCount = 0;
 let dailyRSIScanned = 0;
   let last24hVolumeBreakAt = 0;
+  let pending24hVolumeScan = false;
 
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const fetchJSON=async u=>(await fetch(u)).json();
@@ -1465,7 +1466,14 @@ if (
   }
 
   async function run24hVolumeBreak(){
-    if (scanLock) return;
+    if (scanLock) {
+    pending24hVolumeScan = true;
+
+    dailyRSIStatus.textContent =
+      "⏳ Normal scan running — 24h Volume Break queued";
+
+    return;
+  }
 
   // ⛔ stop auto scans
   if(autoTimer) clearInterval(autoTimer);
@@ -1601,6 +1609,14 @@ if (now - last24hVolumeBreakAt >= AUTO_VOLUME_BREAK_INTERVAL) {
     run24hVolumeBreak();
   }, 800); // small gap after normal scan
 }
+
+    if (pending24hVolumeScan) {
+  pending24hVolumeScan = false;
+
+  setTimeout(() => {
+    run24hVolumeBreak();
+  }, 600); // small buffer
+    }
   
   applySort();
 applyFilters();
