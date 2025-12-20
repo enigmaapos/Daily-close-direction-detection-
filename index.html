@@ -549,6 +549,7 @@ function getRecentRSIDiff(rsi, lookback=14){
 }
 
 async function getDailyRSIContext(sym){
+  const rsiValue = rsi.at(-1); // most recent RSI14
   const cached = DAILY_RSI_CACHE[sym];
   if(cached && Date.now() - cached.ts < DAILY_RSI_TTL){
     return cached.data;
@@ -587,7 +588,7 @@ else if (d.direction === "dump") {
   }
 }
     
-    const data = { label, diff: d.diff, dir: d.direction };
+    const data = { label, diff: d.diff, dir: d.direction, value: +rsiValue.toFixed(2) };
     DAILY_RSI_CACHE[sym] = { data, ts: Date.now() };
 
     return data;
@@ -923,6 +924,7 @@ if (d.volumeBreakout) {
       : `<div class="star" onclick="addFav('${d.sym}')">⭐</div>`
     }
     <b>${d.sym}</b>
+    <div class="muted">Price: ${d.price.toFixed(4)}</div>
     
     <div class="muted ${
   d.mainTrend === "bullish" ? "bull" :
@@ -935,15 +937,17 @@ if (d.volumeBreakout) {
     
     ${d.dailyRSI ? `
   <div class="muted ${
-    d.dailyRSI.dir==="pump"?"bull":
-    d.dailyRSI.dir==="dump"?"bear":"neutral"
+    d.dailyRSI.value >= 60 ? "bull" :
+    d.dailyRSI.value <= 40 ? "bear" : "neutral"
   }">
-    📅 Daily RSI: ${d.dailyRSI.label}
-    (Δ ${d.dailyRSI.diff})
+    📅 Daily RSI14: ${d.dailyRSI.value}
+    <br>
+    <span class="muted">
+      ${d.dailyRSI.label} (Δ ${d.dailyRSI.diff})
+    </span>
   </div>
 ` : ""}
 
-    <div class="muted">Price: ${d.price.toFixed(4)}</div>
     <div class="muted ${d.change>=0?"bull":"bear"}">
       24h Change: ${d.change.toFixed(2)}%
     </div>
