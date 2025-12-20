@@ -1294,8 +1294,8 @@ if (d.volumeBreakout) {
     
     ${d.dailyRSI ? `
   <div class="muted ${
-    d.dailyRSI.value >= 60 ? "bull" :
-    d.dailyRSI.value <= 40 ? "bear" : "neutral"
+    d.dailyRSI.value >= 50 ? "bull" :
+    d.dailyRSI.value <= 50 ? "bear" : "neutral"
   }">
     📅 Daily RSI14: ${d.dailyRSI.value}
     <br>
