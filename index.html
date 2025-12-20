@@ -187,6 +187,9 @@ button.secondary{
 <!-- ACTION ROW -->
 <div class="row">
   <button class="primary" id="scanBtn" onclick="runScan()">Run Scan</button>
+  <button class="secondary" id="scanVolBreakBtn" onclick="run24hVolumeBreak()">
+  🔥 Scan 24h Volume Break
+  </button>
   <input id="symbolSearch" placeholder="BTCUSDT"/>
   <button class="secondary" id="analyzeBtn" onclick="runSearch()">Analyze</button>
 </div>
@@ -227,7 +230,6 @@ button.secondary{
   </select>
 
   <select id="filterVolBreak">
-    <option value="scan">SCAN 24h VOLUME BREAK</option>
   <option value="all">All Volume Breaks</option>
   <option value="yes">24h Volume Breakout</option>
   <option value="no">No Volume Breakout</option>
@@ -1473,6 +1475,20 @@ if (
   applySort();
   applyFilters();
   }
+
+  async function run24hVolumeBreak(){
+  if(scanLock) return;
+
+  scanLock = true;
+  scanBtn.disabled = true;
+  scanVolBreakBtn.disabled = true;
+
+  await runVolumeBreakScan();
+
+  scanLock = false;
+  scanBtn.disabled = false;
+  scanVolBreakBtn.disabled = false;
+  }
   
 /* ================= FAVORITES ================= */
 async function addFav(sym){
@@ -1491,17 +1507,6 @@ function removeFav(sym){
 /* ================= SCAN ================= */
 async function runScan(){
   if(scanLock) return;
-
-  const volBreakMode = filterVolBreak.value;
-
-if(volBreakMode === "scan"){
-  scanLock = true;
-  scanBtn.disabled = true;
-  await runVolumeBreakScan();
-  scanLock = false;
-  scanBtn.disabled = false;
-  return;
-}
   
   const dailyRSIFilter = filterDailyRSI.value;
 
