@@ -210,9 +210,9 @@ button.secondary{
 <!-- ACTION ROW -->
 <div class="row">
   <button class="primary" id="scanBtn" onclick="runScan()">Run Scan</button>
-  <button class="secondary" id="scanVolBreakBtn" onclick="run24hVolumeBreak()">
+<button class="secondary" id="scanVolBreakBtn">
   🔥 Scan 24h Volume Break
-  </button>
+</button>
   <input id="symbolSearch" placeholder="BTCUSDT"/>
   <button class="secondary" id="analyzeBtn" onclick="runSearch()">Analyze</button>
 </div>
@@ -1553,6 +1553,7 @@ async function runScan() {
   // 🔒 lock AFTER check
   scanLock = true;
   scanBtn.disabled = true;
+  scanVolBreakBtn.disabled = true;
 
   setScanStatus(
     isAutoScan
@@ -1625,6 +1626,7 @@ async function runScan() {
     scanLock = false;
     scanBtn.disabled = false;
     isAutoScan = false;
+    scanVolBreakBtn.disabled = false;
 
     setScanStatus("🧭 Scanner Status: Idle");
   }
@@ -1762,6 +1764,11 @@ scrollTopBtn.addEventListener("click", () => {
     top: 0,
     behavior: "smooth"
   });
+});
+
+  scanVolBreakBtn.addEventListener("click", () => {
+  if (scanLock) return;   // ⛔ block during scans
+  run24hVolumeBreak();
 });
 </script>
 </body>
