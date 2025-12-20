@@ -940,28 +940,7 @@ async function getDailyRSIContext(sym){
   };
   }
 
-function detectSustainedVolumeBreak(k, lookback=96, confirmCandles=3, mult=1.1){
-  const v = k.map(c => +c[5]);
-  const o = k.map(c => +c[1]);
-  const cPrice = k.map(c => +c[4]);
 
-  let domV = Math.max(...v.slice(-lookback, -1));
-  let count = 0;
-  let direction = null;
-
-  for(let i = v.length - confirmCandles; i < v.length; i++){
-    if(v[i] > domV * mult){
-      count++;
-      direction ??= cPrice[i] > o[i] ? "bull" : "bear";
-    }
-  }
-
-  return {
-    sustained: count >= confirmCandles,
-    direction,
-    domV
-  };
-}
 
 /* ================= ANALYZE ================= */
 async function analyze(sym,change){
@@ -1001,33 +980,14 @@ const mainTrend = getMainTrendOnly(
   l
 );
 
-// === SUSTAINED VOLUME BREAK LOGIC ===
-const volBreak = detectSustainedVolumeBreak(mappedK);
+const lastVol = v.at(-1);
+const lastBull = k.at(-1)[4] > k.at(-1)[1];
 
-let volumeBreakout = false;
-let volumeBreakoutType = "No Volume Breakout";
-let fakeVolumeBreak = false;
-
-const last = mappedK.at(-1);
-const lastVol = last.baseVol;
-
-// body acceptance
-const body = Math.abs(last.close - last.open);
-const range = last.high - last.low;
-const bodyRatio = range > 0 ? body / range : 0;
-
-if (volBreak.sustained && bodyRatio >= 0.5) {
-  volumeBreakout = true;
-  volumeBreakoutType =
-    volBreak.direction === "bull"
-      ? "SUSTAINED BULL VOLUME BREAK"
-      : "SUSTAINED BEAR VOLUME BREAK";
-}
-
-// ⚠️ FAKE SPIKE (volume > dominant but no acceptance)
-if (!volumeBreakout && lastVol > volBreak.domV) {
-  fakeVolumeBreak = true;
-}
+const volumeBreakout = lastVol > domV;
+const volumeBreakoutType =
+  volumeBreakout
+    ? (lastBull ? "Bull Volume Breakout" : "Bear Volume Breakout")
+    : "No Volume Breakout";
   
   const bull = domVBull;
 
@@ -1216,21 +1176,11 @@ if (d.volumeBreakout) {
       ${d.bull?"Bullish":"Bearish"} Volume Control
     </div>
     
-    ${d.volumeBreakout ? `
+      ${d.volumeBreakout ? `
   <div class="muted ${
-    d.volumeBreakoutType.includes("BULL") ? "bull" : "bear"
+    d.volumeBreakoutType.includes("Bull") ? "bull" : "bear"
   }">
     🔥 ${d.volumeBreakoutType}
-    <br>
-    <span class="muted">
-      15m: ${d.lastVol.toLocaleString()}
-      &nbsp;›&nbsp;
-      24h High: ${d.domV.toLocaleString()}
-    </span>
-  </div>
-` : d.fakeVolumeBreak ? `
-  <div class="muted neutral">
-    ⚠️ Volume Spike (No Acceptance)
     <br>
     <span class="muted">
       15m: ${d.lastVol.toLocaleString()}
