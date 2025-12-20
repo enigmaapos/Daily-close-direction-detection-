@@ -549,7 +549,6 @@ function getRecentRSIDiff(rsi, lookback=14){
 }
 
 async function getDailyRSIContext(sym){
-  const rsiValue = rsi.at(-1); // most recent RSI14
   const cached = DAILY_RSI_CACHE[sym];
   if(cached && Date.now() - cached.ts < DAILY_RSI_TTL){
     return cached.data;
@@ -564,39 +563,39 @@ async function getDailyRSIContext(sym){
     const rsi = calculateRSI(closes);
     if(!rsi.length) return null;
 
+    const rsiValue = rsi.at(-1); // ✅ NOW SAFE
+
     const d = getRecentRSIDiff(rsi);
 
     let label = "Neutral";
 
-if (d.direction === "pump") {
-  if (d.diff >= 30) {
-    label = "MAX ZONE PUMP";
-  } else if (d.diff >= 18 && d.diff <= 26) {
-    label = "BALANCE ZONE PUMP";
-  } else if (d.diff >= 1 && d.diff <= 10) {
-    label = "LOWEST ZONE PUMP";
-  }
-}
+    if (d.direction === "pump") {
+      if (d.diff >= 30) label = "MAX ZONE PUMP";
+      else if (d.diff >= 18 && d.diff <= 26) label = "BALANCE ZONE PUMP";
+      else if (d.diff >= 1 && d.diff <= 10) label = "LOWEST ZONE PUMP";
+    }
+    else if (d.direction === "dump") {
+      if (d.diff >= 30) label = "MAX ZONE DUMP";
+      else if (d.diff >= 18 && d.diff <= 26) label = "BALANCE ZONE DUMP";
+      else if (d.diff >= 1 && d.diff <= 10) label = "LOWEST ZONE DUMP";
+    }
 
-else if (d.direction === "dump") {
-  if (d.diff >= 30) {
-    label = "MAX ZONE DUMP";
-  } else if (d.diff >= 18 && d.diff <= 26) {
-    label = "BALANCE ZONE DUMP";
-  } else if (d.diff >= 1 && d.diff <= 10) {
-    label = "LOWEST ZONE DUMP";
-  }
-}
-    
-    const data = { label, diff: d.diff, dir: d.direction, value: +rsiValue.toFixed(2) };
+    const data = {
+      label,
+      diff: d.diff,
+      dir: d.direction,
+      value: +rsiValue.toFixed(2)
+    };
+
     DAILY_RSI_CACHE[sym] = { data, ts: Date.now() };
-
     return data;
+
   }catch(e){
+    console.error("Daily RSI failed:", sym, e);
     return null;
   }
 }
-
+  
   function isDailyRSIActive(){
   return filterDailyRSI.value !== "all";
   }
