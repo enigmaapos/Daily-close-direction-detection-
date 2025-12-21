@@ -500,7 +500,11 @@ function startAutoScan(){
   return { label: `${rate.toFixed(3)}% (Balanced)`, cls: "neutral" };
   }
 
-  const AI_VERDICTS = {
+  
+  
+      /* ================= AI VERDICTS ================= */
+
+const AI_VERDICTS = {
   STRONG_CONTINUATION: "STRONG CONTINUATION",
   CONTROLLED_CONTINUATION: "CONTROLLED CONTINUATION",
   WAIT_FOR_PULLBACK: "WAIT FOR PULLBACK",
@@ -511,7 +515,7 @@ function startAutoScan(){
   AVOID: "AVOID / NO TRADE"
 };
 
-  const AI_VERDICT_TIERS = {
+const AI_VERDICT_TIERS = {
   "STRONG CONTINUATION": {
     tier: 1,
     label: "TIER 1 — HIGH PROBABILITY",
@@ -554,8 +558,7 @@ function startAutoScan(){
   }
 };
 
-  
-      
+/* ================= AI VERDICT LOGIC ================= */
 
 function getAIFinalVerdict(d) {
   const structure = d.structure || "none";
@@ -573,8 +576,6 @@ function getAIFinalVerdict(d) {
 
   const rsiLabel = d.dailyRSI?.label || "Neutral";
 
-  /* ================= STRUCTURE NORMALIZATION ================= */
-
   const bullishBreak =
     structure.includes("resistance broken") && trend === "bullish";
 
@@ -582,8 +583,6 @@ function getAIFinalVerdict(d) {
     structure.includes("support broken") && trend === "bearish";
 
   const anyBreak = structure.includes("broken");
-
-  /* ================= BASE VERDICT ================= */
 
   let verdict = AI_VERDICTS.AVOID;
   let reason = "Conditions are mixed and lack a statistical edge.";
@@ -620,11 +619,13 @@ function getAIFinalVerdict(d) {
     reason = "Momentum is stretched after a structure break.";
   }
 
-  /* PRIORITY 5 — COUNTER-TREND BREAK */
+  /* PRIORITY 5 — COUNTER-TREND */
   else if (
     anyBreak &&
-    ((structure.includes("resistance broken") && trend === "bearish") ||
-     (structure.includes("support broken") && trend === "bullish"))
+    (
+      (structure.includes("resistance broken") && trend === "bearish") ||
+      (structure.includes("support broken") && trend === "bullish")
+    )
   ) {
     verdict = AI_VERDICTS.COUNTER_TREND;
     reason = "Structure break occurred against the dominant trend.";
@@ -638,17 +639,17 @@ function getAIFinalVerdict(d) {
 
   /* ================= FUNDING MODIFIERS ================= */
 
-  // Downgrade expensive strong continuation
   if (
     verdict === AI_VERDICTS.STRONG_CONTINUATION &&
-    ((trend === "bullish" && extremeLongCrowd) ||
-     (trend === "bearish" && extremeShortCrowd))
+    (
+      (trend === "bullish" && extremeLongCrowd) ||
+      (trend === "bearish" && extremeShortCrowd)
+    )
   ) {
     verdict = AI_VERDICTS.CONTROLLED_CONTINUATION;
     reason += " Funding shows crowded positioning.";
   }
 
-  // Force WAIT if funding elevated and no volume confirmation
   if (
     verdict === AI_VERDICTS.CONTROLLED_CONTINUATION &&
     elevatedFunding &&
@@ -658,7 +659,6 @@ function getAIFinalVerdict(d) {
     reason += " Elevated funding increases entry risk.";
   }
 
-  // Strengthen trap confidence
   if (
     verdict === AI_VERDICTS.TRAP_RISK &&
     elevatedFunding
@@ -666,9 +666,8 @@ function getAIFinalVerdict(d) {
     reason += " Crowded funding confirms trap probability.";
   }
 
-  /* ================= RSI15 SOFT INFLUENCE ================= */
+  /* ================= RSI15 MOMENTUM ================= */
 
-  // Upgrade WAIT → CONTROLLED on momentum reclaim
   if (
     verdict === AI_VERDICTS.WAIT_FOR_PULLBACK &&
     d.rsi15Momentum === "reclaim" &&
@@ -678,7 +677,6 @@ function getAIFinalVerdict(d) {
     reason += " RSI15 reclaimed 50, improving momentum alignment.";
   }
 
-  // Upgrade CONTROLLED → STRONG on acceleration + volume
   if (
     verdict === AI_VERDICTS.CONTROLLED_CONTINUATION &&
     d.rsi15Momentum === "accel" &&
@@ -688,7 +686,6 @@ function getAIFinalVerdict(d) {
     reason += " RSI15 accelerating with volume confirmation.";
   }
 
-  // Downgrade continuation if momentum decays
   if (
     (verdict === AI_VERDICTS.STRONG_CONTINUATION ||
      verdict === AI_VERDICTS.CONTROLLED_CONTINUATION) &&
@@ -698,7 +695,6 @@ function getAIFinalVerdict(d) {
     reason += " RSI15 momentum is decaying.";
   }
 
-  // Confirm trap if RSI momentum is lost
   if (
     verdict === AI_VERDICTS.TRAP_RISK &&
     d.rsi15Momentum === "loss"
@@ -706,53 +702,50 @@ function getAIFinalVerdict(d) {
     reason += " RSI15 loss confirms trap risk.";
   }
 
-    // EMA SHORT-TERM CONFIRMATION
-if (
-  verdict === AI_VERDICTS.WAIT_FOR_PULLBACK &&
-  d.emaShortCross === "bullish-cross" &&
-  d.mainTrend === "bullish"
-) {
-  verdict = AI_VERDICTS.CONTROLLED_CONTINUATION;
-  reason += " EMA14 crossed above EMA21 confirming short-term momentum.";
-}
+  /* ================= MICRO TREND CONFIRMATION ================= */
 
-if (
-  verdict === AI_VERDICTS.CONTROLLED_CONTINUATION &&
-  d.emaShortCross === "bearish-cross"
-) {
-  verdict = AI_VERDICTS.WAIT_FOR_PULLBACK;
-  reason += " EMA14 crossed below EMA21, momentum weakening.";
-}
+  if (
+    verdict === AI_VERDICTS.WAIT_FOR_PULLBACK &&
+    d.emaShortCross === "bullish-cross" &&
+    d.mainTrend === "bullish"
+  ) {
+    verdict = AI_VERDICTS.CONTROLLED_CONTINUATION;
+    reason += " Micro Trend turned bullish.";
+  }
+
+  if (
+    verdict === AI_VERDICTS.CONTROLLED_CONTINUATION &&
+    d.emaShortCross === "bearish-cross"
+  ) {
+    verdict = AI_VERDICTS.WAIT_FOR_PULLBACK;
+    reason += " Micro Trend weakening.";
+  }
 
   return withTier(verdict, reason, d);
 }
 
+/* ================= TIER WRAPPER ================= */
 
-  
-  
-
-  function withTier(verdict, reason, d){
+function withTier(verdict, reason, d){
   const t = AI_VERDICT_TIERS[verdict] || {
     tier: 6,
     label: "TIER 6 — UNKNOWN",
     verdictClass: "verdict-avoid"
   };
 
-  // 🧠 Trend alignment logic
   let trendAlignment = "neutral";
 
   if (d.mainTrend === "bullish" && d.emaShortBias === "bullish")
     trendAlignment = "aligned";
-
   else if (d.mainTrend === "bearish" && d.emaShortBias === "bearish")
     trendAlignment = "aligned";
-
   else if (
-    d.mainTrend === "bullish" && d.emaShortBias === "bearish" ||
-    d.mainTrend === "bearish" && d.emaShortBias === "bullish"
+    (d.mainTrend === "bullish" && d.emaShortBias === "bearish") ||
+    (d.mainTrend === "bearish" && d.emaShortBias === "bullish")
   )
     trendAlignment = "conflict";
-
+  else if (d.emaShortBias === "neutral")
+    trendAlignment = "neutral";
   else
     trendAlignment = "pullback";
 
@@ -762,60 +755,56 @@ if (
     tierLabel: t.label,
     verdictClass: t.verdictClass,
 
-    // 🎯 execution
     tradeSide: getTradeSide(d),
 
-    // 📈 trend layers
     mainTrend: d.mainTrend || "neutral",
     microTrend: d.emaShortBias || "neutral",
     microTrendCross: d.emaShortCross || "none",
-    trendAlignment, // aligned | pullback | conflict
+    trendAlignment,
 
-    // 🧠 explanation
     reason
   };
 }
 
-  function getTradeSide(d){
+/* ================= TRADE SIDE ================= */
+
+function getTradeSide(d){
   const trend = d.mainTrend;
   const volBias = d.volAI?.bias || "Neutral";
   const struct = d.structureType;
 
-  /* ⛔ hard volume blocks only */
   if (volBias === "Caution" || volBias === "Neutral") {
     return "WAIT";
   }
 
-  /* 🟢 BULLISH EXECUTION */
   if (
-  trend === "bullish" &&
-  volBias === "Bullish" &&
-  d.emaShortBias === "bullish" &&
-  (
-    struct === "support holding" ||
-    struct === "resistance broken" ||
-    struct === "resistance weak"
-  )
-) {
-  return "LONG";
-}
-
-  /* 🔴 BEARISH EXECUTION */
-  if (
-  trend === "bearish" &&
-  volBias === "Bearish" &&
-  d.emaShortBias === "bearish" &&
-  (
-    struct === "support broken" ||
-    struct === "resistance failed" ||
-    struct === "support weak"
-  )
-) {
-  return "SHORT";
-}
-
-    return "WAIT";
+    trend === "bullish" &&
+    volBias === "Bullish" &&
+    d.emaShortBias === "bullish" &&
+    (
+      struct === "support holding" ||
+      struct === "resistance broken" ||
+      struct === "resistance weak"
+    )
+  ) {
+    return "LONG";
   }
+
+  if (
+    trend === "bearish" &&
+    volBias === "Bearish" &&
+    d.emaShortBias === "bearish" &&
+    (
+      struct === "support broken" ||
+      struct === "resistance failed" ||
+      struct === "support weak"
+    )
+  ) {
+    return "SHORT";
+  }
+
+  return "WAIT";
+    }
   
 
   function getStructureDirectionalBias(structureType, structureQuality){
