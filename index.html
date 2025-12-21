@@ -724,39 +724,39 @@ function getAIFinalVerdict(d) {
   const volBias = d.volAI?.bias || "Neutral";
   const struct = d.structureType;
 
-  /* ⛔ hard blocks */
+  /* ⛔ hard volume blocks only */
   if (volBias === "Caution" || volBias === "Neutral") {
     return "WAIT";
   }
 
-  /* 🟢 BULLISH SIDE */
+  /* 🟢 BULLISH EXECUTION */
   if (
     trend === "bullish" &&
     volBias === "Bullish" &&
     (
       struct === "support holding" ||
       struct === "resistance broken" ||
-      struct === "resistance weak"   // ✅ NEW: early bullish signal
+      struct === "resistance weak"   // ✅ EARLY BULLISH ENTRY
     )
   ) {
     return "LONG";
   }
 
-  /* 🔴 BEARISH SIDE */
+  /* 🔴 BEARISH EXECUTION */
   if (
     trend === "bearish" &&
     volBias === "Bearish" &&
     (
       struct === "support broken" ||
       struct === "resistance failed" ||
-      struct === "support weak"      // symmetric early bearish signal
+      struct === "support weak"
     )
   ) {
     return "SHORT";
   }
 
   return "WAIT";
-                    }
+}
   
 
   function getStructureDirectionalBias(structureType, structureQuality){
