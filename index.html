@@ -724,6 +724,16 @@ function getAIFinalVerdict(d) {
   const trend = d.mainTrend;
   const momentum = d.rsi15Momentum;
   const fakeVol = d.fakeVolumeBreak;
+    /* ================= REVERSAL LONG ================= */
+const reversalLong =
+  d.mainTrend === "bearish" &&
+  d.dailyRSI &&
+  d.dailyRSI.value <= 30 &&                // oversold
+  d.volAI &&
+  d.volAI.meaning.includes("exhaustion") &&
+  d.rsi15Momentum === "reclaim";           // confirmation
+
+if (reversalLong) return "LONG";
 
   // ❌ hard blocks
   if (fakeVol) return "WAIT";
@@ -755,6 +765,7 @@ function getAIFinalVerdict(d) {
 
   return "WAIT";
 }
+
   
 
   function computeMarketDominance(tickers){
