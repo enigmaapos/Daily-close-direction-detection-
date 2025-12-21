@@ -295,29 +295,28 @@ button.secondary{
   </select>
 </div>
 
-  <div class="row filter-box">
+<div class="row filter-box">
   <select id="filterAIVerdict">
-  <option value="all">All AI Verdicts</option>
+    <option value="all">All AI Verdicts</option>
 
-  <optgroup label="High Probability">
-    <option>STRONG CONTINUATION</option>
-    <option>CONTROLLED CONTINUATION</option>
-  </optgroup>
+    <optgroup label="High Probability">
+      <option>STRONG CONTINUATION</option>
+      <option>CONTROLLED CONTINUATION</option>
+    </optgroup>
 
-  <optgroup label="Watch / Timing">
-    <option>WAIT FOR PULLBACK</option>
-    <option>COUNTER-TREND BREAKOUT</option>
-  </optgroup>
+    <optgroup label="Watch / Timing">
+      <option>WAIT FOR PULLBACK</option>
+      <option>COUNTER-TREND</option>
+    </optgroup>
 
-  <optgroup label="Risk / Avoid">
-    <option>HIGH RISK / LATE MOVE</option>
-    <option>TRAP RISK</option>
-    <option>STRUCTURE WEAK / NO EDGE</option>
-    <option>AVOID / NO TRADE</option>
-  </optgroup>
+    <optgroup label="Risk / Avoid">
+      <option>TRAP RISK</option>
+      <option>STRUCTURE WEAK / NO EDGE</option>
+      <option>AVOID / NO TRADE</option>
+    </optgroup>
   </select>
-  </div>
-
+</div>
+  
 <!-- SORT + RESET ROW -->
 <div class="row">
   <select id="sortField">
@@ -542,11 +541,11 @@ function startAutoScan(){
   
       
 
- function getAIFinalVerdict(d) {
-  const structure = d.structure;
-  const bias = d.bias;
-  const trend = d.mainTrend;
-  const prob = d.prob;
+function getAIFinalVerdict(d) {
+  const structure = d.structure || "none";
+  const bias = d.bias || "";
+  const trend = d.mainTrend || "neutral";
+  const prob = d.prob || 0;
 
   const funding = d.fundingRate ?? 0;
   const extremeLongCrowd  = funding >= 0.03;
@@ -557,10 +556,19 @@ function startAutoScan(){
   const fakeVol = d.fakeVolumeBreak === true;
 
   const rsiLabel = d.dailyRSI?.label || "Neutral";
-  const volAIMeaning = d.volAI?.meaning || "";
-  const volAIBias = d.volAI?.bias || "Neutral";
+
+  /* ================= STRUCTURE NORMALIZATION ================= */
+
+  const bullishBreak =
+    structure.includes("resistance broken") && trend === "bullish";
+
+  const bearishBreak =
+    structure.includes("support broken") && trend === "bearish";
+
+  const anyBreak = structure.includes("broken");
 
   /* ================= BASE VERDICT ================= */
+
   let verdict = AI_VERDICTS.AVOID;
   let reason = "Conditions are mixed and lack a statistical edge.";
 
@@ -572,8 +580,7 @@ function startAutoScan(){
 
   /* PRIORITY 2 — STRONG CONTINUATION */
   else if (
-    ((structure === "resistance broken" && trend === "bullish") ||
-     (structure === "support broken" && trend === "bearish")) &&
+    (bullishBreak || bearishBreak) &&
     hasVolumeBreak &&
     !rsiLabel.includes("MAX")
   ) {
@@ -583,8 +590,7 @@ function startAutoScan(){
 
   /* PRIORITY 3 — CONTROLLED CONTINUATION */
   else if (
-    ((structure === "resistance broken" && trend === "bullish") ||
-     (structure === "support broken" && trend === "bearish")) &&
+    (bullishBreak || bearishBreak) &&
     !hasVolumeBreak &&
     !rsiLabel.includes("MAX")
   ) {
@@ -592,20 +598,20 @@ function startAutoScan(){
     reason = "Structure aligns with trend, but participation remains selective.";
   }
 
-  /* PRIORITY 4 — WAIT */
-  else if (structure.includes("broken") && rsiLabel.includes("MAX")) {
+  /* PRIORITY 4 — WAIT (OVEREXTENDED) */
+  else if (anyBreak && rsiLabel.includes("MAX")) {
     verdict = AI_VERDICTS.WAIT_FOR_PULLBACK;
     reason = "Momentum is stretched after a structure break.";
   }
 
-  /* PRIORITY 5 — COUNTER TREND */
+  /* PRIORITY 5 — COUNTER-TREND BREAK */
   else if (
-    structure.includes("broken") &&
-    ((structure === "resistance broken" && trend === "bearish") ||
-     (structure === "support broken" && trend === "bullish"))
+    anyBreak &&
+    ((structure.includes("resistance broken") && trend === "bearish") ||
+     (structure.includes("support broken") && trend === "bullish"))
   ) {
     verdict = AI_VERDICTS.COUNTER_TREND;
-    reason = "Structure break occurred against dominant trend.";
+    reason = "Structure break occurred against the dominant trend.";
   }
 
   /* PRIORITY 6 — STRUCTURE WEAK */
@@ -616,7 +622,7 @@ function startAutoScan(){
 
   /* ================= FUNDING MODIFIERS ================= */
 
-  // Downgrade expensive continuation
+  // Downgrade expensive strong continuation
   if (
     verdict === AI_VERDICTS.STRONG_CONTINUATION &&
     ((trend === "bullish" && extremeLongCrowd) ||
@@ -626,7 +632,7 @@ function startAutoScan(){
     reason += " Funding shows crowded positioning.";
   }
 
-  // Force wait if funding elevated + no volume
+  // Force WAIT if funding elevated and no volume confirmation
   if (
     verdict === AI_VERDICTS.CONTROLLED_CONTINUATION &&
     elevatedFunding &&
@@ -636,7 +642,7 @@ function startAutoScan(){
     reason += " Elevated funding increases entry risk.";
   }
 
-  // Confirm trap with funding
+  // Strengthen trap confidence
   if (
     verdict === AI_VERDICTS.TRAP_RISK &&
     elevatedFunding
@@ -644,8 +650,48 @@ function startAutoScan(){
     reason += " Crowded funding confirms trap probability.";
   }
 
+  /* ================= RSI15 SOFT INFLUENCE ================= */
+
+  // Upgrade WAIT → CONTROLLED on momentum reclaim
+  if (
+    verdict === AI_VERDICTS.WAIT_FOR_PULLBACK &&
+    d.rsi15Momentum === "reclaim" &&
+    !rsiLabel.includes("MAX")
+  ) {
+    verdict = AI_VERDICTS.CONTROLLED_CONTINUATION;
+    reason += " RSI15 reclaimed 50, improving momentum alignment.";
+  }
+
+  // Upgrade CONTROLLED → STRONG on acceleration + volume
+  if (
+    verdict === AI_VERDICTS.CONTROLLED_CONTINUATION &&
+    d.rsi15Momentum === "accel" &&
+    hasVolumeBreak
+  ) {
+    verdict = AI_VERDICTS.STRONG_CONTINUATION;
+    reason += " RSI15 accelerating with volume confirmation.";
+  }
+
+  // Downgrade continuation if momentum decays
+  if (
+    (verdict === AI_VERDICTS.STRONG_CONTINUATION ||
+     verdict === AI_VERDICTS.CONTROLLED_CONTINUATION) &&
+    d.rsi15Momentum === "decay"
+  ) {
+    verdict = AI_VERDICTS.WAIT_FOR_PULLBACK;
+    reason += " RSI15 momentum is decaying.";
+  }
+
+  // Confirm trap if RSI momentum is lost
+  if (
+    verdict === AI_VERDICTS.TRAP_RISK &&
+    d.rsi15Momentum === "loss"
+  ) {
+    reason += " RSI15 loss confirms trap risk.";
+  }
+
   return withTier(verdict, reason, d);
- }
+}
   
   
 
@@ -924,6 +970,30 @@ async function getDailyRSIContext(sym){
   };
   }
 
+  function getRSI15Momentum(rsi15Arr) {
+  if (!rsi15Arr || rsi15Arr.length < 3) {
+    return "neutral";
+  }
+
+  const r0 = rsi15Arr.at(-3);
+  const r1 = rsi15Arr.at(-2);
+  const r2 = rsi15Arr.at(-1);
+
+  // strong reclaim
+  if (r0 < 50 && r1 >= 50 && r2 > r1) return "reclaim";
+
+  // strong loss
+  if (r0 > 50 && r1 <= 50 && r2 < r1) return "loss";
+
+  // acceleration
+  if (r2 > r1 && r1 > r0 && r2 >= 55) return "accel";
+
+  // decay
+  if (r2 < r1 && r1 < r0 && r2 <= 45) return "decay";
+
+  return "neutral";
+  }
+
   async function batchMap(items, batchSize, asyncFn){
   const results = [];
   for(let i = 0; i < items.length; i += batchSize){
@@ -1137,6 +1207,8 @@ const sw = {
   const sb=sw.S.some(x=>price<x);
   const rb=sw.R.some(x=>price>x);
 
+  const rsi15Momentum = getRSI15Momentum(rsi15Arr);
+
   const bullishBreakAccepted =
   rb &&
   rsi15 !== null &&
@@ -1210,7 +1282,7 @@ const postVolBreakRSIConfirmSafe =
 
   const fundingRate = await getFundingRate(sym);
 
-  return {sym,price,change,bull,prob,bias,structure,S:sw.S,R:sw.R,dailyRSI,rsi15,volumeBreakout,
+  return {sym,price,change,bull,prob,bias,structure,S:sw.S,R:sw.R,dailyRSI,rsi15,rsi15Momentum,volumeBreakout,
   breakoutAge,volumeBreakoutType,fakeVolumeBreak,postVolBreakRSIConfirm: postVolBreakRSIConfirmSafe,
   domV,
   lastVol,mainTrend,volAI,fundingRate};
