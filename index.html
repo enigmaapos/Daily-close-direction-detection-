@@ -1217,6 +1217,18 @@ const ema21Prev = ema21.at(-2);
   const ema70 = ema(c.slice(-300), 70);
 const ema200 = ema(c.slice(-300), 200);
 
+  let emaShortBias = "neutral";
+let emaShortCross = "none";
+
+if (ema14Last > ema21Last) emaShortBias = "bullish";
+else if (ema14Last < ema21Last) emaShortBias = "bearish";
+
+if (ema14Prev <= ema21Prev && ema14Last > ema21Last)
+  emaShortCross = "bullish-cross";
+
+if (ema14Prev >= ema21Prev && ema14Last < ema21Last)
+  emaShortCross = "bearish-cross";
+
 const mainTrend = getMainTrendOnly(
   ema70,
   ema200,
