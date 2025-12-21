@@ -755,7 +755,10 @@ function withTier(verdict, reason, d){
     tierLabel: t.label,
     verdictClass: t.verdictClass,
 
-    tradeSide: getTradeSide(d),
+    tradeSide: getTradeSide({
+  ...d,
+  aiVerdict: verdict
+}),
 
     mainTrend: d.mainTrend || "neutral",
     microTrend: d.emaShortBias || "neutral",
@@ -770,41 +773,50 @@ function withTier(verdict, reason, d){
 
 function getTradeSide(d){
   const trend = d.mainTrend;
+  const micro = d.emaShortBias;
   const volBias = d.volAI?.bias || "Neutral";
   const struct = d.structureType;
+  const verdict = d.aiVerdict || null;
 
-  if (volBias === "Caution" || volBias === "Neutral") {
-    return "WAIT";
-  }
+  /* ================= TRAP-DIRECTION OVERRIDE ================= */
 
+  // 🐻 BEAR TRAP → LONG
   if (
+    d.bias === "Bear Trap Risk" &&
     trend === "bullish" &&
-    volBias === "Bullish" &&
-    d.emaShortBias === "bullish" &&
-    (
-      struct === "support holding" ||
-      struct === "resistance broken" ||
-      struct === "resistance weak"
-    )
+    micro === "bullish"
   ) {
     return "LONG";
   }
 
+  // 🐂 BULL TRAP → SHORT
   if (
+    d.bias === "Bull Trap Risk" &&
     trend === "bearish" &&
-    volBias === "Bearish" &&
-    d.emaShortBias === "bearish" &&
-    (
-      struct === "support broken" ||
-      struct === "resistance failed" ||
-      struct === "support weak"
-    )
+    micro === "bearish"
   ) {
     return "SHORT";
   }
 
+  /* ================= NORMAL TREND EXECUTION ================= */
+
+  // Strong trend alignment (non-trap)
+  if (trend === "bullish" && micro === "bullish") {
+    return "LONG";
+  }
+
+  if (trend === "bearish" && micro === "bearish") {
+    return "SHORT";
+  }
+
+  /* ================= VOLUME CAUTION ================= */
+
+  if (volBias === "Caution") {
+    return "WAIT";
+  }
+
   return "WAIT";
-    }
+}
   
 
   function getStructureDirectionalBias(structureType, structureQuality){
