@@ -738,12 +738,40 @@ if (
     verdictClass: "verdict-avoid"
   };
 
+  // 🧠 Trend alignment logic
+  let trendAlignment = "neutral";
+
+  if (d.mainTrend === "bullish" && d.emaShortBias === "bullish")
+    trendAlignment = "aligned";
+
+  else if (d.mainTrend === "bearish" && d.emaShortBias === "bearish")
+    trendAlignment = "aligned";
+
+  else if (
+    d.mainTrend === "bullish" && d.emaShortBias === "bearish" ||
+    d.mainTrend === "bearish" && d.emaShortBias === "bullish"
+  )
+    trendAlignment = "conflict";
+
+  else
+    trendAlignment = "pullback";
+
   return {
     verdict,
     tier: t.tier,
     tierLabel: t.label,
     verdictClass: t.verdictClass,
+
+    // 🎯 execution
     tradeSide: getTradeSide(d),
+
+    // 📈 trend layers
+    mainTrend: d.mainTrend || "neutral",
+    microTrend: d.emaShortBias || "neutral",
+    microTrendCross: d.emaShortCross || "none",
+    trendAlignment, // aligned | pullback | conflict
+
+    // 🧠 explanation
     reason
   };
 }
