@@ -323,6 +323,13 @@ button.secondary{
     </optgroup>
   </select>
 </div>
+
+  <select id="filterTradeSide">
+  <option value="all">All Trade Sides</option>
+  <option value="LONG">LONG</option>
+  <option value="SHORT">SHORT</option>
+  <option value="WAIT">WAIT</option>
+  </select>
   
 <!-- SORT + RESET ROW -->
 <div class="row">
@@ -1353,6 +1360,7 @@ function applyFilters(){
   const vb = filterVolBreak.value;
   const av = document.getElementById("filterAIVerdict")?.value || "all";
   const sq = document.getElementById("filterStructureQuality")?.value || "all";
+  const ts = document.getElementById("filterTradeSide")?.value || "all";
 
   document.querySelectorAll(".card").forEach(c=>{
     let ok = true;
@@ -1367,6 +1375,7 @@ if (sq !== "all" && c.dataset.structureQuality !== sq) ok = false;
 
     // 🤖 AI Verdict filter
     if(av !== "all" && c.dataset.aiverdict !== av) ok = false;
+    if (ts !== "all" && c.dataset.tradeside !== ts) ok = false;
 
     c.style.display = ok ? "" : "none";
   });
@@ -1382,6 +1391,7 @@ if (sq !== "all" && c.dataset.structureQuality !== sq) ok = false;
   filterVolBreak.value = "all";
   document.getElementById("filterAIVerdict").value = "all"; // 👈 ADD
            document.getElementById("filterStructureQuality").value = "all";
+           document.getElementById("filterTradeSide").value = "all";
 
   applyFilters();
 
@@ -1456,6 +1466,7 @@ card.dataset.dailyrsi = d.dailyRSI?.label || "all";
   card.dataset.aitier = aiVerdict.tier;
 card.dataset.aiverdict = aiVerdict.verdict;
   card.dataset.structureType = d.structureType;
+  card.dataset.tradeside = aiVerdict.tradeSide;
 
 card.dataset.structureQuality =
   d.structure.includes("accepted") ? "accepted" :
@@ -2010,6 +2021,7 @@ async function runSearch(){
   "filterStructureQuality",
   "filterVolBreak",
   "filterAIVerdict"   // 👈 ADD THIS
+  "filterTradeSide"
 ].forEach(id=>{
   document.getElementById(id).addEventListener("change", applyFilters);
 });
