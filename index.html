@@ -720,35 +720,46 @@ function getAIFinalVerdict(d) {
 }
 
   function getTradeSide(d){
-
   const trend = d.mainTrend;
-  const struct = d.structureType;
   const volBias = d.volAI?.bias || "Neutral";
+  const structBias = getStructureDirectionalBias(
+    d.structureType,
+    d.structureQuality
+  );
 
-  /* ⛔ volume caution zones */
+  /* ⛔ Block on volume caution */
   if (volBias === "Caution" || volBias === "Neutral") {
     return "WAIT";
   }
 
-  /* 🟢 LONG permission */
+  /* 🟢 LONG — confirmed only */
   if (
     trend === "bullish" &&
     volBias === "Bullish" &&
     (
-      struct === "support holding" ||
-      struct === "resistance broken"
+      d.structureType === "support holding" ||
+      d.structureType === "resistance broken"
     )
   ) {
     return "LONG";
   }
 
-  /* 🔴 SHORT permission */
+  /* 🔵 BULLISH PRESSURE (PRE-BREAK) */
+  if (
+    trend === "bullish" &&
+    volBias === "Bullish" &&
+    d.structureType === "resistance weak"
+  ) {
+    return "WAIT"; // bullish bias, no entry yet
+  }
+
+  /* 🔴 SHORT — confirmed only */
   if (
     trend === "bearish" &&
     volBias === "Bearish" &&
     (
-      struct === "resistance failed" ||
-      struct === "support broken"
+      d.structureType === "support broken" ||
+      d.structureType === "resistance failed"
     )
   ) {
     return "SHORT";
@@ -756,6 +767,24 @@ function getAIFinalVerdict(d) {
 
   return "WAIT";
 }
+  
+
+  function getStructureDirectionalBias(structureType, structureQuality){
+  if (structureType === "resistance weak") return "bullish";
+  if (structureType === "support weak") return "bearish";
+
+  if (
+    structureType === "resistance broken" ||
+    structureType === "support holding"
+  ) return "bullish";
+
+  if (
+    structureType === "support broken" ||
+    structureType === "resistance failed"
+  ) return "bearish";
+
+  return "neutral";
+  }
   
 
   function computeMarketDominance(tickers){
@@ -1455,6 +1484,11 @@ if (d.volumeBreakout) {
   }
 }
 
+  const structureBias = getStructureDirectionalBias(
+  d.structureType,
+  d.structureQuality
+);
+  
   
   card.innerHTML = `
     ${isFav
@@ -1551,7 +1585,9 @@ ${d.volAI ? `
   </div>
 ` : ""}
 
-    <div class="muted">Structure: ${d.structure}</div>
+    <div class="muted ${structureBias === "bullish" ? "bull" : structureBias === "bearish" ? "bear" : "neutral"}">
+  Structure: ${d.structure}
+</div>
 
     <div class="prob ${
       d.bias.includes("Bull")?"bull":
