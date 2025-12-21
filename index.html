@@ -715,20 +715,22 @@ function getAIFinalVerdict(d) {
   function getTradeSide(d){
   if (
     d.mainTrend === "bullish" &&
-    (d.structure === "resistance broken" || d.structure === "support holding")
+    (d.structureType === "resistance broken" ||
+     d.structureType === "support holding")
   ) {
     return "LONG";
   }
 
   if (
     d.mainTrend === "bearish" &&
-    (d.structure === "support broken" || d.structure === "resistance failed")
+    (d.structureType === "support broken" ||
+     d.structureType === "resistance failed")
   ) {
     return "SHORT";
   }
 
   return "WAIT";
-  }
+}
   
 
   function computeMarketDominance(tickers){
