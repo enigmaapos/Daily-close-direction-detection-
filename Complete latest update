@@ -213,6 +213,16 @@ button.secondary{
 <button class="secondary" id="scanVolBreakBtn">
   🔥 Scan 24h Volume Break
 </button>
+  <div class="row filter-box">
+  <label class="muted" style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+    <input
+      type="checkbox"
+      id="toggle24hVolume"
+      checked
+    />
+    🔥 Auto 24h Volume Break Scan
+  </label>
+  </div>
   <input id="symbolSearch" placeholder="BTCUSDT"/>
   <button class="secondary" id="analyzeBtn" onclick="runSearch()">Analyze</button>
 </div>
@@ -285,29 +295,28 @@ button.secondary{
   </select>
 </div>
 
-  <div class="row filter-box">
+<div class="row filter-box">
   <select id="filterAIVerdict">
-  <option value="all">All AI Verdicts</option>
+    <option value="all">All AI Verdicts</option>
 
-  <optgroup label="High Probability">
-    <option>STRONG CONTINUATION</option>
-    <option>CONTROLLED CONTINUATION</option>
-  </optgroup>
+    <optgroup label="High Probability">
+      <option>STRONG CONTINUATION</option>
+      <option>CONTROLLED CONTINUATION</option>
+    </optgroup>
 
-  <optgroup label="Watch / Timing">
-    <option>WAIT FOR PULLBACK</option>
-    <option>COUNTER-TREND BREAKOUT</option>
-  </optgroup>
+    <optgroup label="Watch / Timing">
+      <option>WAIT FOR PULLBACK</option>
+      <option>COUNTER-TREND</option>
+    </optgroup>
 
-  <optgroup label="Risk / Avoid">
-    <option>HIGH RISK / LATE MOVE</option>
-    <option>TRAP RISK</option>
-    <option>STRUCTURE WEAK / NO EDGE</option>
-    <option>AVOID / NO TRADE</option>
-  </optgroup>
+    <optgroup label="Risk / Avoid">
+      <option>TRAP RISK</option>
+      <option>STRUCTURE WEAK / NO EDGE</option>
+      <option>AVOID / NO TRADE</option>
+    </optgroup>
   </select>
-  </div>
-
+</div>
+  
 <!-- SORT + RESET ROW -->
 <div class="row">
   <select id="sortField">
@@ -389,6 +398,7 @@ let dailyRSIScanned = 0;
   let last24hVolumeBreakAt = 0;
   let pending24hVolumeScan = false;
   let statusLocked = false;
+  let auto24hVolumeEnabled = true; // ✅ default ON
   
 
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
@@ -531,11 +541,11 @@ function startAutoScan(){
   
       
 
- function getAIFinalVerdict(d) {
-  const structure = d.structure;
-  const bias = d.bias;
-  const trend = d.mainTrend;
-  const prob = d.prob;
+function getAIFinalVerdict(d) {
+  const structure = d.structure || "none";
+  const bias = d.bias || "";
+  const trend = d.mainTrend || "neutral";
+  const prob = d.prob || 0;
 
   const funding = d.fundingRate ?? 0;
   const extremeLongCrowd  = funding >= 0.03;
@@ -546,10 +556,19 @@ function startAutoScan(){
   const fakeVol = d.fakeVolumeBreak === true;
 
   const rsiLabel = d.dailyRSI?.label || "Neutral";
-  const volAIMeaning = d.volAI?.meaning || "";
-  const volAIBias = d.volAI?.bias || "Neutral";
+
+  /* ================= STRUCTURE NORMALIZATION ================= */
+
+  const bullishBreak =
+    structure.includes("resistance broken") && trend === "bullish";
+
+  const bearishBreak =
+    structure.includes("support broken") && trend === "bearish";
+
+  const anyBreak = structure.includes("broken");
 
   /* ================= BASE VERDICT ================= */
+
   let verdict = AI_VERDICTS.AVOID;
   let reason = "Conditions are mixed and lack a statistical edge.";
 
@@ -561,8 +580,7 @@ function startAutoScan(){
 
   /* PRIORITY 2 — STRONG CONTINUATION */
   else if (
-    ((structure === "resistance broken" && trend === "bullish") ||
-     (structure === "support broken" && trend === "bearish")) &&
+    (bullishBreak || bearishBreak) &&
     hasVolumeBreak &&
     !rsiLabel.includes("MAX")
   ) {
@@ -572,8 +590,7 @@ function startAutoScan(){
 
   /* PRIORITY 3 — CONTROLLED CONTINUATION */
   else if (
-    ((structure === "resistance broken" && trend === "bullish") ||
-     (structure === "support broken" && trend === "bearish")) &&
+    (bullishBreak || bearishBreak) &&
     !hasVolumeBreak &&
     !rsiLabel.includes("MAX")
   ) {
@@ -581,20 +598,20 @@ function startAutoScan(){
     reason = "Structure aligns with trend, but participation remains selective.";
   }
 
-  /* PRIORITY 4 — WAIT */
-  else if (structure.includes("broken") && rsiLabel.includes("MAX")) {
+  /* PRIORITY 4 — WAIT (OVEREXTENDED) */
+  else if (anyBreak && rsiLabel.includes("MAX")) {
     verdict = AI_VERDICTS.WAIT_FOR_PULLBACK;
     reason = "Momentum is stretched after a structure break.";
   }
 
-  /* PRIORITY 5 — COUNTER TREND */
+  /* PRIORITY 5 — COUNTER-TREND BREAK */
   else if (
-    structure.includes("broken") &&
-    ((structure === "resistance broken" && trend === "bearish") ||
-     (structure === "support broken" && trend === "bullish"))
+    anyBreak &&
+    ((structure.includes("resistance broken") && trend === "bearish") ||
+     (structure.includes("support broken") && trend === "bullish"))
   ) {
     verdict = AI_VERDICTS.COUNTER_TREND;
-    reason = "Structure break occurred against dominant trend.";
+    reason = "Structure break occurred against the dominant trend.";
   }
 
   /* PRIORITY 6 — STRUCTURE WEAK */
@@ -605,7 +622,7 @@ function startAutoScan(){
 
   /* ================= FUNDING MODIFIERS ================= */
 
-  // Downgrade expensive continuation
+  // Downgrade expensive strong continuation
   if (
     verdict === AI_VERDICTS.STRONG_CONTINUATION &&
     ((trend === "bullish" && extremeLongCrowd) ||
@@ -615,7 +632,7 @@ function startAutoScan(){
     reason += " Funding shows crowded positioning.";
   }
 
-  // Force wait if funding elevated + no volume
+  // Force WAIT if funding elevated and no volume confirmation
   if (
     verdict === AI_VERDICTS.CONTROLLED_CONTINUATION &&
     elevatedFunding &&
@@ -625,7 +642,7 @@ function startAutoScan(){
     reason += " Elevated funding increases entry risk.";
   }
 
-  // Confirm trap with funding
+  // Strengthen trap confidence
   if (
     verdict === AI_VERDICTS.TRAP_RISK &&
     elevatedFunding
@@ -633,8 +650,48 @@ function startAutoScan(){
     reason += " Crowded funding confirms trap probability.";
   }
 
+  /* ================= RSI15 SOFT INFLUENCE ================= */
+
+  // Upgrade WAIT → CONTROLLED on momentum reclaim
+  if (
+    verdict === AI_VERDICTS.WAIT_FOR_PULLBACK &&
+    d.rsi15Momentum === "reclaim" &&
+    !rsiLabel.includes("MAX")
+  ) {
+    verdict = AI_VERDICTS.CONTROLLED_CONTINUATION;
+    reason += " RSI15 reclaimed 50, improving momentum alignment.";
+  }
+
+  // Upgrade CONTROLLED → STRONG on acceleration + volume
+  if (
+    verdict === AI_VERDICTS.CONTROLLED_CONTINUATION &&
+    d.rsi15Momentum === "accel" &&
+    hasVolumeBreak
+  ) {
+    verdict = AI_VERDICTS.STRONG_CONTINUATION;
+    reason += " RSI15 accelerating with volume confirmation.";
+  }
+
+  // Downgrade continuation if momentum decays
+  if (
+    (verdict === AI_VERDICTS.STRONG_CONTINUATION ||
+     verdict === AI_VERDICTS.CONTROLLED_CONTINUATION) &&
+    d.rsi15Momentum === "decay"
+  ) {
+    verdict = AI_VERDICTS.WAIT_FOR_PULLBACK;
+    reason += " RSI15 momentum is decaying.";
+  }
+
+  // Confirm trap if RSI momentum is lost
+  if (
+    verdict === AI_VERDICTS.TRAP_RISK &&
+    d.rsi15Momentum === "loss"
+  ) {
+    reason += " RSI15 loss confirms trap risk.";
+  }
+
   return withTier(verdict, reason, d);
- }
+}
   
   
 
@@ -658,20 +715,22 @@ function startAutoScan(){
   function getTradeSide(d){
   if (
     d.mainTrend === "bullish" &&
-    (d.structure === "resistance broken" || d.structure === "support holding")
+    (d.structureType === "resistance broken" ||
+     d.structureType === "support holding")
   ) {
     return "LONG";
   }
 
   if (
     d.mainTrend === "bearish" &&
-    (d.structure === "support broken" || d.structure === "resistance failed")
+    (d.structureType === "support broken" ||
+     d.structureType === "resistance failed")
   ) {
     return "SHORT";
   }
 
   return "WAIT";
-  }
+}
   
 
   function computeMarketDominance(tickers){
@@ -894,6 +953,49 @@ async function getDailyRSIContext(sym){
   return filterDailyRSI.value !== "all";
   }
 
+  function analyzeRSI50Behavior(rsiArr, lookback = 5) {
+  if (!rsiArr || rsiArr.length < lookback) {
+    return {
+      consistentlyAbove50: false,
+      consistentlyBelow50: false
+    };
+  }
+
+  const recent = rsiArr.slice(-lookback);
+
+  const above50 = recent.filter(v => v >= 50).length;
+  const below50 = recent.filter(v => v < 50).length;
+
+  return {
+    consistentlyAbove50: above50 >= 3,
+    consistentlyBelow50: below50 >= 3
+  };
+  }
+
+  function getRSI15Momentum(rsi15Arr) {
+  if (!rsi15Arr || rsi15Arr.length < 3) {
+    return "neutral";
+  }
+
+  const r0 = rsi15Arr.at(-3);
+  const r1 = rsi15Arr.at(-2);
+  const r2 = rsi15Arr.at(-1);
+
+  // strong reclaim
+  if (r0 < 50 && r1 >= 50 && r2 > r1) return "reclaim";
+
+  // strong loss
+  if (r0 > 50 && r1 <= 50 && r2 < r1) return "loss";
+
+  // acceleration
+  if (r2 > r1 && r1 > r0 && r2 >= 55) return "accel";
+
+  // decay
+  if (r2 < r1 && r1 < r0 && r2 <= 45) return "decay";
+
+  return "neutral";
+  }
+
   async function batchMap(items, batchSize, asyncFn){
   const results = [];
   for(let i = 0; i < items.length; i += batchSize){
@@ -1003,6 +1105,25 @@ const volAI = detect24hVolumeLocationAI(mappedK);
   const c=k.map(x=>+x[4]),h=k.map(x=>+x[2]),l=k.map(x=>+x[3]),v=k.map(x=>+x[5]);
   const price=c.at(-1);
 
+    // 📊 15m RSI(14)
+const rsi15Arr = calculateRSI(c, 14);
+const rsi15 = rsi15Arr.length
+  ? +rsi15Arr.at(-1).toFixed(2)
+  : null;
+
+  // 📈 RSI slope (15m)
+const rsi15Prev = rsi15Arr.length >= 2
+  ? rsi15Arr.at(-2)
+  : null;
+
+const rsi15Rising =
+  rsi15 !== null &&
+  rsi15Prev !== null &&
+  rsi15 > rsi15Prev;
+
+  const rsi50State = analyzeRSI50Behavior(rsi15Arr);
+
+
   let domV = 0;
 let domVBull = true;
 let domVIndex = -1;
@@ -1027,6 +1148,7 @@ const mainTrend = getMainTrendOnly(
   h,
   l
 );
+
 
 const lastVol = v.at(-1);
 const lastBull = k.at(-1)[4] > k.at(-1)[1];
@@ -1068,6 +1190,14 @@ const fakeVolumeBreak =
   volumeBreakout &&
   (directionConflict || climax) &&
   followThroughFail;
+
+    // ✅ Post-24h Volume Break RSI confirmation
+const postVolBreakRSIConfirm =
+  volumeBreakout &&          // 24h volume break happened
+  rsi15 !== null &&
+  rsi15 < 50 &&              // RSI reset
+  rsi15Rising;            // RSI turning up 
+  
   
   const bull = domVBull;
 
@@ -1079,23 +1209,90 @@ const sw = {
   const sb=sw.S.some(x=>price<x);
   const rb=sw.R.some(x=>price>x);
 
+  const rsi15Momentum = getRSI15Momentum(rsi15Arr);
+
+  const bullishBreakAccepted =
+  rb &&
+  rsi15 !== null &&
+  !rsi50State.consistentlyBelow50 &&
+  rsi15Rising;
+
+const bearishBreakAccepted =
+  sb &&
+  rsi15 !== null &&
+  !rsi50State.consistentlyAbove50 &&
+  !rsi15Rising;
+
   let bias="Neutral",prob=50,structure="none";
   if(bull){
-    if(rb){bias="Bullish Continuation";prob=85;structure="resistance broken";}
-    else if(sw.S.length){bias="Bullish Defense";prob=70;structure="support holding";}
-    else{bias="Bull Trap Risk";prob=40;}
+   if (rb) {
+  if (bullishBreakAccepted) {
+    bias = "Bullish Continuation";
+    prob = 90;
+    structure = "resistance broken (accepted)";
+  } else {
+    bias = "Bull Trap Risk";
+    prob = 55;
+    structure = "resistance broken (unaccepted)";
+  }
+}
+    else if (sw.S.length) {
+  if (!rsi50State.consistentlyBelow50) {
+    bias = "Bullish Defense";
+    prob = 75;
+    structure = "support holding (confirmed)";
+  } else {
+    bias = "Bull Trap Risk";
+    prob = 45;
+    structure = "support weak (RSI pressure)";
+  }
+}
   }else{
-    if(sb){bias="Bearish Continuation";prob=85;structure="support broken";}
-    else if(sw.R.length){bias="Bearish Defense";prob=70;structure="resistance failed";}
+    if (sb) {
+  if (bearishBreakAccepted) {
+    bias = "Bearish Continuation";
+    prob = 90;
+    structure = "support broken (accepted)";
+  } else {
+    bias = "Bear Trap Risk";
+    prob = 55;
+    structure = "support broken (unaccepted)";
+  }
+}
+    else if (sw.R.length) {
+  if (!rsi50State.consistentlyAbove50) {
+    bias = "Bearish Defense";
+    prob = 75;
+    structure = "resistance failed (confirmed)";
+  } else {
+    bias = "Bear Trap Risk";
+    prob = 45;
+    structure = "resistance weak (RSI pressure)";
+  	}
+  }
     else{bias="Bear Trap Risk";prob=40;}
   }
+
+  const structureHolding =
+  (mainTrend === "bullish" && structure !== "support broken") ||
+  (mainTrend === "bearish" && structure !== "resistance broken");
+
+  const structureType =
+  structure.startsWith("support holding") ? "support holding" :
+  structure.startsWith("support broken")  ? "support broken" :
+  structure.startsWith("resistance failed") ? "resistance failed" :
+  structure.startsWith("resistance broken") ? "resistance broken" :
+  "none";
+
+const postVolBreakRSIConfirmSafe =
+  postVolBreakRSIConfirm && structureHolding;
 
     const dailyRSI = await getDailyRSIContext(sym);
 
   const fundingRate = await getFundingRate(sym);
 
-  return {sym,price,change,bull,prob,bias,structure,S:sw.S,R:sw.R,dailyRSI,volumeBreakout,
-  breakoutAge,volumeBreakoutType,fakeVolumeBreak,
+  return {sym,price,change,bull,prob,bias,structure,structureType,S:sw.S,R:sw.R,dailyRSI,rsi15,rsi15Momentum,volumeBreakout,
+  breakoutAge,volumeBreakoutType,fakeVolumeBreak,postVolBreakRSIConfirm: postVolBreakRSIConfirmSafe,
   domV,
   lastVol,mainTrend,volAI,fundingRate};
 }
@@ -1209,6 +1406,7 @@ card.dataset.dailyrsi = d.dailyRSI?.label || "all";
   card.dataset.trend = d.mainTrend || "neutral";
   card.dataset.aitier = aiVerdict.tier;
 card.dataset.aiverdict = aiVerdict.verdict;
+  card.dataset.structure = d.structureType;
   
 
   // 🔔 SOUND ALERT — only on 24h volume breakout
@@ -1230,6 +1428,9 @@ if (d.volumeBreakout) {
     }
     <b>${d.sym}</b>
     <div class="muted">Price: ${d.price.toFixed(4)}</div>
+    <div class="muted ${d.change>=0?"bull":"bear"}">
+      24h Change: ${d.change.toFixed(2)}%
+    </div>
     
     <div class="muted ${fundingInfo.cls}">
   💸 Funding Fee: ${fundingInfo.label}
@@ -1246,8 +1447,8 @@ if (d.volumeBreakout) {
     
     ${d.dailyRSI ? `
   <div class="muted ${
-    d.dailyRSI.value >= 60 ? "bull" :
-    d.dailyRSI.value <= 40 ? "bear" : "neutral"
+    d.dailyRSI.value >= 50 ? "bull" :
+    d.dailyRSI.value <= 50 ? "bear" : "neutral"
   }">
     📅 Daily RSI14: ${d.dailyRSI.value}
     <br>
@@ -1257,9 +1458,15 @@ if (d.volumeBreakout) {
   </div>
 ` : ""}
 
-    <div class="muted ${d.change>=0?"bull":"bear"}">
-      24h Change: ${d.change.toFixed(2)}%
-    </div>
+${d.rsi15 !== null ? `
+  <div class="muted ${
+    d.rsi15 >= 60 ? "bull" :
+    d.rsi15 <= 40 ? "bear" : "neutral"
+  }">
+    ⏱ 15m RSI14: ${d.rsi15}
+  </div>
+` : ""}
+
     <div class="muted ${d.bull?"bull":"bear"}">
       ${d.bull?"Bullish":"Bearish"} Volume Control
     </div>
@@ -1281,6 +1488,16 @@ if (d.volumeBreakout) {
     📊 No 24h Volume Breakout
   </div>
 `}
+
+${d.postVolBreakRSIConfirm ? `
+  <div class="muted verdict-strong">
+    ✅ Post-Volume RSI Confirmation
+    <br>
+    <span class="muted">
+      RSI14 < 50 and turning up after 24h volume break
+    </span>
+  </div>
+` : ""}
 
 ${d.volAI ? `
   <div class="muted ${
@@ -1632,12 +1849,19 @@ async function runScan() {
 
   // 🔥 AUTO 24h VOLUME BREAK
   const now = Date.now();
-  if (now - last24hVolumeBreakAt >= AUTO_VOLUME_BREAK_INTERVAL) {
+  if (
+  auto24hVolumeEnabled &&
+  now - last24hVolumeBreakAt >= AUTO_VOLUME_BREAK_INTERVAL
+) {
     last24hVolumeBreakAt = now;
     pending24hVolumeScan = true;
-    statusLocked = true;
 
-    setScanStatus("⏳ 24h Volume Break scheduled (auto)");
+// ✅ show message FIRST
+statusLocked = false;
+setScanStatus("⏳ 24h Volume Break scheduled (auto)");
+
+// 🔒 lock AFTER message is visible
+statusLocked = true;
 
     setTimeout(async () => {
       try {
@@ -1768,6 +1992,18 @@ scrollTopBtn.addEventListener("click", () => {
   scanVolBreakBtn.addEventListener("click", () => {
   if (scanLock) return;   // ⛔ block during scans
   run24hVolumeBreak();
+});
+
+  document.getElementById("toggle24hVolume").addEventListener("change", (e) => {
+  auto24hVolumeEnabled = e.target.checked;
+
+  if (!auto24hVolumeEnabled) {
+    pending24hVolumeScan = false;
+    statusLocked = false;
+    setScanStatus("⏸ Auto 24h Volume Break: OFF");
+  } else {
+    setScanStatus("▶ Auto 24h Volume Break: ON");
+  }
 });
 </script>
 </body>
