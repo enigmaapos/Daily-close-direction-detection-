@@ -276,13 +276,20 @@ button.secondary{
   </select>
 
   <select id="filterStructure">
-  <option value="all">All Structures</option>
+  <option value="all">All Structure Directions</option>
   <option value="support holding">Support Holding</option>
   <option value="support broken">Support Broken</option>
   <option value="resistance failed">Resistance Failed</option>
   <option value="resistance broken">Resistance Broken</option>
-  <option value="none">None</option>
-  </select>
+</select>
+
+<select id="filterStructureQuality">
+  <option value="all">All Structure Quality</option>
+  <option value="accepted">Accepted</option>
+  <option value="confirmed">Confirmed</option>
+  <option value="unaccepted">Unaccepted</option>
+  <option value="weak">Weak</option>
+</select>
 
   <select id="filterDailyRSI">
     <option value="all">All Daily RSI</option>
@@ -1306,6 +1313,7 @@ function applyFilters(){
   const s  = filterStructure.value;
   const vb = filterVolBreak.value;
   const av = document.getElementById("filterAIVerdict")?.value || "all";
+  const sq = document.getElementById("filterStructureQuality")?.value || "all";
 
   document.querySelectorAll(".card").forEach(c=>{
     let ok = true;
@@ -1314,7 +1322,8 @@ function applyFilters(){
     if(v !== "all" && c.dataset.vol !== v) ok = false;
     if(p > 0 && +c.dataset.prob < p) ok = false;
     if(r !== "all" && c.dataset.dailyrsi !== r) ok = false;
-    if(s !== "all" && c.dataset.structure !== s) ok = false;
+    if (s !== "all" && c.dataset.structureType !== s) ok = false;
+if (sq !== "all" && c.dataset.structureQuality !== sq) ok = false;
     if(vb !== "all" && c.dataset.volbreak !== vb) ok = false;
 
     // 🤖 AI Verdict filter
@@ -1333,6 +1342,7 @@ function applyFilters(){
   filterStructure.value = "all";
   filterVolBreak.value = "all";
   document.getElementById("filterAIVerdict").value = "all"; // 👈 ADD
+           document.getElementById("filterStructureQuality").value = "all";
 
   applyFilters();
 
@@ -1406,7 +1416,14 @@ card.dataset.dailyrsi = d.dailyRSI?.label || "all";
   card.dataset.trend = d.mainTrend || "neutral";
   card.dataset.aitier = aiVerdict.tier;
 card.dataset.aiverdict = aiVerdict.verdict;
-  card.dataset.structure = d.structureType;
+  card.dataset.structureType = d.structureType;
+
+card.dataset.structureQuality =
+  d.structure.includes("accepted") ? "accepted" :
+  d.structure.includes("confirmed") ? "confirmed" :
+  d.structure.includes("unaccepted") ? "unaccepted" :
+  d.structure.includes("weak") ? "weak" :
+  "none";
   
 
   // 🔔 SOUND ALERT — only on 24h volume breakout
@@ -1944,6 +1961,7 @@ async function runSearch(){
   "filterVol",
   "filterProb",
   "filterStructure",
+  "filterStructureQuality",
   "filterVolBreak",
   "filterAIVerdict"   // 👈 ADD THIS
 ].forEach(id=>{
