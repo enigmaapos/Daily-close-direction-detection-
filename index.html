@@ -720,18 +720,36 @@ function getAIFinalVerdict(d) {
 }
 
   function getTradeSide(d){
+
+  const trend = d.mainTrend;
+  const struct = d.structureType;
+  const volBias = d.volAI?.bias || "Neutral";
+
+  /* ⛔ volume caution zones */
+  if (volBias === "Caution" || volBias === "Neutral") {
+    return "WAIT";
+  }
+
+  /* 🟢 LONG permission */
   if (
-    d.mainTrend === "bullish" &&
-    (d.structureType === "resistance broken" ||
-     d.structureType === "support holding")
+    trend === "bullish" &&
+    volBias === "Bullish" &&
+    (
+      struct === "support holding" ||
+      struct === "resistance broken"
+    )
   ) {
     return "LONG";
   }
 
+  /* 🔴 SHORT permission */
   if (
-    d.mainTrend === "bearish" &&
-    (d.structureType === "support broken" ||
-     d.structureType === "resistance failed")
+    trend === "bearish" &&
+    volBias === "Bearish" &&
+    (
+      struct === "resistance failed" ||
+      struct === "support broken"
+    )
   ) {
     return "SHORT";
   }
