@@ -706,10 +706,7 @@ function getAIFinalVerdict(d) {
     reason += " RSI15 loss confirms trap risk.";
   }
 
-  return withTier(verdict, reason, d);
-}
-
-  // EMA SHORT-TERM CONFIRMATION
+    // EMA SHORT-TERM CONFIRMATION
 if (
   verdict === AI_VERDICTS.WAIT_FOR_PULLBACK &&
   d.emaShortCross === "bullish-cross" &&
@@ -726,6 +723,11 @@ if (
   verdict = AI_VERDICTS.WAIT_FOR_PULLBACK;
   reason += " EMA14 crossed below EMA21, momentum weakening.";
 }
+
+  return withTier(verdict, reason, d);
+}
+
+
   
   
 
