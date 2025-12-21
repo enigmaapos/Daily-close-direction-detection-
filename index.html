@@ -1275,6 +1275,13 @@ const bearishBreakAccepted =
   (mainTrend === "bullish" && structure !== "support broken") ||
   (mainTrend === "bearish" && structure !== "resistance broken");
 
+  const structureType =
+  structure.startsWith("support holding") ? "support holding" :
+  structure.startsWith("support broken")  ? "support broken" :
+  structure.startsWith("resistance failed") ? "resistance failed" :
+  structure.startsWith("resistance broken") ? "resistance broken" :
+  "none";
+
 const postVolBreakRSIConfirmSafe =
   postVolBreakRSIConfirm && structureHolding;
 
@@ -1282,7 +1289,7 @@ const postVolBreakRSIConfirmSafe =
 
   const fundingRate = await getFundingRate(sym);
 
-  return {sym,price,change,bull,prob,bias,structure,S:sw.S,R:sw.R,dailyRSI,rsi15,rsi15Momentum,volumeBreakout,
+  return {sym,price,change,bull,prob,bias,structure,structureType,S:sw.S,R:sw.R,dailyRSI,rsi15,rsi15Momentum,volumeBreakout,
   breakoutAge,volumeBreakoutType,fakeVolumeBreak,postVolBreakRSIConfirm: postVolBreakRSIConfirmSafe,
   domV,
   lastVol,mainTrend,volAI,fundingRate};
@@ -1397,6 +1404,7 @@ card.dataset.dailyrsi = d.dailyRSI?.label || "all";
   card.dataset.trend = d.mainTrend || "neutral";
   card.dataset.aitier = aiVerdict.tier;
 card.dataset.aiverdict = aiVerdict.verdict;
+  card.dataset.structure = d.structureType;
   
 
   // 🔔 SOUND ALERT — only on 24h volume breakout
