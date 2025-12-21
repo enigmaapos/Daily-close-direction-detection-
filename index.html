@@ -1324,8 +1324,10 @@ const bearishBreakAccepted =
   const structureType =
   structure.startsWith("support holding") ? "support holding" :
   structure.startsWith("support broken")  ? "support broken" :
+  structure.startsWith("support weak")    ? "support weak" :
   structure.startsWith("resistance failed") ? "resistance failed" :
   structure.startsWith("resistance broken") ? "resistance broken" :
+  structure.startsWith("resistance weak") ? "resistance weak" :
   "none";
 
 const postVolBreakRSIConfirmSafe =
