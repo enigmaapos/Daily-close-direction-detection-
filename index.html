@@ -722,51 +722,41 @@ function getAIFinalVerdict(d) {
   function getTradeSide(d){
   const trend = d.mainTrend;
   const volBias = d.volAI?.bias || "Neutral";
-  const structBias = getStructureDirectionalBias(
-    d.structureType,
-    d.structureQuality
-  );
+  const struct = d.structureType;
 
-  /* ⛔ Block on volume caution */
+  /* ⛔ hard blocks */
   if (volBias === "Caution" || volBias === "Neutral") {
     return "WAIT";
   }
 
-  /* 🟢 LONG — confirmed only */
+  /* 🟢 BULLISH SIDE */
   if (
     trend === "bullish" &&
     volBias === "Bullish" &&
     (
-      d.structureType === "support holding" ||
-      d.structureType === "resistance broken"
+      struct === "support holding" ||
+      struct === "resistance broken" ||
+      struct === "resistance weak"   // ✅ NEW: early bullish signal
     )
   ) {
     return "LONG";
   }
 
-  /* 🔵 BULLISH PRESSURE (PRE-BREAK) */
-  if (
-    trend === "bullish" &&
-    volBias === "Bullish" &&
-    d.structureType === "resistance weak"
-  ) {
-    return "WAIT"; // bullish bias, no entry yet
-  }
-
-  /* 🔴 SHORT — confirmed only */
+  /* 🔴 BEARISH SIDE */
   if (
     trend === "bearish" &&
     volBias === "Bearish" &&
     (
-      d.structureType === "support broken" ||
-      d.structureType === "resistance failed"
+      struct === "support broken" ||
+      struct === "resistance failed" ||
+      struct === "support weak"      // symmetric early bearish signal
     )
   ) {
     return "SHORT";
   }
 
   return "WAIT";
-}
+                    }
   
 
   function getStructureDirectionalBias(structureType, structureQuality){
