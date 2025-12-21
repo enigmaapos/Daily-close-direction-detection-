@@ -196,11 +196,6 @@ button.secondary{
   transform: translateY(-2px);
   box-shadow: 0 10px 26px rgba(0,0,0,.8);
 }
-
-  .wait {
-  color: var(--muted);
-  opacity: 0.7;
-  }
 </style>
 </head>
 
@@ -718,39 +713,22 @@ function getAIFinalVerdict(d) {
 }
 
   function getTradeSide(d){
-  const structure = d.structure || "";
-  const trend = d.mainTrend;
-  const momentum = d.rsi15Momentum;
-  const fakeVol = d.fakeVolumeBreak;
-  const ai = getAIFinalVerdict(d);
+  if (
+    d.mainTrend === "bullish" &&
+    (d.structure === "resistance broken" || d.structure === "support holding")
+  ) {
+    return "LONG";
+  }
 
-  // ❌ never trade weak tiers
-  if (ai.tier >= 3) return "WAIT";
-
-  /* ================= LONG ================= */
-  const longAllowed =
-    trend === "bullish" &&
-    structure.includes("accepted") &&
-    structure.includes("resistance broken") &&
-    momentum !== "decay" &&
-    momentum !== "loss" &&
-    !fakeVol;
-
-  if (longAllowed) return "LONG";
-
-  /* ================= SHORT ================= */
-  const shortAllowed =
-    trend === "bearish" &&
-    structure.includes("accepted") &&
-    structure.includes("support broken") &&
-    momentum !== "reclaim" &&
-    momentum !== "accel" &&
-    !fakeVol;
-
-  if (shortAllowed) return "SHORT";
+  if (
+    d.mainTrend === "bearish" &&
+    (d.structure === "support broken" || d.structure === "resistance failed")
+  ) {
+    return "SHORT";
+  }
 
   return "WAIT";
-}
+  }
   
 
   function computeMarketDominance(tickers){
@@ -1405,15 +1383,14 @@ const id = `card-${scope}-${d.sym}`;
 
   const fundingInfo = getFundingInfo(d.fundingRate);
 
-
   const aiVerdict = getAIFinalVerdict(d);
 
-const tradeSideClass =
+  const tradeSideClass =
   aiVerdict.tradeSide === "LONG"
     ? "bull"
     : aiVerdict.tradeSide === "SHORT"
     ? "bear"
-    : "wait";
+    : "neutral";
 
   
   card.dataset.bias = d.bias;
