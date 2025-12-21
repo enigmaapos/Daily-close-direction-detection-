@@ -722,10 +722,9 @@ function getAIFinalVerdict(d) {
   const trend = d.mainTrend;
   const momentum = d.rsi15Momentum;
   const fakeVol = d.fakeVolumeBreak;
-  const ai = getAIFinalVerdict(d);
 
-  // ❌ never trade weak tiers
-  if (ai.tier >= 3) return "WAIT";
+  // 🔒 HARD BLOCK — no trade if fake volume
+  if (fakeVol) return "WAIT";
 
   /* ================= LONG ================= */
   const longAllowed =
@@ -733,8 +732,7 @@ function getAIFinalVerdict(d) {
     structure.includes("accepted") &&
     structure.includes("resistance broken") &&
     momentum !== "decay" &&
-    momentum !== "loss" &&
-    !fakeVol;
+    momentum !== "loss";
 
   if (longAllowed) return "LONG";
 
@@ -744,8 +742,7 @@ function getAIFinalVerdict(d) {
     structure.includes("accepted") &&
     structure.includes("support broken") &&
     momentum !== "reclaim" &&
-    momentum !== "accel" &&
-    !fakeVol;
+    momentum !== "accel";
 
   if (shortAllowed) return "SHORT";
 
@@ -1421,13 +1418,13 @@ card.dataset.vol  = d.bull ? "bull" : "bear";
 card.dataset.prob = d.prob;
 card.dataset.change = d.change;
 card.dataset.price = d.price;
-card.dataset.structure = d.structure || "none";
+card.dataset.structure = d.structureType || "none";
 card.dataset.dailyrsi = d.dailyRSI?.label || "all";
   card.dataset.volbreak = d.volumeBreakout ? "yes" : "no";
   card.dataset.trend = d.mainTrend || "neutral";
   card.dataset.aitier = aiVerdict.tier;
 card.dataset.aiverdict = aiVerdict.verdict;
-  card.dataset.structure = d.structureType;
+  
   
 
   // 🔔 SOUND ALERT — only on 24h volume breakout
