@@ -1564,15 +1564,19 @@ if (d.volumeBreakout) {
   Main Trend: ${d.mainTrend.toUpperCase()}
 </div>
 
-  <div class="muted ${
+ <div class="muted ${
   d.emaShortBias === "bullish" ? "bull" :
   d.emaShortBias === "bearish" ? "bear" : "neutral"
 }">
-  📉 EMA14 / EMA21:
-  ${d.ema14.toFixed(4)} /
-  ${d.ema21.toFixed(4)}
-  ${d.emaShortCross === "bullish-cross" ? "⬆ Cross" :
-    d.emaShortCross === "bearish-cross" ? "⬇ Cross" : ""}
+  ${
+    d.emaShortBias === "bullish" ? "📈" :
+    d.emaShortBias === "bearish" ? "📉" : "➖"
+  }
+  Micro Trend: ${d.emaShortBias.toUpperCase()}
+  ${
+    d.emaShortCross === "bullish-cross" ? " ⬆ Cross" :
+    d.emaShortCross === "bearish-cross" ? " ⬇ Cross" : ""
+  }
 </div>
     
     ${d.dailyRSI ? `
