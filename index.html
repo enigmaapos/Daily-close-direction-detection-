@@ -707,44 +707,51 @@ function getAIFinalVerdict(d) {
     verdictClass: "verdict-avoid"
   };
 
+  if (t.tier >= 5) {
   return {
     verdict,
     tier: t.tier,
     tierLabel: t.label,
     verdictClass: t.verdictClass,
-    tradeSide: getTradeSide(d),
+    tradeSide: "WAIT",
     reason
   };
 }
 
   function getTradeSide(d){
   const structure = d.structure || "";
+  const type = d.structureType || "";
   const trend = d.mainTrend;
   const momentum = d.rsi15Momentum;
   const fakeVol = d.fakeVolumeBreak;
 
-  // 🔒 HARD BLOCK — no trade if fake volume
+  // ❌ hard blocks
   if (fakeVol) return "WAIT";
+  if (momentum === "loss" || momentum === "decay") return "WAIT";
 
   /* ================= LONG ================= */
-  const longAllowed =
+  if (
     trend === "bullish" &&
-    structure.includes("accepted") &&
-    structure.includes("resistance broken") &&
-    momentum !== "decay" &&
-    momentum !== "loss";
-
-  if (longAllowed) return "LONG";
+    (
+      structure.includes("resistance broken (accepted)") ||
+      type === "support holding"
+    ) &&
+    momentum !== "decay"
+  ) {
+    return "LONG";
+  }
 
   /* ================= SHORT ================= */
-  const shortAllowed =
+  if (
     trend === "bearish" &&
-    structure.includes("accepted") &&
-    structure.includes("support broken") &&
-    momentum !== "reclaim" &&
-    momentum !== "accel";
-
-  if (shortAllowed) return "SHORT";
+    (
+      structure.includes("support broken (accepted)") ||
+      type === "resistance failed"
+    ) &&
+    momentum !== "reclaim"
+  ) {
+    return "SHORT";
+  }
 
   return "WAIT";
 }
