@@ -1715,7 +1715,7 @@ if (sq !== "all" && c.dataset.structureQuality !== sq) ok = false;
     }
   
 /* ================= RENDER ================= */
-function renderCard(d, el, isFav=false){
+  function renderCard(d, el, isFav=false, skipFilter=false){
   const scope = el.id || "global";
 const id = `card-${scope}-${d.sym}`;
   let card = document.getElementById(id);
@@ -1728,7 +1728,7 @@ const id = `card-${scope}-${d.sym}`;
     el.appendChild(card);
   }
 
-  function renderCard(d, el, isFav=false, skipFilter=false){
+  
 
   const fundingInfo = getFundingInfo(d.fundingRate);
 
