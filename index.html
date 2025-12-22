@@ -1599,6 +1599,7 @@ const id = `card-${scope}-${d.sym}`;
   const fundingInfo = getFundingInfo(d.fundingRate);
 
   const aiVerdict = getAIFinalVerdict(d);
+  const executionZone = aiVerdict.executionZone;
 
   const tradeSideClass =
   aiVerdict.tradeSide === "LONG"
