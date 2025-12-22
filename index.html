@@ -1790,7 +1790,7 @@ ${d.volAI ? `
 <div class="muted ${tradeSideClass}">
   🎯 Trade Side: <b>${aiVerdict.tradeSide}</b>
 </div>
-`;
+
 
   <div class="muted ${
   executionZone === "ENTRY ZONE" ? "bull" :
@@ -1799,6 +1799,7 @@ ${d.volAI ? `
 }">
   🧭 Execution Zone: <b>${executionZone}</b>
 </div>
+`;
 
   applyFilters();
 }
