@@ -793,6 +793,18 @@ function getTradeSide(d){
     return "SHORT";
   }
 
+  /* ================= DISTRIBUTION / ACCUMULATION GUARD ================= */
+
+if (d.volAI?.meaning?.includes("Distribution")) {
+  if (d.mainTrend === "bullish") return "WAIT";   // pullback
+  if (d.mainTrend === "bearish") return "SHORT";  // continuation
+}
+
+if (d.volAI?.meaning?.includes("Accumulation")) {
+  if (d.mainTrend === "bearish") return "WAIT";   // pullback
+  if (d.mainTrend === "bullish") return "LONG";   // continuation
+}
+
   /* ================= CLIMAX OVERRIDE ================= */
 
 // ⛔ Buy climax → do NOT chase longs
@@ -864,6 +876,7 @@ if (
 
   const meaning = d.volAI?.meaning || "";
   const location = d.volAI?.location || "";
+  const trend = d.mainTrend || "neutral";
 
   /* ================= CLIMAX ================= */
   if (
@@ -873,38 +886,48 @@ if (
     return "WAIT";
   }
 
-  /* ================= SELL-SIDE EVENTS ================= */
-
-  // Distribution (sell into strength) → SHORT entry
+  /* ================= DISTRIBUTION ================= */
   if (meaning.includes("Distribution")) {
-    return tradeSide === "SHORT" ? "ENTRY ZONE" : "WAIT";
+    // 🔵 Bull trend → pullback
+    if (trend === "bullish") return "PULLBACK ZONE";
+
+    // 🔴 Bear trend → continuation short
+    if (trend === "bearish" && tradeSide === "SHORT")
+      return "ENTRY ZONE";
+
+    return "WAIT";
   }
 
-  // Sell exhaustion → LONG entry
-  if (meaning.includes("Sell exhaustion")) {
-    return tradeSide === "LONG" ? "ENTRY ZONE" : "WAIT";
-  }
-
-  /* ================= BUY-SIDE EVENTS ================= */
-
-  // Accumulation → LONG entry
+  /* ================= ACCUMULATION ================= */
   if (meaning.includes("Accumulation")) {
+    // 🔴 Bear trend → pullback
+    if (trend === "bearish") return "PULLBACK ZONE";
+
+    // 🔵 Bull trend → continuation long
+    if (trend === "bullish" && tradeSide === "LONG")
+      return "ENTRY ZONE";
+
+    return "WAIT";
+  }
+
+  /* ================= SELL EXHAUSTION ================= */
+  if (meaning.includes("Sell exhaustion")) {
+    // reversal logic
     return tradeSide === "LONG" ? "ENTRY ZONE" : "WAIT";
   }
 
-  // Buy exhaustion → SHORT entry
+  /* ================= BUY EXHAUSTION ================= */
   if (meaning.includes("Buy exhaustion")) {
     return tradeSide === "SHORT" ? "ENTRY ZONE" : "WAIT";
   }
 
   /* ================= NEUTRAL ================= */
-
   if (meaning === "Neutral" || location === "MID") {
     return "PULLBACK ZONE";
   }
 
   return "NO TRADE ZONE";
-}
+  }
   
 
   function getStructureDirectionalBias(structureType, structureQuality){
