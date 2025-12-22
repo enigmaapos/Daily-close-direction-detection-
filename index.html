@@ -790,6 +790,25 @@ function getTradeSide(d){
     return "SHORT";
   }
 
+  /* ================= CLIMAX OVERRIDE ================= */
+
+// ⛔ Buy climax → do NOT chase longs
+if (
+  d.volAI &&
+  d.volAI.meaning?.includes("Buy climax")
+) {
+  return "WAIT";
+}
+
+// ⛔ Sell climax → do NOT chase shorts
+if (
+  d.volAI &&
+  d.volAI.meaning?.includes("Sell exhaustion") === false &&
+  d.volAI.meaning?.includes("Sell climax")
+) {
+  return "WAIT";
+}
+
   /* ================= TREND ALIGNMENT ================= */
 
   if (trend === "bullish" && micro === "bullish") {
