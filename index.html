@@ -749,6 +749,9 @@ function withTier(verdict, reason, d){
   else
     trendAlignment = "pullback";
 
+  const tradeSide = getTradeSide(d);
+const executionZone = getExecutionZone(d, tradeSide);
+
   return {
     verdict,
     tier: t.tier,
@@ -759,6 +762,7 @@ function withTier(verdict, reason, d){
   ...d,
   aiVerdict: verdict
 }),
+    executionZone,
 
     mainTrend: d.mainTrend || "neutral",
     microTrend: d.emaShortBias || "neutral",
@@ -855,6 +859,43 @@ if (
 
   return "WAIT";
 }
+
+  function getExecutionZone(d, tradeSide) {
+  const volAI = d.volAI;
+  if (!tradeSide || tradeSide === "WAIT") return "NO TRADE ZONE";
+
+  const meaning = volAI?.meaning || "";
+  const location = volAI?.location || "";
+
+  /* ================= CLIMAX ================= */
+
+  if (
+    meaning.includes("Buy climax") ||
+    meaning.includes("Sell climax")
+  ) {
+    return "WAIT";
+  }
+
+  /* ================= DISTRIBUTION / ACCUMULATION ================= */
+
+  if (
+    meaning.includes("Distribution") ||
+    meaning.includes("Accumulation")
+  ) {
+    return "ENTRY ZONE";
+  }
+
+  /* ================= NEUTRAL / MID RANGE ================= */
+
+  if (
+    meaning === "Neutral" ||
+    location === "MID"
+  ) {
+    return "PULLBACK ZONE";
+  }
+
+  return "NO TRADE ZONE";
+  }
   
 
   function getStructureDirectionalBias(structureType, structureQuality){
@@ -1750,6 +1791,14 @@ ${d.volAI ? `
   🎯 Trade Side: <b>${aiVerdict.tradeSide}</b>
 </div>
 `;
+
+  <div class="muted ${
+  executionZone === "ENTRY ZONE" ? "bull" :
+  executionZone === "PULLBACK ZONE" ? "neutral" :
+  "bear"
+}">
+  🧭 Execution Zone: <b>${executionZone}</b>
+</div>
 
   applyFilters();
 }
