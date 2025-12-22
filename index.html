@@ -1337,8 +1337,6 @@ async function analyze(sym,change){
 
   const mappedK = mapKlines(k);
 
-// 🧠 24h Volume Location AI
-const volAI = detect24hVolumeLocationAI(mappedK, mainTrend);
 
   const c=k.map(x=>+x[4]),h=k.map(x=>+x[2]),l=k.map(x=>+x[3]),v=k.map(x=>+x[5]);
   const price=c.at(-1);
@@ -1405,6 +1403,12 @@ const mainTrend = getMainTrendOnly(
   k.map(x=>+x[1]), // opens
   h,
   l
+);
+
+  // 🧠 24h Volume Location AI
+  const volAI = detect24hVolumeLocationAI(
+  mappedK,
+  mainTrend || "neutral"
 );
 
 
