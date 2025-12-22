@@ -1646,24 +1646,29 @@ function applyFilters(){
   const ts = document.getElementById("filterTradeSide")?.value || "all";
   const ez = document.getElementById("filterExecution")?.value || "all";
 
-  document.querySelectorAll(".card").forEach(c=>{
-    let ok = true;
+  document.querySelectorAll(".card").forEach(c => {
 
-    if(b !== "all" && c.dataset.bias !== b) ok = false;
-    if(v !== "all" && c.dataset.vol !== v) ok = false;
-    if(p > 0 && +c.dataset.prob < p) ok = false;
-    if(r !== "all" && c.dataset.dailyrsi !== r) ok = false;
-    if (s !== "all" && c.dataset.structureType !== s) ok = false;
-if (sq !== "all" && c.dataset.structureQuality !== sq) ok = false;
-    if(vb !== "all" && c.dataset.volbreak !== vb) ok = false;
+  // ✅ SKIP MANUAL RESULTS
+  if (c.dataset.manual === "true") {
+    c.style.display = "";
+    return;
+  }
 
-    // 🤖 AI Verdict filter
-    if(av !== "all" && c.dataset.aiverdict !== av) ok = false;
-    if (ts !== "all" && c.dataset.tradeside !== ts) ok = false;
-    if (ez !== "all" && c.dataset.execution !== ez) ok = false;
+  let ok = true;
 
-    c.style.display = ok ? "" : "none";
-  });
+  if(b !== "all" && c.dataset.bias !== b) ok = false;
+  if(v !== "all" && c.dataset.vol !== v) ok = false;
+  if(p > 0 && +c.dataset.prob < p) ok = false;
+  if(r !== "all" && c.dataset.dailyrsi !== r) ok = false;
+  if(s !== "all" && c.dataset.structureType !== s) ok = false;
+  if(sq !== "all" && c.dataset.structureQuality !== sq) ok = false;
+  if(vb !== "all" && c.dataset.volbreak !== vb) ok = false;
+  if(av !== "all" && c.dataset.aiverdict !== av) ok = false;
+  if(ts !== "all" && c.dataset.tradeside !== ts) ok = false;
+  if(ez !== "all" && c.dataset.execution !== ez) ok = false;
+
+  c.style.display = ok ? "" : "none";
+});
 }
   
 
@@ -1785,6 +1790,10 @@ card.dataset.structureQuality =
   d.structure.includes("unaccepted") ? "unaccepted" :
   d.structure.includes("weak") ? "weak" :
   "none";
+
+    if (el.id === "searchGrid") {
+  card.dataset.manual = "true";
+    }
   
 
   // 🔔 SOUND ALERT — only on 24h volume breakout
