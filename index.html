@@ -883,7 +883,7 @@ const executionZone = getExecutionZone(d, tradeSide);
   function getExecutionZone(d, tradeSide){
   if (!tradeSide || tradeSide === "WAIT") return "NO TRADE ZONE";
 
-  const bias = d.bias || "";
+  const bias     = d.bias || "";
   const meaning  = d.volAI?.meaning || "";
   const location = d.volAI?.location || "";
 
@@ -895,19 +895,35 @@ const executionZone = getExecutionZone(d, tradeSide);
     return "NO TRADE ZONE";
   }
 
-  /* ================= TRAP ENTRIES ================= */
+  /* ================= TRAP ENTRIES (CONFIRMED ONLY) ================= */
 
-  // 🐻 Bear Trap → LONG entry
-  if (bias.includes("Bear Trap") && tradeSide === "LONG") {
+  // 🐻 Bear Trap → LONG (sell pressure FAILED)
+  if (
+    bias.includes("Bear Trap") &&
+    tradeSide === "LONG" &&
+    (
+      meaning.includes("Sell exhaustion") ||   // sellers failed
+      meaning.includes("Distribution")          // sell into strength failed
+    ) &&
+    location !== "MID"
+  ) {
     return "ENTRY ZONE";
   }
 
-  // 🐂 Bull Trap → SHORT entry
-  if (bias.includes("Bull Trap") && tradeSide === "SHORT") {
+  // 🐂 Bull Trap → SHORT (buy pressure FAILED)
+  if (
+    bias.includes("Bull Trap") &&
+    tradeSide === "SHORT" &&
+    (
+      meaning.includes("Buy exhaustion") ||     // buyers failed
+      meaning.includes("Buy climax") === false  // not a fresh climax
+    ) &&
+    location !== "MID"
+  ) {
     return "ENTRY ZONE";
   }
 
-  /* ================= DEFENSE ENTRIES ================= */
+  /* ================= DEFENSE ENTRIES (STRUCTURAL) ================= */
 
   // Bullish Defense → LONG entry
   if (bias === "Bullish Defense" && tradeSide === "LONG") {
@@ -919,22 +935,20 @@ const executionZone = getExecutionZone(d, tradeSide);
     return "ENTRY ZONE";
   }
 
-  /* ================= CONTINUATION (LATE) ================= */
+  /* ================= CONTINUATION (LATE ENTRY) ================= */
 
-  if (
-    bias.includes("Continuation")
-  ) {
+  if (bias.includes("Continuation")) {
     return "LATE ZONE";
   }
 
-  /* ================= NEUTRAL / PULLBACK ================= */
+  /* ================= PULLBACK / WAIT ================= */
 
   if (location === "MID" || bias === "Neutral") {
     return "PULLBACK ZONE";
   }
 
   return "NO TRADE ZONE";
-}
+  }
   
 
   function getStructureDirectionalBias(structureType){
