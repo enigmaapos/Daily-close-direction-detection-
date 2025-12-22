@@ -1921,160 +1921,153 @@ if (d.volumeBreakout) {
   d.bias,
   d.structure
 );
-  
-  
-  card.innerHTML = `
-    ${isFav
-      ? `<div class="close" onclick="removeFav('${d.sym}')">✖</div>`
-      : `<div class="star" onclick="addFav('${d.sym}')">⭐</div>`
+    
+
+card.innerHTML = `
+  ${isFav
+    ? `<div class="close" onclick="removeFav('${d.sym}')">✖</div>`
+    : `<div class="star" onclick="addFav('${d.sym}')">⭐</div>`
+  }
+
+  <b>${d.sym}</b>
+  <div class="muted">Price: ${d.price.toFixed(4)}</div>
+  <div class="muted ${d.change>=0?"bull":"bear"}">
+    24h Change: ${d.change.toFixed(2)}%
+  </div>
+
+  <div class="muted ${fundingInfo.cls}">
+    💸 Funding Fee: ${fundingInfo.label}
+  </div>
+
+  <hr style="opacity:.15">
+
+  <!-- ================= TREND STRUCTURE ================= -->
+  <div class="muted"><b>📈 Trend Structure</b></div>
+
+  <div class="muted ${
+    d.mainTrend === "bullish" ? "bull" :
+    d.mainTrend === "bearish" ? "bear" : "neutral"
+  }">
+    Main Trend: ${d.mainTrend.toUpperCase()}
+  </div>
+
+  <div class="muted ${
+    d.emaShortBias === "bullish" ? "bull" :
+    d.emaShortBias === "bearish" ? "bear" : "neutral"
+  }">
+    Micro Trend: ${d.emaShortBias.toUpperCase()}
+    ${
+      d.emaShortCross === "bullish-cross" ? " ⬆ Cross" :
+      d.emaShortCross === "bearish-cross" ? " ⬇ Cross" : ""
     }
-    <b>${d.sym}</b>
-    <div class="muted">Price: ${d.price.toFixed(4)}</div>
-    <div class="muted ${d.change>=0?"bull":"bear"}">
-      24h Change: ${d.change.toFixed(2)}%
-    </div>
-    
-    <div class="muted ${fundingInfo.cls}">
-  💸 Funding Fee: ${fundingInfo.label}
-</div>
-    
+  </div>
+
+  <div class="muted ${
+    structureBias === "bullish" ? "bull" :
+    structureBias === "bearish" ? "bear" : "neutral"
+  }">
+    Structure: ${d.structure}
+  </div>
+
+  ${d.dailyRSI ? `
     <div class="muted ${
-  d.mainTrend === "bullish" ? "bull" :
-  d.mainTrend === "bearish" ? "bear" : "neutral"
-}">
-  ${d.mainTrend === "bullish" ? "📈" :
-    d.mainTrend === "bearish" ? "📉" : "➖"}
-  Main Trend: ${d.mainTrend.toUpperCase()}
-</div>
-
- <div class="muted ${
-  d.emaShortBias === "bullish" ? "bull" :
-  d.emaShortBias === "bearish" ? "bear" : "neutral"
-}">
-  ${
-    d.emaShortBias === "bullish" ? "📈" :
-    d.emaShortBias === "bearish" ? "📉" : "➖"
-  }
-  Micro Trend: ${d.emaShortBias.toUpperCase()}
-  ${
-    d.emaShortCross === "bullish-cross" ? " ⬆ Cross" :
-    d.emaShortCross === "bearish-cross" ? " ⬇ Cross" : ""
-  }
-</div>
-    
-    ${d.dailyRSI ? `
-  <div class="muted ${
-    d.dailyRSI.value >= 50 ? "bull" :
-    d.dailyRSI.value <= 50 ? "bear" : "neutral"
-  }">
-    📅 Daily RSI14: ${d.dailyRSI.value}
-    <br>
-    <span class="muted">
-      ${d.dailyRSI.label} (Δ ${d.dailyRSI.diff})
-    </span>
-  </div>
-` : ""}
-
-${d.rsi15 !== null ? `
-  <div class="muted ${
-    d.rsi15 >= 60 ? "bull" :
-    d.rsi15 <= 40 ? "bear" : "neutral"
-  }">
-    ⏱ 15m RSI14: ${d.rsi15}
-  </div>
-` : ""}
-
-    <div class="muted ${d.bull?"bull":"bear"}">
-      ${d.bull?"Bullish":"Bearish"} Volume Control
-    </div>
-    
-      ${d.volumeBreakout ? `
-  <div class="muted ${
-    d.volumeBreakoutType.includes("Bull") ? "bull" : "bear"
-  }">
-    🔥 ${d.volumeBreakoutType}
-    <br>
-    <span class="muted">
-      15m: ${d.lastVol.toLocaleString()}
-      &nbsp;›&nbsp;
-      24h High: ${d.domV.toLocaleString()}
-    </span>
-  </div>
-` : `
-  <div class="muted neutral">
-    📊 No 24h Volume Breakout
-  </div>
-`}
-
-${d.postVolBreakRSIConfirm ? `
-  <div class="muted verdict-strong">
-    ✅ Post-Volume RSI Confirmation
-    <br>
-    <span class="muted">
-      RSI14 < 50 and turning up after 24h volume break
-    </span>
-  </div>
-` : ""}
-
-${d.volAI ? `
-  <div class="muted ${
-    d.volAI.bias === "Bullish" ? "bull" :
-    d.volAI.bias === "Bearish" ? "bear" : "neutral"
-  }">
-    🧠 24h Volume AI
-    <br>
-    <span class="muted">
-      ${d.volAI.color} candle · ${d.volAI.location} range
-    </span>
-    <br>
-    <span class="muted">
-      ${d.volAI.meaning}
-    </span>
-  </div>
-` : ""}
-
-<div class="muted neutral">
-  📦 Volume State: <b>${volumeStateLabel}</b>
-</div>
-
-    <div class="muted ${structureBias === "bullish" ? "bull" : structureBias === "bearish" ? "bear" : "neutral"}">
-  Structure: ${d.structure}
-</div>
-
-    <div class="prob ${
-      d.bias.includes("Bull")?"bull":
-      d.bias.includes("Bear")?"bear":"neutral"
+      d.dailyRSI.value >= 50 ? "bull" :
+      d.dailyRSI.value <= 50 ? "bear" : "neutral"
     }">
-      ${d.bias} — ${d.prob}%
+      📅 Daily RSI14: ${d.dailyRSI.value}
+      <br>
+      <span class="muted">
+        ${d.dailyRSI.label} (Δ ${d.dailyRSI.diff})
+      </span>
     </div>
-    ${d.S[0]?`<div class="muted bear">S1: ${d.S[0].toFixed(4)}</div>`:""}
-    ${d.S[1]?`<div class="muted bear">S2: ${d.S[1].toFixed(4)}</div>`:""}
-    ${d.R[0]?`<div class="muted bull">R1: ${d.R[0].toFixed(4)}</div>`:""}
-    ${d.R[1]?`<div class="muted bull">R2: ${d.R[1].toFixed(4)}</div>`:""}
+  ` : ""}
 
-    <hr style="opacity:.15">
+  <hr style="opacity:.15">
 
-<div class="muted ${aiVerdict.verdictClass}">
-  🧠 AI Verdict: <b>${aiVerdict.verdict}</b>
-</div>
+  <!-- ================= VOLUME STRUCTURE ================= -->
+  <div class="muted"><b>📦 Volume Structure</b></div>
 
-<div class="muted ${aiVerdict.verdictClass}">
-  ${aiVerdict.tierLabel}
-</div>
+  <div class="muted ${d.bull ? "bull" : "bear"}">
+    Dominant Volume: ${d.bull ? "BUYERS" : "SELLERS"}
+  </div>
 
-<div class="muted">
-  ${aiVerdict.reason}
-</div>
+  ${d.volAI ? `
+    <div class="muted ${
+      d.volAI.bias === "Bullish" ? "bull" :
+      d.volAI.bias === "Bearish" ? "bear" : "neutral"
+    }">
+      🧠 24h Volume AI
+      <br>
+      <span class="muted">
+        ${d.volAI.color} candle · ${d.volAI.location} range
+      </span>
+      <br>
+      <span class="muted">
+        ${d.volAI.meaning}
+      </span>
+    </div>
+  ` : ""}
 
-<div class="muted ${tradeSideClass}">
-  🎯 Trade Side: <b>${aiVerdict.tradeSide}</b>
-</div>
+  <div class="muted neutral">
+    Volume State: <b>${volumeStateLabel}</b>
+  </div>
 
+  ${d.volumeBreakout ? `
+    <div class="muted ${
+      d.volumeBreakoutType.includes("Bull") ? "bull" : "bear"
+    }">
+      🔥 ${d.volumeBreakoutType}
+      <br>
+      <span class="muted">
+        15m: ${d.lastVol.toLocaleString()}
+        &nbsp;›&nbsp;
+        24h High: ${d.domV.toLocaleString()}
+      </span>
+    </div>
+  ` : `
+    <div class="muted neutral">
+      📊 No 24h Volume Breakout
+    </div>
+  `}
 
- <div class="muted ${execClass}">
-  🧭 Execution Zone: <b>${executionZone}</b>
-</div>
+  <hr style="opacity:.15">
+
+  <!-- ================= CONFLUENCE / EXECUTION ================= -->
+  <div class="muted"><b>🧭 Confluence & Execution</b></div>
+
+  <div class="prob ${
+    d.bias.includes("Bull") ? "bull" :
+    d.bias.includes("Bear") ? "bear" : "neutral"
+  }">
+    ${d.bias} — ${d.prob}%
+  </div>
+
+  <div class="muted ${aiVerdict.verdictClass}">
+    🧠 AI Verdict: <b>${aiVerdict.verdict}</b>
+  </div>
+
+  <div class="muted ${aiVerdict.verdictClass}">
+    ${aiVerdict.tierLabel}
+  </div>
+
+  <div class="muted">
+    ${aiVerdict.reason}
+  </div>
+
+  <div class="muted ${tradeSideClass}">
+    🎯 Trade Side: <b>${aiVerdict.tradeSide}</b>
+  </div>
+
+  <div class="muted ${execClass}">
+    🧭 Execution Zone: <b>${executionZone}</b>
+  </div>
+
+  ${d.S[0]?`<div class="muted bear">S1: ${d.S[0].toFixed(4)}</div>`:""}
+  ${d.S[1]?`<div class="muted bear">S2: ${d.S[1].toFixed(4)}</div>`:""}
+  ${d.R[0]?`<div class="muted bull">R1: ${d.R[0].toFixed(4)}</div>`:""}
+  ${d.R[1]?`<div class="muted bull">R2: ${d.R[1].toFixed(4)}</div>`:""}
 `;
+    
 
   if (!skipFilter) {
   applyFilters();
