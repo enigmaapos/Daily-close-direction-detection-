@@ -776,31 +776,22 @@ function getTradeSide(d){
   const micro = d.emaShortBias;
   const volBias = d.volAI?.bias || "Neutral";
   const struct = d.structureType;
-  const verdict = d.aiVerdict || null;
+  const bias = d.bias || "";
 
-  /* ================= TRAP-DIRECTION OVERRIDE ================= */
+  /* ================= TRAP OVERRIDE (HIGHEST PRIORITY) ================= */
 
   // 🐻 BEAR TRAP → LONG
-  if (
-    d.bias === "Bear Trap Risk" &&
-    trend === "bullish" &&
-    micro === "bullish"
-  ) {
+  if (bias.includes("Bear Trap")) {
     return "LONG";
   }
 
   // 🐂 BULL TRAP → SHORT
-  if (
-    d.bias === "Bull Trap Risk" &&
-    trend === "bearish" &&
-    micro === "bearish"
-  ) {
+  if (bias.includes("Bull Trap")) {
     return "SHORT";
   }
 
-  /* ================= NORMAL TREND EXECUTION ================= */
+  /* ================= TREND ALIGNMENT ================= */
 
-  // Strong trend alignment (non-trap)
   if (trend === "bullish" && micro === "bullish") {
     return "LONG";
   }
@@ -809,10 +800,38 @@ function getTradeSide(d){
     return "SHORT";
   }
 
-  /* ================= VOLUME CAUTION ================= */
+  /* ================= VOLUME CAUTION (LOW PRIORITY) ================= */
 
   if (volBias === "Caution") {
     return "WAIT";
+  }
+
+  /* ================= STRUCTURE-BASED FALLBACK ================= */
+
+  if (
+    trend === "bullish" &&
+    volBias === "Bullish" &&
+    micro === "bullish" &&
+    (
+      struct === "support holding" ||
+      struct === "resistance broken" ||
+      struct === "resistance weak"
+    )
+  ) {
+    return "LONG";
+  }
+
+  if (
+    trend === "bearish" &&
+    volBias === "Bearish" &&
+    micro === "bearish" &&
+    (
+      struct === "support broken" ||
+      struct === "resistance failed" ||
+      struct === "support weak"
+    )
+  ) {
+    return "SHORT";
   }
 
   return "WAIT";
