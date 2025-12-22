@@ -218,7 +218,6 @@ button.secondary{
     <input
       type="checkbox"
       id="toggle24hVolume"
-      checked
     />
     🔥 Auto 24h Volume Break Scan
   </label>
@@ -414,7 +413,7 @@ let dailyRSIScanned = 0;
   let last24hVolumeBreakAt = 0;
   let pending24hVolumeScan = false;
   let statusLocked = false;
-  let auto24hVolumeEnabled = true; // ✅ default ON
+  let auto24hVolumeEnabled = false; // ✅ default ON
   
 
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
