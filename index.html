@@ -860,14 +860,12 @@ if (
 }
 
   function getExecutionZone(d, tradeSide) {
-  const volAI = d.volAI;
   if (!tradeSide || tradeSide === "WAIT") return "NO TRADE ZONE";
 
-  const meaning = volAI?.meaning || "";
-  const location = volAI?.location || "";
+  const meaning = d.volAI?.meaning || "";
+  const location = d.volAI?.location || "";
 
   /* ================= CLIMAX ================= */
-
   if (
     meaning.includes("Buy climax") ||
     meaning.includes("Sell climax")
@@ -875,26 +873,38 @@ if (
     return "WAIT";
   }
 
-  /* ================= DISTRIBUTION / ACCUMULATION ================= */
+  /* ================= SELL-SIDE EVENTS ================= */
 
-  if (
-    meaning.includes("Distribution") ||
-    meaning.includes("Accumulation")
-  ) {
-    return "ENTRY ZONE";
+  // Distribution (sell into strength) → SHORT entry
+  if (meaning.includes("Distribution")) {
+    return tradeSide === "SHORT" ? "ENTRY ZONE" : "WAIT";
   }
 
-  /* ================= NEUTRAL / MID RANGE ================= */
+  // Sell exhaustion → LONG entry
+  if (meaning.includes("Sell exhaustion")) {
+    return tradeSide === "LONG" ? "ENTRY ZONE" : "WAIT";
+  }
 
-  if (
-    meaning === "Neutral" ||
-    location === "MID"
-  ) {
+  /* ================= BUY-SIDE EVENTS ================= */
+
+  // Accumulation → LONG entry
+  if (meaning.includes("Accumulation")) {
+    return tradeSide === "LONG" ? "ENTRY ZONE" : "WAIT";
+  }
+
+  // Buy exhaustion → SHORT entry
+  if (meaning.includes("Buy exhaustion")) {
+    return tradeSide === "SHORT" ? "ENTRY ZONE" : "WAIT";
+  }
+
+  /* ================= NEUTRAL ================= */
+
+  if (meaning === "Neutral" || location === "MID") {
     return "PULLBACK ZONE";
   }
 
   return "NO TRADE ZONE";
-  }
+}
   
 
   function getStructureDirectionalBias(structureType, structureQuality){
