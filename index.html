@@ -805,106 +805,65 @@ const executionZone = getExecutionZone(d, tradeSide);
   };
 }
 
-/* ================= TRADE SIDE ================= */
 
-function getTradeSide(d){
-  const trend = d.mainTrend;
-  const micro = d.emaShortBias;
-  const volBias = d.volAI?.bias || "Neutral";
-  const struct = d.structureType;
-  const bias = d.bias || "";
+    function getTradeSide(d){
+  const trend   = d.mainTrend;
+  const micro   = d.emaShortBias;
+  const volAI   = d.volAI || {};
+  const meaning = volAI.meaning || "";
+  const bias    = d.bias || "";
 
-  /* ================= TRAP OVERRIDE (HIGHEST PRIORITY) ================= */
+  /* ================= 1. TRAP OVERRIDE (HIGHEST PRIORITY) ================= */
 
-  // 🐻 BEAR TRAP → LONG
-  if (bias.includes("Bear Trap")) {
-    return "LONG";
-  }
+  // 🐻 Bear Trap → LONG (bear pressure failed in bullish env)
+  if (bias.includes("Bear Trap")) return "LONG";
 
-  // 🐂 BULL TRAP → SHORT
-  if (bias.includes("Bull Trap")) {
-    return "SHORT";
-  }
+  // 🐂 Bull Trap → SHORT (bull pressure failed in bearish env)
+  if (bias.includes("Bull Trap")) return "SHORT";
 
-  /* ================= DISTRIBUTION / ACCUMULATION GUARD ================= */
+  /* ================= 2. CLIMAX BLOCK (DO NOT CHASE) ================= */
 
-if (d.volAI?.meaning?.includes("Distribution")) {
-  if (d.mainTrend === "bullish") return "WAIT";   // pullback
-  if (d.mainTrend === "bearish") return "SHORT";  // continuation
-}
-
-if (d.volAI?.meaning?.includes("Accumulation")) {
-  if (d.mainTrend === "bearish") return "WAIT";   // pullback
-  if (d.mainTrend === "bullish") return "LONG";   // continuation
-}
-
-  /* ================= CLIMAX OVERRIDE ================= */
-
-// ⛔ Buy climax → do NOT chase longs
-if (
-  d.volAI &&
-  d.volAI.meaning?.includes("Buy climax")
-) {
-  return "WAIT";
-}
-
-// ⛔ Sell climax → do NOT chase shorts
-if (
-  d.volAI &&
-  d.volAI.meaning?.includes("Sell exhaustion") === false &&
-  d.volAI.meaning?.includes("Sell climax")
-) {
-  return "WAIT";
-}
-
-  /* ================= TREND ALIGNMENT ================= */
-
-  if (trend === "bullish" && micro === "bullish") {
-    return "LONG";
-  }
-
-  if (trend === "bearish" && micro === "bearish") {
-    return "SHORT";
-  }
-
-  /* ================= VOLUME CAUTION (LOW PRIORITY) ================= */
-
-  if (volBias === "Caution") {
+  if (
+    meaning.includes("Buy climax") ||
+    meaning.includes("Sell climax")
+  ) {
     return "WAIT";
   }
 
-  /* ================= STRUCTURE-BASED FALLBACK ================= */
+  /* ================= 3. DISTRIBUTION / ACCUMULATION ================= */
 
-  if (
-    trend === "bullish" &&
-    volBias === "Bullish" &&
-    micro === "bullish" &&
-    (
-      struct === "support holding" ||
-      struct === "resistance broken" ||
-      struct === "resistance weak"
-    )
-  ) {
-    return "LONG";
+  // Distribution = sell into strength
+  if (meaning.includes("Distribution")) {
+    return trend === "bearish" ? "SHORT" : "WAIT";
   }
 
-  if (
-    trend === "bearish" &&
-    volBias === "Bearish" &&
-    micro === "bearish" &&
-    (
-      struct === "support broken" ||
-      struct === "resistance failed" ||
-      struct === "support weak"
-    )
-  ) {
-    return "SHORT";
+  // Accumulation = buy into weakness
+  if (meaning.includes("Accumulation")) {
+    return trend === "bullish" ? "LONG" : "WAIT";
   }
+
+  /* ================= 4. EXHAUSTION ================= */
+
+  // Sell exhaustion → buyers take control
+  if (meaning.includes("Sell exhaustion")) {
+    return trend === "bullish" ? "LONG" : "WAIT";
+  }
+
+  // Buy exhaustion → sellers take control
+  if (meaning.includes("Buy exhaustion")) {
+    return trend === "bearish" ? "SHORT" : "WAIT";
+  }
+
+  /* ================= 5. TREND + MICRO ALIGNMENT ================= */
+
+  if (trend === "bullish" && micro === "bullish") return "LONG";
+  if (trend === "bearish" && micro === "bearish") return "SHORT";
 
   return "WAIT";
-}
+    }
+  
 
-  function getExecutionZone(d, tradeSide) {
+  function getExecutionZone(d, tradeSide){
   if (!tradeSide || tradeSide === "WAIT") return "NO TRADE ZONE";
 
   const meaning  = d.volAI?.meaning || "";
@@ -918,37 +877,45 @@ if (
     return "NO TRADE ZONE";
   }
 
-  /* ================= DISTRIBUTION ================= */
-  if (meaning.includes("Distribution") && location === "HIGH") {
-    return "ENTRY ZONE";
-  }
+  /* ================= ENTRY ZONES ================= */
 
-  /* ================= ACCUMULATION ================= */
-  if (meaning.includes("Accumulation") && location === "LOW") {
-    return "ENTRY ZONE";
-  }
-
-  /* ================= EXHAUSTION ================= */
+  // Distribution at HIGH → SHORT entry (bearish env)
   if (
-    meaning.includes("Sell exhaustion") ||
-    meaning.includes("Buy exhaustion")
+    tradeSide === "SHORT" &&
+    meaning.includes("Distribution") &&
+    location === "HIGH"
   ) {
     return "ENTRY ZONE";
   }
 
-  /* ================= NEUTRAL ================= */
-  if (meaning === "Neutral" || location === "MID") {
+  // Accumulation at LOW → LONG entry (bullish env)
+  if (
+    tradeSide === "LONG" &&
+    meaning.includes("Accumulation") &&
+    location === "LOW"
+  ) {
+    return "ENTRY ZONE";
+  }
+
+  // Exhaustion → reversal entry
+  if (
+    (tradeSide === "LONG"  && meaning.includes("Sell exhaustion")) ||
+    (tradeSide === "SHORT" && meaning.includes("Buy exhaustion"))
+  ) {
+    return "ENTRY ZONE";
+  }
+
+  /* ================= PULLBACK ================= */
+
+  if (location === "MID" || meaning === "Neutral") {
     return "PULLBACK ZONE";
   }
 
   return "NO TRADE ZONE";
-}
+  }
   
 
-  function getStructureDirectionalBias(structureType, structureQuality){
-  if (structureType === "resistance weak") return "bullish";
-  if (structureType === "support weak") return "bearish";
-
+  function getStructureDirectionalBias(structureType){
   if (
     structureType === "resistance broken" ||
     structureType === "support holding"
@@ -960,7 +927,7 @@ if (
   ) return "bearish";
 
   return "neutral";
-  }
+}
   
 
   function computeMarketDominance(tickers){
@@ -1512,7 +1479,7 @@ const sw = {
   const rsi15Momentum = getRSI15Momentum(rsi15Arr);
 
   
-    const bullishBreakAccepted =
+   const bullishBreakAccepted =
   rb &&
   rsi15 !== null &&
   !rsi50State.consistentlyBelow50 &&
@@ -1524,14 +1491,14 @@ const bearishBreakAccepted =
   !rsi50State.consistentlyAbove50 &&
   !rsi15Rising;
 
-  let bias = "Neutral";
+let bias = "Neutral";
 let prob = 50;
 let structure = "none";
 
 /* ================= BULLISH ENVIRONMENT ================= */
 if (mainTrend === "bullish") {
 
-  // ▶ Break above resistance
+  /* ▶ Resistance break */
   if (rb) {
     if (bullishBreakAccepted) {
       bias = "Bullish Continuation";
@@ -1544,8 +1511,8 @@ if (mainTrend === "bullish") {
     }
   }
 
-  // ▶ Defense at support
-  else if (sw.S.length) {
+  /* ▶ Support defense */
+  else if (sw.S.length && !sb) {
     if (!rsi50State.consistentlyBelow50) {
       bias = "Bullish Defense";
       prob = 75;
@@ -1561,7 +1528,7 @@ if (mainTrend === "bullish") {
 /* ================= BEARISH ENVIRONMENT ================= */
 else if (mainTrend === "bearish") {
 
-  // ▶ Break below support
+  /* ▶ Support break */
   if (sb) {
     if (bearishBreakAccepted) {
       bias = "Bearish Continuation";
@@ -1574,8 +1541,8 @@ else if (mainTrend === "bearish") {
     }
   }
 
-  // ▶ Defense at resistance
-  else if (sw.R.length) {
+  /* ▶ Resistance defense */
+  else if (sw.R.length && !rb) {
     if (!rsi50State.consistentlyAbove50) {
       bias = "Bearish Defense";
       prob = 75;
@@ -1593,19 +1560,25 @@ else {
   bias = "Neutral";
   prob = 40;
   structure = "none";
-  }
+}
 
-  const structureHolding =
-  (mainTrend === "bullish" && !structure.startsWith("support broken")) ||
-  (mainTrend === "bearish" && !structure.startsWith("resistance broken"));
+/* ================= STRUCTURE HOLDING ================= */
+const structureHolding =
+  (mainTrend === "bullish" &&
+    !structure.startsWith("support broken") &&
+    !structure.startsWith("resistance failed")) ||
+  (mainTrend === "bearish" &&
+    !structure.startsWith("resistance broken") &&
+    !structure.startsWith("support holding"));
 
-  const structureType =
-  structure.startsWith("support holding")     ? "support holding" :
-  structure.startsWith("support broken")      ? "support broken" :
-  structure.startsWith("support weak")        ? "support weak" :
-  structure.startsWith("resistance failed")   ? "resistance failed" :
-  structure.startsWith("resistance broken")   ? "resistance broken" :
-  structure.startsWith("resistance weak")     ? "resistance weak" :
+/* ================= STRUCTURE TYPE ================= */
+const structureType =
+  structure.startsWith("support holding")   ? "support holding" :
+  structure.startsWith("support broken")    ? "support broken" :
+  structure.startsWith("support weak")      ? "support weak" :
+  structure.startsWith("resistance failed") ? "resistance failed" :
+  structure.startsWith("resistance broken") ? "resistance broken" :
+  structure.startsWith("resistance weak")   ? "resistance weak" :
   "none";
 
 const postVolBreakRSIConfirmSafe =
