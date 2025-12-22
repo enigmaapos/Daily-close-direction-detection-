@@ -1385,28 +1385,31 @@ async function getDailyRSIContext(sym){
   };
 }
 
+  
   function getVolumeStateLabel(d) {
   const structure = d.structure || "";
-  const volAI = d.volAI || {};
-  const dominantBuy = d.bull === true;
-  const dominantSell = d.bull === false;
+  const dominantBuy  = d.bull === true;   // dominant green volume
+  const dominantSell = d.bull === false;  // dominant red volume
 
   /* ================= BUY-SIDE DOMINANT ================= */
   if (dominantBuy) {
 
-    // Buyers defending downside
+    // Buyers absorbing sell pressure at support
     if (structure.includes("support holding"))
       return "🟢 Buy-Side Defense (Demand Absorbing)";
 
-    // Buyers accepted higher prices
-    if (structure.includes("resistance broken") && structure.includes("accepted"))
+    // Buyers successfully accepted higher prices
+    if (
+      structure.includes("resistance broken") &&
+      structure.includes("accepted")
+    )
       return "🟢 Buy-Side Acceptance (Continuation)";
 
-    // Buyers losing momentum
+    // Buyers pushing but momentum is weakening
     if (structure.includes("support weak"))
       return "🟡 Buy-Side Pressure Weakening";
 
-    // Buyers failing at resistance
+    // Buyers failing to push through resistance
     if (structure.includes("resistance weak"))
       return "🟡 Buy-Side Rejection Risk";
 
@@ -1416,19 +1419,22 @@ async function getDailyRSIContext(sym){
   /* ================= SELL-SIDE DOMINANT ================= */
   if (dominantSell) {
 
-    // Sellers defending upside
+    // Sellers absorbing buy pressure at resistance
     if (structure.includes("resistance failed"))
       return "🔴 Sell-Side Defense (Supply Absorbing)";
 
-    // Sellers accepted lower prices
-    if (structure.includes("support broken") && structure.includes("accepted"))
+    // Sellers successfully accepted lower prices
+    if (
+      structure.includes("support broken") &&
+      structure.includes("accepted")
+    )
       return "🔴 Sell-Side Acceptance (Continuation)";
 
-    // Sellers losing momentum
+    // Sellers pushing but momentum is weakening
     if (structure.includes("resistance weak"))
       return "🟡 Sell-Side Pressure Weakening";
 
-    // Sellers failing at support
+    // Sellers failing to push through support
     if (structure.includes("support weak"))
       return "🟡 Sell-Side Rejection Risk";
 
@@ -1437,6 +1443,7 @@ async function getDailyRSIContext(sym){
 
   return "⚪ Neutral Volume";
 }
+  
 
 /* ================= ANALYZE ================= */
 async function analyze(sym,change){
