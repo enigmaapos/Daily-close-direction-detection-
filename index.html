@@ -876,10 +876,8 @@ if (
 
   const meaning  = d.volAI?.meaning || "";
   const location = d.volAI?.location || "";
-  const trend    = d.mainTrend || "neutral";
 
-  /* ================= CLIMAX (ALWAYS WAIT) ================= */
-
+  /* ================= CLIMAX ================= */
   if (
     meaning.includes("Buy climax") ||
     meaning.includes("Sell climax")
@@ -887,42 +885,25 @@ if (
     return "NO TRADE ZONE";
   }
 
-  /* ================= DISTRIBUTION (RED + HIGH) ================= */
-  // 🔴 Active selling at highs → ENTRY
-  // Trend-aligned = continuation
-  // Counter-trend = trap entry
-
-  if (meaning.includes("Distribution")) {
-    if (location === "HIGH") {
-      return "ENTRY ZONE";
-    }
+  /* ================= DISTRIBUTION ================= */
+  if (meaning.includes("Distribution") && location === "HIGH") {
+    return "ENTRY ZONE";
   }
 
-  /* ================= ACCUMULATION (GREEN + LOW) ================= */
-  // 🟢 Active buying at lows → ENTRY
-  // Trend-aligned = continuation
-  // Counter-trend = trap entry
-
-  if (meaning.includes("Accumulation")) {
-    if (location === "LOW") {
-      return "ENTRY ZONE";
-    }
+  /* ================= ACCUMULATION ================= */
+  if (meaning.includes("Accumulation") && location === "LOW") {
+    return "ENTRY ZONE";
   }
 
-  /* ================= EXHAUSTION (REVERSAL ENTRIES) ================= */
-
-  // Sell exhaustion → LONG reversal
-  if (meaning.includes("Sell exhaustion")) {
-    return tradeSide === "LONG" ? "ENTRY ZONE" : "WAIT";
+  /* ================= EXHAUSTION ================= */
+  if (
+    meaning.includes("Sell exhaustion") ||
+    meaning.includes("Buy exhaustion")
+  ) {
+    return "ENTRY ZONE";
   }
 
-  // Buy exhaustion → SHORT reversal
-  if (meaning.includes("Buy exhaustion")) {
-    return tradeSide === "SHORT" ? "ENTRY ZONE" : "WAIT";
-  }
-
-  /* ================= NEUTRAL / MID ================= */
-
+  /* ================= NEUTRAL ================= */
   if (meaning === "Neutral" || location === "MID") {
     return "PULLBACK ZONE";
   }
@@ -1685,6 +1666,13 @@ const id = `card-${scope}-${d.sym}`;
   const aiVerdict = getAIFinalVerdict(d);
   const executionZone = aiVerdict.executionZone;
 
+  const execColor =
+  aiVerdict.tradeSide === "LONG"
+    ? "bull"
+    : aiVerdict.tradeSide === "SHORT"
+    ? "bear"
+    : "neutral";
+
   const tradeSideClass =
   aiVerdict.tradeSide === "LONG"
     ? "bull"
@@ -1876,11 +1864,7 @@ ${d.volAI ? `
 </div>
 
 
-  <div class="muted ${
-  executionZone === "ENTRY ZONE" ? "bull" :
-  executionZone === "PULLBACK ZONE" ? "neutral" :
-  "bear"
-}">
+ <div class="muted ${execColor}">
   🧭 Execution Zone: <b>${executionZone}</b>
 </div>
 `;
