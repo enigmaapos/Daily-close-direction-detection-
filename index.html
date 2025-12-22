@@ -331,6 +331,16 @@ button.secondary{
   <option value="WAIT">WAIT</option>
   </select>
   </div>
+
+  <div class="row filter-box">
+  <select id="filterExecution">
+    <option value="all">All Execution Zones</option>
+    <option value="ENTRY ZONE">ENTRY ZONE</option>
+    <option value="LATE ZONE">LATE ZONE</option>
+    <option value="PULLBACK ZONE">PULLBACK ZONE</option>
+    <option value="NO TRADE ZONE">NO TRADE ZONE</option>
+  </select>
+  </div>
   
 <!-- SORT + RESET ROW -->
 <div class="row">
@@ -1613,6 +1623,7 @@ function applyFilters(){
   const av = document.getElementById("filterAIVerdict")?.value || "all";
   const sq = document.getElementById("filterStructureQuality")?.value || "all";
   const ts = document.getElementById("filterTradeSide")?.value || "all";
+  const ez = document.getElementById("filterExecution")?.value || "all";
 
   document.querySelectorAll(".card").forEach(c=>{
     let ok = true;
@@ -1628,6 +1639,7 @@ if (sq !== "all" && c.dataset.structureQuality !== sq) ok = false;
     // 🤖 AI Verdict filter
     if(av !== "all" && c.dataset.aiverdict !== av) ok = false;
     if (ts !== "all" && c.dataset.tradeside !== ts) ok = false;
+    if (ez !== "all" && c.dataset.execution !== ez) ok = false;
 
     c.style.display = ok ? "" : "none";
   });
@@ -1644,6 +1656,7 @@ if (sq !== "all" && c.dataset.structureQuality !== sq) ok = false;
   document.getElementById("filterAIVerdict").value = "all"; // 👈 ADD
            document.getElementById("filterStructureQuality").value = "all";
            document.getElementById("filterTradeSide").value = "all";
+           document.getElementById("filterExecution").value = "all";
 
   applyFilters();
 
@@ -1727,6 +1740,7 @@ card.dataset.dailyrsi = d.dailyRSI?.label || "all";
 card.dataset.aiverdict = aiVerdict.verdict;
   card.dataset.structureType = d.structureType;
   card.dataset.tradeside = aiVerdict.tradeSide;
+  card.dataset.execution = executionZone;
 
 card.dataset.structureQuality =
   d.structure.includes("accepted") ? "accepted" :
@@ -2298,7 +2312,8 @@ async function runSearch(){
   "filterStructureQuality",
   "filterVolBreak",
   "filterAIVerdict",  // 👈 ADD THIS
-  "filterTradeSide"
+  "filterTradeSide",
+  "filterExecution"
 ].forEach(id=>{
   document.getElementById(id).addEventListener("change", applyFilters);
 });
