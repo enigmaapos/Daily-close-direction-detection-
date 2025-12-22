@@ -196,6 +196,13 @@ button.secondary{
   transform: translateY(-2px);
   box-shadow: 0 10px 26px rgba(0,0,0,.8);
 }
+
+  .exec-entry-long { color: var(--bull); font-weight:700; }
+.exec-entry-short{ color: var(--bear); font-weight:700; }
+
+.exec-pullback   { color: var(--neutral); }
+.exec-late       { color: var(--accent); }   /* blue */
+.exec-no-trade   { color: var(--muted); }
 </style>
 </head>
 
@@ -1712,12 +1719,26 @@ const id = `card-${scope}-${d.sym}`;
   const aiVerdict = getAIFinalVerdict(d);
   const executionZone = aiVerdict.executionZone;
 
-  const execColor =
-  aiVerdict.tradeSide === "LONG"
-    ? "bull"
-    : aiVerdict.tradeSide === "SHORT"
-    ? "bear"
-    : "neutral";
+  function getExecutionClass(zone, side){
+  if (zone === "ENTRY ZONE") {
+    return side === "LONG"
+      ? "exec-entry-long"
+      : side === "SHORT"
+      ? "exec-entry-short"
+      : "exec-no-trade";
+  }
+
+  if (zone === "PULLBACK ZONE") return "exec-pullback";
+  if (zone === "LATE ZONE")     return "exec-late";
+  if (zone === "NO TRADE ZONE") return "exec-no-trade";
+
+  return "exec-no-trade";
+}
+
+  const execClass = getExecutionClass(
+  executionZone,
+  aiVerdict.tradeSide
+);
 
   const tradeSideClass =
   aiVerdict.tradeSide === "LONG"
@@ -1911,7 +1932,7 @@ ${d.volAI ? `
 </div>
 
 
- <div class="muted ${execColor}">
+ <div class="muted ${execClass}">
   🧭 Execution Zone: <b>${executionZone}</b>
 </div>
 `;
