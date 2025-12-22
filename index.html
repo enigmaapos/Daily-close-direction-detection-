@@ -1511,7 +1511,8 @@ const sw = {
 
   const rsi15Momentum = getRSI15Momentum(rsi15Arr);
 
-  const bullishBreakAccepted =
+  
+    const bullishBreakAccepted =
   rb &&
   rsi15 !== null &&
   !rsi50State.consistentlyBelow50 &&
@@ -1523,67 +1524,88 @@ const bearishBreakAccepted =
   !rsi50State.consistentlyAbove50 &&
   !rsi15Rising;
 
-  let bias="Neutral",prob=50,structure="none";
-  if(bull){
-   if (rb) {
-  if (bullishBreakAccepted) {
-    bias = "Bullish Continuation";
-    prob = 90;
-    structure = "resistance broken (accepted)";
-  } else {
-    bias = "Bull Trap Risk";
-    prob = 55;
-    structure = "resistance broken (unaccepted)";
+  let bias = "Neutral";
+let prob = 50;
+let structure = "none";
+
+/* ================= BULLISH ENVIRONMENT ================= */
+if (mainTrend === "bullish") {
+
+  // ▶ Break above resistance
+  if (rb) {
+    if (bullishBreakAccepted) {
+      bias = "Bullish Continuation";
+      prob = 90;
+      structure = "resistance broken (accepted)";
+    } else {
+      bias = "Bull Trap Risk";
+      prob = 55;
+      structure = "resistance broken (unaccepted)";
+    }
+  }
+
+  // ▶ Defense at support
+  else if (sw.S.length) {
+    if (!rsi50State.consistentlyBelow50) {
+      bias = "Bullish Defense";
+      prob = 75;
+      structure = "support holding (confirmed)";
+    } else {
+      bias = "Bull Trap Risk";
+      prob = 45;
+      structure = "support weak (RSI pressure)";
+    }
   }
 }
-    else if (sw.S.length) {
-  if (!rsi50State.consistentlyBelow50) {
-    bias = "Bullish Defense";
-    prob = 75;
-    structure = "support holding (confirmed)";
-  } else {
-    bias = "Bull Trap Risk";
-    prob = 45;
-    structure = "support weak (RSI pressure)";
+
+/* ================= BEARISH ENVIRONMENT ================= */
+else if (mainTrend === "bearish") {
+
+  // ▶ Break below support
+  if (sb) {
+    if (bearishBreakAccepted) {
+      bias = "Bearish Continuation";
+      prob = 90;
+      structure = "support broken (accepted)";
+    } else {
+      bias = "Bear Trap Risk";
+      prob = 55;
+      structure = "support broken (unaccepted)";
+    }
+  }
+
+  // ▶ Defense at resistance
+  else if (sw.R.length) {
+    if (!rsi50State.consistentlyAbove50) {
+      bias = "Bearish Defense";
+      prob = 75;
+      structure = "resistance failed (confirmed)";
+    } else {
+      bias = "Bear Trap Risk";
+      prob = 45;
+      structure = "resistance weak (RSI pressure)";
+    }
   }
 }
-  }else{
-    if (sb) {
-  if (bearishBreakAccepted) {
-    bias = "Bearish Continuation";
-    prob = 90;
-    structure = "support broken (accepted)";
-  } else {
-    bias = "Bear Trap Risk";
-    prob = 55;
-    structure = "support broken (unaccepted)";
-  }
-}
-    else if (sw.R.length) {
-  if (!rsi50State.consistentlyAbove50) {
-    bias = "Bearish Defense";
-    prob = 75;
-    structure = "resistance failed (confirmed)";
-  } else {
-    bias = "Bear Trap Risk";
-    prob = 45;
-    structure = "resistance weak (RSI pressure)";
-  	}
-  }
-    else{bias="Bear Trap Risk";prob=40;}
+
+/* ================= NO STRUCTURE ================= */
+else {
+  bias = "Neutral";
+  prob = 40;
+  structure = "none";
   }
 
   const structureHolding =
-  (mainTrend === "bullish" && structure !== "support broken") ||
-  (mainTrend === "bearish" && structure !== "resistance broken");
+  (mainTrend === "bullish" && !structure.startsWith("support broken")) ||
+  (mainTrend === "bearish" && !structure.startsWith("resistance broken"));
 
   const structureType =
-  structure.startsWith("support holding") ? "support holding" :
-  structure.startsWith("support broken")  ? "support broken" :
-  structure.startsWith("support weak")    ? "support weak" :
-  structure.startsWith("resistance failed") ? "resistance failed" :
-  structure.startsWith("resistance broken") ? "resistance broken" :
-  structure.startsWith("resistance weak") ? "resistance weak" :
+  structure.startsWith("support holding")     ? "support holding" :
+  structure.startsWith("support broken")      ? "support broken" :
+  structure.startsWith("support weak")        ? "support weak" :
+  structure.startsWith("resistance failed")   ? "resistance failed" :
+  structure.startsWith("resistance broken")   ? "resistance broken" :
+  structure.startsWith("resistance weak")     ? "resistance weak" :
   "none";
 
 const postVolBreakRSIConfirmSafe =
