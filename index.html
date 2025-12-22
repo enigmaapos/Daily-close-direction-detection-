@@ -1219,7 +1219,7 @@ async function getDailyRSIContext(sym){
     : "bearish";
   }
 
-  function detect24hVolumeLocationAI(klines){
+  function detect24hVolumeLocationAI(klines, mainTrend = "neutral") {
   if (!klines || klines.length < 96) return null;
 
   const last24h = klines.slice(-96).map(c => ({
@@ -1250,38 +1250,84 @@ async function getDailyRSIContext(sym){
   const range = dayHigh - dayLow;
   const mid = dayLow + range * 0.5;
 
-  let location = 'MID';
-  if (top.high <= mid) location = 'LOW';
-  else if (top.low >= mid) location = 'HIGH';
+  let location = "MID";
+  if (top.high <= mid) location = "LOW";
+  else if (top.low >= mid) location = "HIGH";
 
-  let meaning = 'Neutral';
-  let bias = 'Neutral';
+  let meaning = "Neutral";
+  let bias = "Neutral";
+  let intent = "Neutral";
+  let futureOutcome = "Neutral";
 
-  if (isRed && location === 'LOW') {
-    meaning = 'Sell exhaustion → bullish';
-    bias = 'Bullish';
-  } else if (isRed && location === 'HIGH') {
-    meaning = 'Distribution → bearish';
-    bias = 'Bearish';
-  } else if (isGreen && location === 'LOW') {
-    meaning = 'Initiative buying → bullish';
-    bias = 'Bullish';
-  } else if (isGreen && location === 'HIGH') {
-    meaning = 'Buy climax → caution';
-    bias = 'Caution';
+  /* ================= BULLISH ENVIRONMENT ================= */
+  if (mainTrend === "bullish") {
+    if (location === "LOW" && isGreen) {
+      meaning = "Initiative buying";
+      intent = "Bullish";
+      bias = "Bullish";
+      futureOutcome = "Continuation";
+    }
+    else if (location === "LOW" && isRed) {
+      meaning = "Initiative selling";
+      intent = "Bearish";
+      bias = "Bearish";
+      futureOutcome = "Trap / Reversal Risk";
+    }
+    else if (location === "HIGH" && isRed) {
+      meaning = "Distribution";
+      intent = "Bearish";
+      bias = "Bearish";
+      futureOutcome = "Bullish Pullback";
+    }
+    else if (location === "HIGH" && isGreen) {
+      meaning = "Buy climax";
+      intent = "Bullish";
+      bias = "Caution";
+      futureOutcome = "Reversal Risk";
+    }
+  }
+
+  /* ================= BEARISH ENVIRONMENT ================= */
+  else if (mainTrend === "bearish") {
+    if (location === "HIGH" && isRed) {
+      meaning = "Initiative selling";
+      intent = "Bearish";
+      bias = "Bearish";
+      futureOutcome = "Continuation";
+    }
+    else if (location === "HIGH" && isGreen) {
+      meaning = "Short covering";
+      intent = "Bullish";
+      bias = "Bearish";
+      futureOutcome = "Bearish Continuation";
+    }
+    else if (location === "LOW" && isGreen) {
+      meaning = "Accumulation attempt";
+      intent = "Bullish";
+      bias = "Bearish";
+      futureOutcome = "Bearish Continuation";
+    }
+    else if (location === "LOW" && isRed) {
+      meaning = "Sell climax";
+      intent = "Bearish";
+      bias = "Caution";
+      futureOutcome = "Bounce Risk";
+    }
   }
 
   return {
-    color: isRed ? 'RED' : 'GREEN',
+    color: isRed ? "RED" : "GREEN",
     location,
     meaning,
+    intent,
     bias,
+    futureOutcome,
     volume: top.baseVol,
     time: top.openTime,
     high: top.high,
     low: top.low
   };
-  }
+}
 
 
 /* ================= ANALYZE ================= */
@@ -1292,7 +1338,7 @@ async function analyze(sym,change){
   const mappedK = mapKlines(k);
 
 // 🧠 24h Volume Location AI
-const volAI = detect24hVolumeLocationAI(mappedK);
+const volAI = detect24hVolumeLocationAI(mappedK, mainTrend);
 
   const c=k.map(x=>+x[4]),h=k.map(x=>+x[2]),l=k.map(x=>+x[3]),v=k.map(x=>+x[5]);
   const price=c.at(-1);
