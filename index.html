@@ -1385,6 +1385,32 @@ async function getDailyRSIContext(sym){
   };
 }
 
+  function getVolumeStateLabel(bias, structure) {
+
+  // BUY-SIDE
+  if (structure.includes("support holding"))
+    return "🟢 Buy-Side Defense (Volume Holding)";
+
+  if (structure.includes("resistance broken") && structure.includes("accepted"))
+    return "🟢 Buy-Side Acceptance";
+
+  if (structure.includes("support weak"))
+    return "🟡 Buy-Side Pressure Weakening";
+
+
+  // SELL-SIDE
+  if (structure.includes("resistance failed"))
+    return "🔴 Sell-Side Defense (Supply Holding)";
+
+  if (structure.includes("support broken") && structure.includes("accepted"))
+    return "🔴 Sell-Side Acceptance";
+
+  if (structure.includes("resistance weak"))
+    return "🟡 Sell-Side Pressure Weakening";
+
+
+  return "⚪ Neutral Volume";
+  }
 
 /* ================= ANALYZE ================= */
 async function analyze(sym,change){
@@ -1613,6 +1639,55 @@ else {
   structure = "none";
 }
 
+      if(bull){
+   if (rb) {
+  if (bullishBreakAccepted) {
+    bias = "Bullish Continuation";
+    prob = 90;
+    structure = "resistance broken (accepted)";
+  } else {
+    bias = "Bull Trap Risk";
+    prob = 55;
+    structure = "resistance broken (unaccepted)";
+  }
+}
+    else if (sw.S.length) {
+  if (!rsi50State.consistentlyBelow50) {
+    bias = "Bullish Defense";
+    prob = 75;
+    structure = "support holding (confirmed)";
+  } else {
+    bias = "Bull Trap Risk";
+    prob = 45;
+    structure = "support weak (RSI pressure)";
+  }
+}
+  }else{
+    if (sb) {
+  if (bearishBreakAccepted) {
+    bias = "Bearish Continuation";
+    prob = 90;
+    structure = "support broken (accepted)";
+  } else {
+    bias = "Bear Trap Risk";
+    prob = 55;
+    structure = "support broken (unaccepted)";
+  }
+}
+    else if (sw.R.length) {
+  if (!rsi50State.consistentlyAbove50) {
+    bias = "Bearish Defense";
+    prob = 75;
+    structure = "resistance failed (confirmed)";
+  } else {
+    bias = "Bear Trap Risk";
+    prob = 45;
+    structure = "resistance weak (RSI pressure)";
+  	}
+  }
+    else{bias="Bear Trap Risk";prob=40;}
+  }
+
 /* ================= STRUCTURE HOLDING ================= */
 const structureHolding =
   (mainTrend === "bullish" &&
@@ -1831,6 +1906,11 @@ if (d.volumeBreakout) {
   d.structureType,
   d.structureQuality
 );
+
+    const volumeStateLabel = getVolumeStateLabel(
+  d.bias,
+  d.structure
+);
   
   
   card.innerHTML = `
@@ -1942,6 +2022,10 @@ ${d.volAI ? `
     </span>
   </div>
 ` : ""}
+
+<div class="muted neutral">
+  📦 Volume State: <b>${volumeStateLabel}</b>
+</div>
 
     <div class="muted ${structureBias === "bullish" ? "bull" : structureBias === "bearish" ? "bear" : "neutral"}">
   Structure: ${d.structure}
