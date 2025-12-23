@@ -755,7 +755,7 @@ function getTradeSide(d){
     return "WAIT";
   }
 
-  /* ================= 1️⃣ CONTINUATION (PRIMARY) ================= */
+  /* ================= CONTINUATION ================= */
   if (
     verdict === AI_VERDICTS.STRONG_CONTINUATION ||
     verdict === AI_VERDICTS.CONTROLLED_CONTINUATION
@@ -764,7 +764,7 @@ function getTradeSide(d){
     if (trend === "bearish") return "SHORT";
   }
 
-  /* ================= 2️⃣ DEFENSE (STRUCTURE HOLDING) ================= */
+  /* ================= DEFENSE ================= */
   if (bias === "Bullish Defense" && trend === "bullish") {
     return "LONG";
   }
@@ -773,9 +773,8 @@ function getTradeSide(d){
     return "SHORT";
   }
 
-  /* ================= 3️⃣ TRAP (DIRECTIONAL ONLY — NO AGGRESSION) ================= */
+  /* ================= TRAP ================= */
   if (verdict === AI_VERDICTS.TRAP_RISK) {
-    // Trap means: watch for reversal, NOT act yet
     return "WAIT";
   }
 
@@ -787,53 +786,38 @@ function getTradeSide(d){
   function getExecutionZone(d, tradeSide){
   const verdict  = d.aiVerdict;
   const bias     = d.bias || "";
-  const meaning  = d.volAI?.meaning || "";
-  const location = d.volAI?.location || "";
 
-  if (!tradeSide || tradeSide === "WAIT")
-    return "NO TRADE ZONE";
-
-  /* ================= HARD BLOCK ================= */
-  if (
-    verdict === AI_VERDICTS.AVOID ||
-    verdict === AI_VERDICTS.STRUCTURE_WEAK ||
-    verdict === AI_VERDICTS.COUNTER_TREND
-  ) {
+  if (!tradeSide || tradeSide === "WAIT") {
+    // Trap & no-trade still show pullback or no-trade separately
+    if (verdict === AI_VERDICTS.TRAP_RISK) {
+      return "PULLBACK ZONE";
+    }
     return "NO TRADE ZONE";
   }
 
-  /* ================= CLIMAX = NO ENTRY ================= */
+  /* ================= DEFENSE = ENTRY ================= */
   if (
-    meaning.includes("Buy climax") ||
-    meaning.includes("Sell climax")
-  ) {
-    return "NO TRADE ZONE";
-  }
-
-  /* ================= TRAP = WAIT ONLY ================= */
-  if (verdict === AI_VERDICTS.TRAP_RISK) {
-    return "NO TRADE ZONE";
-  }
-
-  /* ================= DEFENSE = EARLY ENTRY ================= */
-  if (
-    bias === "Bullish Defense" && tradeSide === "LONG" ||
-    bias === "Bearish Defense" && tradeSide === "SHORT"
+    (bias === "Bullish Defense" && tradeSide === "LONG") ||
+    (bias === "Bearish Defense" && tradeSide === "SHORT")
   ) {
     return "ENTRY ZONE";
   }
 
-/* ================= CONTINUATION ================= */
-    if (bias.includes("Continuation")) {
-  if (isValidPullback(d)) {
+  /* ================= CONTINUATION = LATE ================= */
+  if (
+    verdict === AI_VERDICTS.STRONG_CONTINUATION ||
+    verdict === AI_VERDICTS.CONTROLLED_CONTINUATION
+  ) {
+    return "LATE ZONE";
+  }
+
+  /* ================= TRAP = PULLBACK ================= */
+  if (verdict === AI_VERDICTS.TRAP_RISK) {
     return "PULLBACK ZONE";
   }
-  return "LATE ZONE";
-    }
 
-      /* ================= FALLBACK ================= */
   return "NO TRADE ZONE";
-  }
+}
   
 
   function getExecutionClass(zone, side){
