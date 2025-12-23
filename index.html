@@ -454,6 +454,7 @@ let dailyRSIScanned = 0;
   let pending24hVolumeScan = false;
   let statusLocked = false;
   let auto24hVolumeEnabled = false; // ✅ default ON
+  let GLOBAL_MARKET_DOM = null;
   
 
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
@@ -711,6 +712,17 @@ if (
     reason += " Elevated funding increases entry risk.";
   }
 
+      // 🌊 Market smoothness check (downgrade only)
+if (
+  (verdict === AI_VERDICTS.STRONG_CONTINUATION ||
+   verdict === AI_VERDICTS.CONTROLLED_CONTINUATION) &&
+  d.marketDom &&
+  !isSmoothDirection(d)
+) {
+  verdict = AI_VERDICTS.WAIT_FOR_PULLBACK;
+  reason += " Market dominance shows opposing participation — execution friction expected.";
+}
+
   return withTier(verdict, reason, d);
 }
 
@@ -808,6 +820,15 @@ function getTradeSide(d){
     return "LATE ZONE";
   }
 
+    // 🌊 downgrade execution if market is choppy
+if (
+  (zone === "ENTRY ZONE" || zone === "LATE ZONE") &&
+  d.marketDom &&
+  !isSmoothDirection(d)
+) {
+  return "PULLBACK ZONE";
+}
+
   return "NO TRADE ZONE";
 }
   
@@ -900,6 +921,16 @@ function getTrendStructureBias(structureType){
       "Neutral"
   };
   }
+
+  function isSmoothDirection(d){
+  if (!d.marketDom) return false;
+
+  return (
+    (d.mainTrend === "bullish" && d.marketDom.net > 0) ||
+    (d.mainTrend === "bearish" && d.marketDom.net < 0)
+  );
+  }
+  
 
 /* === IMPROVED 15m SWING DETECTION (CONFIRMED) === */
 function findSwings(h, l, c, v){
@@ -1751,7 +1782,7 @@ const postVolBreakRSIConfirmSafe =
   lastVol,mainTrend,volAI,fundingRate,ema14: ema14Last,
   ema21: ema21Last,
   emaShortBias,
-  emaShortCross,aiVerdict};
+  emaShortCross,aiVerdict,marketDom: GLOBAL_MARKET_DOM};
 }
 
 /* ================= FILTERS ================= */
@@ -2102,6 +2133,14 @@ ${d.volumeBreakout ? `
     🧭 Execution Zone: <b>${executionZone}</b>
   </div>
 
+  ${d.marketDom ? `
+  <div class="muted ${
+    isSmoothDirection(d) ? "bull" : "neutral"
+  }">
+    🌊 Market Flow: ${isSmoothDirection(d) ? "Smooth" : "Choppy"}
+  </div>
+` : ""}
+
   <div class="muted ${aiVerdict.verdictClass}">
     🧠 AI Verdict: <b>${aiVerdict.verdict}</b>
   </div>
@@ -2370,6 +2409,7 @@ async function runScan() {
     );
 
     const dom = computeMarketDominance(usdtAll);
+GLOBAL_MARKET_DOM = dom;
 
     marketGreen.textContent = `🟢 Green: ${dom.green.toLocaleString()}%`;
     marketRed.textContent   = `🔴 Red: ${dom.red.toLocaleString()}%`;
