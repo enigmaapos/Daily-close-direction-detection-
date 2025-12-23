@@ -208,11 +208,6 @@ button.secondary{
   font-style: italic;
   opacity: .85;
   }
-
-  .exec-late-warning {
-  color: var(--neutral);
-  font-weight: 700;
-  }
 </style>
 </head>
 
@@ -459,7 +454,6 @@ let dailyRSIScanned = 0;
   let pending24hVolumeScan = false;
   let statusLocked = false;
   let auto24hVolumeEnabled = false; // ✅ default ON
-  let GLOBAL_MARKET_DOM = null;
   
 
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
@@ -717,21 +711,6 @@ if (
     reason += " Elevated funding increases entry risk.";
   }
 
-      // ================= MARKET DOMINANCE TRAP AMPLIFIER =================
-if (d.marketDom?.net !== undefined && verdict === AI_VERDICTS.CONTROLLED_CONTINUATION) 
-{
-  const net = d.marketDom.net;
-
-  // continuation against market participation
-  if (
-    (d.bias.includes("Bullish") && net < -15) ||
-    (d.bias.includes("Bearish") && net > 15)
-  ) {
-    verdict = AI_VERDICTS.WAIT_FOR_PULLBACK;
-    reason += " Market dominance conflicts with continuation direction.";
-  }
-    }
-
   return withTier(verdict, reason, d);
 }
 
@@ -823,17 +802,13 @@ function getTradeSide(d){
 
   /* ▶ CONTINUATION = LATE */
   if (
-  verdict === AI_VERDICTS.STRONG_CONTINUATION ||
-  verdict === AI_VERDICTS.CONTROLLED_CONTINUATION
-) {
-  if (
-    d.marketDom &&
-    Math.abs(d.marketDom.net) < 5
+    verdict === AI_VERDICTS.STRONG_CONTINUATION ||
+    verdict === AI_VERDICTS.CONTROLLED_CONTINUATION
   ) {
     return "LATE ZONE";
   }
 
-  return "LATE ZONE";
+  return "NO TRADE ZONE";
 }
   
 
@@ -1385,7 +1360,7 @@ async function getDailyRSIContext(sym){
   
 
 /* ================= ANALYZE ================= */
-async function analyze(sym, change, marketDom = GLOBAL_MARKET_DOM){
+async function analyze(sym,change){
   const k=await fetchJSON(`${API}/fapi/v1/klines?symbol=${sym}&interval=15m&limit=240`);
   await sleep(DELAY);
 
@@ -1712,38 +1687,6 @@ if (volumeAlign === "conflict") {
 
 prob = Math.max(40, Math.min(prob, 95));
 
-  /* ================= MARKET DOMINANCE MODIFIER ================= */
-
-// continuation trusts participation
-if (
-  marketDom &&
-  bias.includes("Continuation")
-) {
-  // strong aligned dominance
-  if (
-    (bias.includes("Bullish") && marketDom.net > 15) ||
-    (bias.includes("Bearish") && marketDom.net < -15)
-  ) {
-    prob += 3;
-  }
-
-  // weak / choppy market
-  if (Math.abs(marketDom.net) < 5) {
-    prob -= 5;
-  }
-
-  // opposing dominance (hidden trap risk)
-  if (
-    (bias.includes("Bullish") && marketDom.net < -15) ||
-    (bias.includes("Bearish") && marketDom.net > 15)
-  ) {
-    prob -= 7;
-  }
-}
-
-// clamp again
-prob = Math.max(40, Math.min(prob, 95));
-
 /* ================= STRUCTURE QUALITY ================= */
 let structureQuality = "normal";
 
@@ -1799,8 +1742,7 @@ const postVolBreakRSIConfirmSafe =
   volumeBreakout,
   fakeVolumeBreak,
   dailyRSI,
-  fundingRate,
-    marketDom
+  fundingRate
 });
 
   return {sym,price,change,bull,prob,bias,structure,structureType,volumeStructure,structureQuality,volumeAlign,S:sw.S,R:sw.R,dailyRSI,rsi15,rsi15Momentum,volumeBreakout,
@@ -1809,7 +1751,7 @@ const postVolBreakRSIConfirmSafe =
   lastVol,mainTrend,volAI,fundingRate,ema14: ema14Last,
   ema21: ema21Last,
   emaShortBias,
-  emaShortCross,marketDom,aiVerdict};
+  emaShortCross,aiVerdict};
 }
 
 /* ================= FILTERS ================= */
@@ -1923,7 +1865,22 @@ const id = `card-${scope}-${d.sym}`;
   const aiVerdict = d.aiVerdict;
   const executionZone = aiVerdict.executionZone;
 
-  
+  function getExecutionClass(zone, side){
+  if (zone === "ENTRY ZONE") {
+    return side === "LONG"
+      ? "exec-entry-long"
+      : side === "SHORT"
+      ? "exec-entry-short"
+      : "exec-no-trade";
+  }
+
+  if (zone === "PULLBACK ZONE") return "exec-pullback";
+  if (zone === "LATE ZONE")     return "exec-late";
+  if (zone === "NO TRADE ZONE") return "exec-no-trade";
+
+  return "exec-no-trade";
+}
+
   const execClass = getExecutionClass(
   executionZone,
   aiVerdict.tradeSide
@@ -2052,12 +2009,6 @@ ${d.structure === "none" && d.volumeStructure?.name !== "none" ? `
 
   <!-- ================= STRUCTURE ================= -->
   <div class="muted"><b>📈 Trend Structure</b></div>
-
-  <div class="muted neutral">
-  🌍 Market Dominance:
-  ${d.marketDom ? d.marketDom.bias : "—"}
-(Net ${d.marketDom ? d.marketDom.net : "—"}%)
-</div>
 
   <div class="muted ${
     d.mainTrend === "bullish" ? "bull" :
@@ -2419,7 +2370,6 @@ async function runScan() {
     );
 
     const dom = computeMarketDominance(usdtAll);
-GLOBAL_MARKET_DOM = dom;
 
     marketGreen.textContent = `🟢 Green: ${dom.green.toLocaleString()}%`;
     marketRed.textContent   = `🔴 Red: ${dom.red.toLocaleString()}%`;
@@ -2437,11 +2387,7 @@ GLOBAL_MARKET_DOM = dom;
 
     let done = 0;
     for (const x of all) {
-      const d = await analyze(
-  x.symbol,
-  +x.priceChangePercent,
-  dom
-);
+      const d = await analyze(x.symbol, +x.priceChangePercent);
       renderCard(d, x.priceChangePercent >= 0 ? greenGrid : redGrid);
       done++;
       progressFill.style.width = Math.round(done / all.length * 100) + "%";
