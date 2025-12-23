@@ -2013,7 +2013,7 @@ card.innerHTML = `
 
   <hr style="opacity:.15">
 
-  <!-- ================= TREND STRUCTURE ================= -->
+  <!-- ================= STRUCTURE ================= -->
   <div class="muted"><b>📈 Trend Structure</b></div>
 
   <div class="muted ${
@@ -2034,13 +2034,6 @@ card.innerHTML = `
     }
   </div>
 
-  <div class="muted ${
-    structureBias === "bullish" ? "bull" :
-    structureBias === "bearish" ? "bear" : "neutral"
-  }">
-    Structure: ${d.structure}
-  </div>
-
   ${d.dailyRSI ? `
     <div class="muted ${
       d.dailyRSI.value >= 50 ? "bull" :
@@ -2054,12 +2047,21 @@ card.innerHTML = `
     </div>
   ` : ""}
 
-  <hr style="opacity:.15">
+  ${d.rsi15 !== null ? `
+  <div class="muted ${
+    d.rsi15 >= 50 ? "bull" :
+    d.rsi15 <= 50 ? "bear" : "neutral"
+  }">
+    ⏱ 15m RSI14: ${d.rsi15}
+  </div>
+` : ""}
 
-  <!-- ================= VOLUME STRUCTURE (NON-BINDING) ================= -->
-  <div class="muted"><b>📦 Volume Structure</b></div>
+<div class="muted neutral">
+      📊 No 24h Volume Breakout
+    </div>
+  `}
 
-  <div class="muted ${d.bull ? "bull" : "bear"}">
+<div class="muted ${d.bull ? "bull" : "bear"}">
     Dominant Volume: <b>${d.bull ? "BUYERS" : "SELLERS"}</b>
   </div>
 
@@ -2079,6 +2081,15 @@ card.innerHTML = `
       </span>
     </div>
   ` : ""}
+
+  <div class="muted"><b>📦 Volume Structure</b></div>
+
+  <div class="muted ${
+    structureBias === "bullish" ? "bull" :
+    structureBias === "bearish" ? "bear" : "neutral"
+  }">
+    Structure: ${d.structure}
+  </div>
 
   <div class="muted ${volumeStructClass}">
     Volume Structure: <b>${volumeStruct.name}</b>
@@ -2101,10 +2112,6 @@ card.innerHTML = `
       </span>
     </div>
   ` : `
-    <div class="muted neutral">
-      📊 No 24h Volume Breakout
-    </div>
-  `}
 
   <div class="muted volume-hint">
     ℹ Volume structure reflects pressure behavior, not trend direction
