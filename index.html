@@ -275,17 +275,20 @@ button.secondary{
 
   <div class="row filter-box">
   <select id="filterVolAI">
-    <option value="all">All 24h Volume AI</option>
-    <option value="Distribution">Distribution</option>
-    <option value="Accumulation">Accumulation</option>
-    <option value="Sell exhaustion">Sell exhaustion</option>
-    <option value="Buy exhaustion">Buy exhaustion</option>
-    <option value="Buy climax">Buy climax</option>
-    <option value="Sell climax">Sell climax</option>
-    <option value="Initiative buying">Initiative buying</option>
-    <option value="Initiative selling">Initiative selling</option>
-    <option value="Neutral">Neutral</option>
-  </select>
+  <option value="all">All 24h Volume AI</option>
+
+  <option>Initiative buying</option>
+  <option>Initiative selling</option>
+
+  <option>Distribution</option>
+  <option>Buy climax</option>
+  <option>Sell climax</option>
+
+  <option>Accumulation attempt</option>
+  <option>Short covering</option>
+
+  <option>Neutral</option>
+</select>
   </div>
 
   <select id="filterVolBreak">
@@ -329,25 +332,25 @@ button.secondary{
 </div>
 
 <div class="row filter-box">
-  <select id="filterAIVerdict">
-    <option value="all">All AI Verdicts</option>
+ <select id="filterAIVerdict">
+  <option value="all">All AI Verdicts</option>
 
-    <optgroup label="High Probability">
-      <option>STRONG CONTINUATION</option>
-      <option>CONTROLLED CONTINUATION</option>
-    </optgroup>
+  <optgroup label="High Probability">
+    <option>STRONG CONTINUATION</option>
+    <option>CONTROLLED CONTINUATION</option>
+  </optgroup>
 
-    <optgroup label="Watch / Timing">
-      <option>WAIT FOR PULLBACK</option>
-      <option>COUNTER-TREND</option>
-    </optgroup>
+  <optgroup label="Watch / Timing">
+    <option>WAIT FOR PULLBACK</option>
+    <option>COUNTER-TREND BREAKOUT</option>
+  </optgroup>
 
-    <optgroup label="Risk / Avoid">
-      <option>TRAP RISK</option>
-      <option>STRUCTURE WEAK / NO EDGE</option>
-      <option>AVOID / NO TRADE</option>
-    </optgroup>
-  </select>
+  <optgroup label="Risk / Avoid">
+    <option>TRAP RISK</option>
+    <option>STRUCTURE WEAK / NO EDGE</option>
+    <option>AVOID / NO TRADE</option>
+  </optgroup>
+</select>
 </div>
 
   <div class="row filter-box">
