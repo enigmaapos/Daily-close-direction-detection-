@@ -678,6 +678,17 @@ const AI_VERDICT_TIERS = {
     verdict = AI_VERDICTS.COUNTER_TREND;
     reason = "Structure break occurred against the dominant trend.";
   }
+    // 🛡 DEFENSE OVERRIDE
+if (
+  d.bias === "Bullish Defense" ||
+  d.bias === "Bearish Defense"
+) {
+  return withTier(
+    AI_VERDICTS.CONTROLLED_CONTINUATION,
+    "Structure is holding with defensive participation.",
+    d
+  );
+  }
   else if (structure === "none" || prob < 60) {
     verdict = AI_VERDICTS.STRUCTURE_WEAK;
     reason = "No confirmed structure or probability edge present.";
@@ -745,14 +756,17 @@ function getTradeSide(d){
   const trend   = d.mainTrend;
   const bias    = d.bias || "";
 
-  /* ⛔ HARD INVALID ONLY */
+  /* ⛔ HARD BLOCKS — BUT ALLOW DEFENSE */
   if (
     verdict === AI_VERDICTS.AVOID ||
-    verdict === AI_VERDICTS.STRUCTURE_WEAK ||
     verdict === AI_VERDICTS.COUNTER_TREND
   ) {
     return "WAIT";
   }
+
+  /* 🛡 DEFENSE HAS PRIORITY */
+  if (bias === "Bullish Defense" && trend === "bullish") return "LONG";
+  if (bias === "Bearish Defense" && trend === "bearish") return "SHORT";
 
   /* ▶ CONTINUATION */
   if (
@@ -764,14 +778,9 @@ function getTradeSide(d){
          : "WAIT";
   }
 
-  /* 🛡 DEFENSE (ALLOWED EVEN IF TIMING IS WAIT) */
-  if (bias === "Bullish Defense" && trend === "bullish") return "LONG";
-  if (bias === "Bearish Defense" && trend === "bearish") return "SHORT";
-
-  /* 🧨 TRAP = NO DIRECT ENTRY */
+  /* 🧨 TRAP = WAIT */
   return "WAIT";
 }
-  
   
 
   function getExecutionZone(d, tradeSide){
