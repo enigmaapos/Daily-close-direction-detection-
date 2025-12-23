@@ -584,6 +584,8 @@ const AI_VERDICTS = {
   AVOID: "AVOID / NO TRADE"
 };
 
+  
+
 const AI_VERDICT_TIERS = {
   "STRONG CONTINUATION": {
     tier: 1,
@@ -629,91 +631,58 @@ const AI_VERDICT_TIERS = {
 
 /* ================= AI VERDICT LOGIC ================= */
 
-function getAIFinalVerdict(d) {
+    function getAIFinalVerdict(d) {
   const structure = d.structure || "none";
-  const bias = d.bias || "";
   const trend = d.mainTrend || "neutral";
   const prob = d.prob || 0;
 
   const funding = d.fundingRate ?? 0;
-  const extremeLongCrowd  = funding >= 0.03;
-  const extremeShortCrowd = funding <= -0.03;
-  const elevatedFunding   = Math.abs(funding) >= 0.015;
+  const extreme = Math.abs(funding) >= 0.03;
+  const elevated = Math.abs(funding) >= 0.015;
 
   const hasVolumeBreak = d.volumeBreakout === true;
   const fakeVol = d.fakeVolumeBreak === true;
-
   const rsiLabel = d.dailyRSI?.label || "Neutral";
 
-  const bullishBreak =
-    structure.includes("resistance broken") && trend === "bullish";
-
-  const bearishBreak =
-    structure.includes("support broken") && trend === "bearish";
-
+  const bullishBreak = structure.includes("resistance broken") && trend === "bullish";
+  const bearishBreak = structure.includes("support broken") && trend === "bearish";
   const anyBreak = structure.includes("broken");
 
   let verdict = AI_VERDICTS.AVOID;
   let reason = "Conditions are mixed and lack a statistical edge.";
 
-  /* PRIORITY 1 — TRAP */
-  if (bias.includes("Trap") || fakeVol) {
+  if (d.bias?.includes("Trap") || fakeVol) {
     verdict = AI_VERDICTS.TRAP_RISK;
     reason = "Volume spike lacks acceptance and structure stability is weak.";
   }
-
-  /* PRIORITY 2 — STRONG CONTINUATION */
-  else if (
-    (bullishBreak || bearishBreak) &&
-    hasVolumeBreak &&
-    !rsiLabel.includes("MAX")
-  ) {
+  else if ((bullishBreak || bearishBreak) && hasVolumeBreak && !rsiLabel.includes("MAX")) {
     verdict = AI_VERDICTS.STRONG_CONTINUATION;
     reason = "Structure, trend, and sustained participation are aligned.";
   }
-
-  /* PRIORITY 3 — CONTROLLED CONTINUATION */
-  else if (
-    (bullishBreak || bearishBreak) &&
-    !hasVolumeBreak &&
-    !rsiLabel.includes("MAX")
-  ) {
+  else if ((bullishBreak || bearishBreak) && !hasVolumeBreak && !rsiLabel.includes("MAX")) {
     verdict = AI_VERDICTS.CONTROLLED_CONTINUATION;
     reason = "Structure aligns with trend, but participation remains selective.";
   }
-
-  /* PRIORITY 4 — WAIT (OVEREXTENDED) */
   else if (anyBreak && rsiLabel.includes("MAX")) {
     verdict = AI_VERDICTS.WAIT_FOR_PULLBACK;
     reason = "Momentum is stretched after a structure break.";
   }
-
-  /* PRIORITY 5 — COUNTER-TREND */
   else if (
     anyBreak &&
-    (
-      (structure.includes("resistance broken") && trend === "bearish") ||
-      (structure.includes("support broken") && trend === "bullish")
-    )
+    ((structure.includes("resistance broken") && trend === "bearish") ||
+     (structure.includes("support broken") && trend === "bullish"))
   ) {
     verdict = AI_VERDICTS.COUNTER_TREND;
     reason = "Structure break occurred against the dominant trend.";
   }
-
-  /* PRIORITY 6 — STRUCTURE WEAK */
   else if (structure === "none" || prob < 60) {
     verdict = AI_VERDICTS.STRUCTURE_WEAK;
     reason = "No confirmed structure or probability edge present.";
   }
 
-  /* ================= FUNDING MODIFIERS ================= */
-
   if (
     verdict === AI_VERDICTS.STRONG_CONTINUATION &&
-    (
-      (trend === "bullish" && extremeLongCrowd) ||
-      (trend === "bearish" && extremeShortCrowd)
-    )
+    extreme
   ) {
     verdict = AI_VERDICTS.CONTROLLED_CONTINUATION;
     reason += " Funding shows crowded positioning.";
@@ -721,73 +690,11 @@ function getAIFinalVerdict(d) {
 
   if (
     verdict === AI_VERDICTS.CONTROLLED_CONTINUATION &&
-    elevatedFunding &&
+    elevated &&
     !hasVolumeBreak
   ) {
     verdict = AI_VERDICTS.WAIT_FOR_PULLBACK;
     reason += " Elevated funding increases entry risk.";
-  }
-
-  if (
-    verdict === AI_VERDICTS.TRAP_RISK &&
-    elevatedFunding
-  ) {
-    reason += " Crowded funding confirms trap probability.";
-  }
-
-  /* ================= RSI15 MOMENTUM ================= */
-
-  if (
-    verdict === AI_VERDICTS.WAIT_FOR_PULLBACK &&
-    d.rsi15Momentum === "reclaim" &&
-    !rsiLabel.includes("MAX")
-  ) {
-    verdict = AI_VERDICTS.CONTROLLED_CONTINUATION;
-    reason += " RSI15 reclaimed 50, improving momentum alignment.";
-  }
-
-  if (
-    verdict === AI_VERDICTS.CONTROLLED_CONTINUATION &&
-    d.rsi15Momentum === "accel" &&
-    hasVolumeBreak
-  ) {
-    verdict = AI_VERDICTS.STRONG_CONTINUATION;
-    reason += " RSI15 accelerating with volume confirmation.";
-  }
-
-  if (
-    (verdict === AI_VERDICTS.STRONG_CONTINUATION ||
-     verdict === AI_VERDICTS.CONTROLLED_CONTINUATION) &&
-    d.rsi15Momentum === "decay"
-  ) {
-    verdict = AI_VERDICTS.WAIT_FOR_PULLBACK;
-    reason += " RSI15 momentum is decaying.";
-  }
-
-  if (
-    verdict === AI_VERDICTS.TRAP_RISK &&
-    d.rsi15Momentum === "loss"
-  ) {
-    reason += " RSI15 loss confirms trap risk.";
-  }
-
-  /* ================= MICRO TREND CONFIRMATION ================= */
-
-  if (
-    verdict === AI_VERDICTS.WAIT_FOR_PULLBACK &&
-    d.emaShortCross === "bullish-cross" &&
-    d.mainTrend === "bullish"
-  ) {
-    verdict = AI_VERDICTS.CONTROLLED_CONTINUATION;
-    reason += " Micro Trend turned bullish.";
-  }
-
-  if (
-    verdict === AI_VERDICTS.CONTROLLED_CONTINUATION &&
-    d.emaShortCross === "bearish-cross"
-  ) {
-    verdict = AI_VERDICTS.WAIT_FOR_PULLBACK;
-    reason += " Micro Trend weakening.";
   }
 
   return withTier(verdict, reason, d);
@@ -843,132 +750,109 @@ const executionZone = getExecutionZone(d, tradeSide);
 }
 
 
-    function getTradeSide(d){
+    
+function getTradeSide(d){
+  const verdict = d.aiVerdict;
   const trend   = d.mainTrend;
   const micro   = d.emaShortBias;
-  const volAI   = d.volAI || {};
-  const meaning = volAI.meaning || "";
+  const meaning = d.volAI?.meaning || "";
   const bias    = d.bias || "";
 
-  /* ================= 1. TRAP OVERRIDE (HIGHEST PRIORITY) ================= */
-
-  // 🐻 Bear Trap → LONG (bear pressure failed in bullish env)
-  if (bias.includes("Bear Trap")) return "LONG";
-
-  // 🐂 Bull Trap → SHORT (bull pressure failed in bearish env)
-  if (bias.includes("Bull Trap")) return "SHORT";
-
-  /* ================= 2. CLIMAX BLOCK (DO NOT CHASE) ================= */
-
+  /* ❌ HARD BLOCKS */
   if (
-    meaning.includes("Buy climax") ||
-    meaning.includes("Sell climax")
+    verdict === AI_VERDICTS.AVOID ||
+    verdict === AI_VERDICTS.STRUCTURE_WEAK ||
+    verdict === AI_VERDICTS.WAIT_FOR_PULLBACK ||
+    verdict === AI_VERDICTS.COUNTER_TREND
   ) {
     return "WAIT";
   }
 
-  /* ================= 3. DISTRIBUTION / ACCUMULATION ================= */
+  /* 🧨 TRAPS (ALLOWED BUT CONTROLLED) */
+  if (verdict === AI_VERDICTS.TRAP_RISK) {
+    if (bias.includes("Bear Trap")) return "LONG";
+    if (bias.includes("Bull Trap")) return "SHORT";
+    return "WAIT";
+  }
 
-  // Distribution = sell into strength
-  if (meaning.includes("Distribution")) {
+  /* 🚫 CLIMAX */
+  if (meaning.includes("Buy climax") || meaning.includes("Sell climax")) {
+    return "WAIT";
+  }
+
+  /* 📦 DISTRIBUTION / ACCUMULATION */
+  if (meaning.includes("Distribution"))
     return trend === "bearish" ? "SHORT" : "WAIT";
-  }
 
-  // Accumulation = buy into weakness
-  if (meaning.includes("Accumulation")) {
+  if (meaning.includes("Accumulation"))
     return trend === "bullish" ? "LONG" : "WAIT";
-  }
 
-  /* ================= 4. EXHAUSTION ================= */
-
-  // Sell exhaustion → buyers take control
-  if (meaning.includes("Sell exhaustion")) {
+  /* 🔥 EXHAUSTION */
+  if (meaning.includes("Sell exhaustion"))
     return trend === "bullish" ? "LONG" : "WAIT";
-  }
 
-  // Buy exhaustion → sellers take control
-  if (meaning.includes("Buy exhaustion")) {
+  if (meaning.includes("Buy exhaustion"))
     return trend === "bearish" ? "SHORT" : "WAIT";
-  }
 
-  /* ================= 5. TREND + MICRO ALIGNMENT ================= */
-
+  /* ✅ TREND + MICRO */
   if (trend === "bullish" && micro === "bullish") return "LONG";
   if (trend === "bearish" && micro === "bearish") return "SHORT";
 
   return "WAIT";
-    }
+     }
+  
   
 
   function getExecutionZone(d, tradeSide){
-  if (!tradeSide || tradeSide === "WAIT") return "NO TRADE ZONE";
-
-  const bias     = d.bias || "";
-  const meaning  = d.volAI?.meaning || "";
+  const verdict = d.aiVerdict;
+  const bias = d.bias || "";
+  const meaning = d.volAI?.meaning || "";
   const location = d.volAI?.location || "";
 
-  /* ================= CLIMAX (ALWAYS NO TRADE) ================= */
-  if (
-    meaning.includes("Buy climax") ||
-    meaning.includes("Sell climax")
-  ) {
+  if (!tradeSide || tradeSide === "WAIT")
     return "NO TRADE ZONE";
-  }
 
-  /* ================= TRAP ENTRIES (CONFIRMED ONLY) ================= */
-
-  // 🐻 Bear Trap → LONG (sell pressure FAILED)
+  /* ❌ VERDICT BLOCK */
   if (
-    bias.includes("Bear Trap") &&
-    tradeSide === "LONG" &&
-    (
-      meaning.includes("Sell exhaustion") ||   // sellers failed
-      meaning.includes("Distribution")          // sell into strength failed
-    ) &&
-    location !== "MID"
+    verdict === AI_VERDICTS.WAIT_FOR_PULLBACK ||
+    verdict === AI_VERDICTS.HIGH_RISK_LATE_MOVE ||
+    verdict === AI_VERDICTS.STRUCTURE_WEAK ||
+    verdict === AI_VERDICTS.AVOID
   ) {
-    return "ENTRY ZONE";
-  }
-
-  // 🐂 Bull Trap → SHORT (buy pressure FAILED)
-  if (
-    bias.includes("Bull Trap") &&
-    tradeSide === "SHORT" &&
-    (
-      meaning.includes("Buy exhaustion") ||     // buyers failed
-      meaning.includes("Buy climax") === false  // not a fresh climax
-    ) &&
-    location !== "MID"
-  ) {
-    return "ENTRY ZONE";
-  }
-
-  /* ================= DEFENSE ENTRIES (STRUCTURAL) ================= */
-
-  // Bullish Defense → LONG entry
-  if (bias === "Bullish Defense" && tradeSide === "LONG") {
-    return "ENTRY ZONE";
-  }
-
-  // Bearish Defense → SHORT entry
-  if (bias === "Bearish Defense" && tradeSide === "SHORT") {
-    return "ENTRY ZONE";
-  }
-
-  /* ================= CONTINUATION (LATE ENTRY) ================= */
-
-  if (bias.includes("Continuation")) {
-    return "LATE ZONE";
-  }
-
-  /* ================= PULLBACK / WAIT ================= */
-
-  if (location === "MID" || bias === "Neutral") {
     return "PULLBACK ZONE";
   }
 
+  /* 🚫 CLIMAX */
+  if (meaning.includes("Buy climax") || meaning.includes("Sell climax"))
+    return "NO TRADE ZONE";
+
+  /* 🧨 TRAPS (CONFIRMED ONLY) */
+  if (
+    verdict === AI_VERDICTS.TRAP_RISK &&
+    location !== "MID"
+  ) {
+    return "ENTRY ZONE";
+  }
+
+  /* 🛡 DEFENSE */
+  if (
+    bias === "Bullish Defense" && tradeSide === "LONG" ||
+    bias === "Bearish Defense" && tradeSide === "SHORT"
+  ) {
+    return "ENTRY ZONE";
+  }
+
+  /* ⏰ CONTINUATION */
+  if (bias.includes("Continuation"))
+    return "LATE ZONE";
+
+  if (location === "MID")
+    return "PULLBACK ZONE";
+
   return "NO TRADE ZONE";
   }
+
+
   
 
   // Trend-only directional bias
