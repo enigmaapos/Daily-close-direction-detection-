@@ -208,6 +208,11 @@ button.secondary{
   font-style: italic;
   opacity: .85;
   }
+
+  .exec-late-warning {
+  color: var(--neutral);
+  font-weight: 700;
+  }
 </style>
 </head>
 
@@ -711,6 +716,23 @@ if (
     reason += " Elevated funding increases entry risk.";
   }
 
+      // ================= MARKET DOMINANCE TRAP AMPLIFIER =================
+if (
+  d.marketDom &&
+  verdict === AI_VERDICTS.CONTROLLED_CONTINUATION
+) {
+  const net = d.marketDom.net;
+
+  // continuation against market participation
+  if (
+    (d.bias.includes("Bullish") && net < -15) ||
+    (d.bias.includes("Bearish") && net > 15)
+  ) {
+    verdict = AI_VERDICTS.WAIT_FOR_PULLBACK;
+    reason += " Market dominance conflicts with continuation direction.";
+  }
+    }
+
   return withTier(verdict, reason, d);
 }
 
@@ -758,11 +780,18 @@ function getTradeSide(d){
 
   /* ⛔ HARD BLOCKS — BUT ALLOW DEFENSE */
   if (
-    verdict === AI_VERDICTS.AVOID ||
-    verdict === AI_VERDICTS.COUNTER_TREND
+  verdict === AI_VERDICTS.STRONG_CONTINUATION ||
+  verdict === AI_VERDICTS.CONTROLLED_CONTINUATION
+) {
+  if (
+    d.marketDom &&
+    Math.abs(d.marketDom.net) < 5
   ) {
-    return "WAIT";
+    return "LATE ZONE (LOW FOLLOW-THROUGH)";
   }
+
+  return "LATE ZONE";
+}
 
   /* 🛡 DEFENSE HAS PRIORITY */
   if (bias === "Bullish Defense" && trend === "bullish") return "LONG";
@@ -1360,7 +1389,7 @@ async function getDailyRSIContext(sym){
   
 
 /* ================= ANALYZE ================= */
-async function analyze(sym,change){
+async function analyze(sym, change, marketDom){
   const k=await fetchJSON(`${API}/fapi/v1/klines?symbol=${sym}&interval=15m&limit=240`);
   await sleep(DELAY);
 
@@ -1687,6 +1716,38 @@ if (volumeAlign === "conflict") {
 
 prob = Math.max(40, Math.min(prob, 95));
 
+  /* ================= MARKET DOMINANCE MODIFIER ================= */
+
+// continuation trusts participation
+if (
+  marketDom &&
+  bias.includes("Continuation")
+) {
+  // strong aligned dominance
+  if (
+    (bias.includes("Bullish") && marketDom.net > 15) ||
+    (bias.includes("Bearish") && marketDom.net < -15)
+  ) {
+    prob += 3;
+  }
+
+  // weak / choppy market
+  if (Math.abs(marketDom.net) < 5) {
+    prob -= 5;
+  }
+
+  // opposing dominance (hidden trap risk)
+  if (
+    (bias.includes("Bullish") && marketDom.net < -15) ||
+    (bias.includes("Bearish") && marketDom.net > 15)
+  ) {
+    prob -= 7;
+  }
+}
+
+// clamp again
+prob = Math.max(40, Math.min(prob, 95));
+
 /* ================= STRUCTURE QUALITY ================= */
 let structureQuality = "normal";
 
@@ -1751,7 +1812,7 @@ const postVolBreakRSIConfirmSafe =
   lastVol,mainTrend,volAI,fundingRate,ema14: ema14Last,
   ema21: ema21Last,
   emaShortBias,
-  emaShortCross,aiVerdict};
+  emaShortCross,marketDom,aiVerdict};
 }
 
 /* ================= FILTERS ================= */
@@ -2009,6 +2070,12 @@ ${d.structure === "none" && d.volumeStructure?.name !== "none" ? `
 
   <!-- ================= STRUCTURE ================= -->
   <div class="muted"><b>📈 Trend Structure</b></div>
+
+  <div class="muted neutral">
+  🌍 Market Dominance:
+  ${d.marketDom.bias}
+  (Net ${d.marketDom.net}%)
+</div>
 
   <div class="muted ${
     d.mainTrend === "bullish" ? "bull" :
@@ -2387,7 +2454,11 @@ async function runScan() {
 
     let done = 0;
     for (const x of all) {
-      const d = await analyze(x.symbol, +x.priceChangePercent);
+      const d = await analyze(
+  x.symbol,
+  +x.priceChangePercent,
+  dom
+);
       renderCard(d, x.priceChangePercent >= 0 ? greenGrid : redGrid);
       done++;
       progressFill.style.width = Math.round(done / all.length * 100) + "%";
