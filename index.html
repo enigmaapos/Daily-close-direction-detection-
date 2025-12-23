@@ -720,12 +720,12 @@ if (
   const net = d.marketDom.net;
 
   if (
-    (d.bias.includes("Bullish") && net < -15) ||
-    (d.bias.includes("Bearish") && net > 15)
-  ) {
-    verdict = AI_VERDICTS.WAIT_FOR_PULLBACK;
-    reason += " Market dominance conflicts with continuation direction.";
-  }
+  ((d.bias || "").includes("Bullish") && net < -15) ||
+  ((d.bias || "").includes("Bearish") && net > 15)
+) {
+  verdict = AI_VERDICTS.WAIT_FOR_PULLBACK;
+  reason += " Market dominance conflicts with continuation direction.";
+}
 }
 
 /* ================= MARKET SMOOTHNESS VERDICT REFINEMENT ================= */
@@ -1421,6 +1421,7 @@ async function getDailyRSIContext(sym){
 
 /* ================= ANALYZE ================= */
 async function analyze(sym,change){
+  const marketDom = GLOBAL_MARKET_DOM;
   const k=await fetchJSON(`${API}/fapi/v1/klines?symbol=${sym}&interval=15m&limit=240`);
   await sleep(DELAY);
 
@@ -2192,14 +2193,14 @@ ${d.volumeBreakout ? `
 
  <div class="muted neutral">
   🌍 Market Dominance:
-  <b>${d.marketDom.bias}</b>
-  (Net ${d.marketDom.net}%)
+  <b>${d.marketDom?.bias || "—"}</b>
+(Net ${d.marketDom?.net ?? "—"}%)
 </div>
 
 <div class="muted">
   🌍 Market Participation:
   <b>${
-    Math.abs(d.marketDom.net) < 5
+    d.marketDom && Math.abs(d.marketDom.net) < 5
       ? "LOW (Choppy)"
       : "ACTIVE"
   }</b>
