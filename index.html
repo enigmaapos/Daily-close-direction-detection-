@@ -1635,6 +1635,58 @@ if (bull) {
     }
   }
 }
+
+  /* ================= VOLUME CONFIRMATION ================= */
+let volumeAlign = "neutral";
+
+if (
+  volumeStructure.name === "support holding (confirmed)" &&
+  bias === "Bullish Defense"
+) {
+  volumeAlign = "confirmed";
+}
+
+if (
+  volumeStructure.name === "resistance failed (confirmed)" &&
+  bias === "Bearish Defense"
+) {
+  volumeAlign = "confirmed";
+}
+
+if (
+  volumeStructure.name.includes("accepted") &&
+  bias.includes("Continuation")
+) {
+  volumeAlign = "confirmed";
+}
+
+if (
+  volumeStructure.name.includes("weak") &&
+  bias.includes("Continuation")
+) {
+  volumeAlign = "conflict";
+}
+
+/* ================= PROBABILITY MODIFIER ================= */
+if (volumeAlign === "confirmed") {
+  prob += 5;
+}
+
+if (volumeAlign === "conflict") {
+  prob -= 10;
+}
+
+prob = Math.max(40, Math.min(prob, 95));
+
+/* ================= STRUCTURE QUALITY ================= */
+let structureQuality = "normal";
+
+if (volumeStructure.name.includes("accepted"))
+  structureQuality = "accepted";
+else if (volumeStructure.name.includes("confirmed"))
+  structureQuality = "confirmed";
+else if (volumeStructure.name.includes("weak"))
+  structureQuality = "weak";
   
 
 /* ================= STRUCTURE HOLDING ================= */
@@ -1663,7 +1715,7 @@ const postVolBreakRSIConfirmSafe =
 
   const fundingRate = await getFundingRate(sym);
 
-  return {sym,price,change,bull,prob,bias,structure,structureType,volumeStructure,S:sw.S,R:sw.R,dailyRSI,rsi15,rsi15Momentum,volumeBreakout,
+  return {sym,price,change,bull,prob,bias,structure,structureType,volumeStructure,structureQuality,volumeAlign,S:sw.S,R:sw.R,dailyRSI,rsi15,rsi15Momentum,volumeBreakout,
   breakoutAge,volumeBreakoutType,fakeVolumeBreak,postVolBreakRSIConfirm: postVolBreakRSIConfirmSafe,
   domV,
   lastVol,mainTrend,volAI,fundingRate,ema14: ema14Last,
