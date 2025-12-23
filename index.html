@@ -709,24 +709,14 @@ function withTier(verdict, reason, d){
     verdictClass: "verdict-avoid"
   };
 
-  let trendAlignment = "neutral";
+  // ✅ inject verdict FIRST
+  const dWithVerdict = {
+    ...d,
+    aiVerdict: verdict
+  };
 
-  if (d.mainTrend === "bullish" && d.emaShortBias === "bullish")
-    trendAlignment = "aligned";
-  else if (d.mainTrend === "bearish" && d.emaShortBias === "bearish")
-    trendAlignment = "aligned";
-  else if (
-    (d.mainTrend === "bullish" && d.emaShortBias === "bearish") ||
-    (d.mainTrend === "bearish" && d.emaShortBias === "bullish")
-  )
-    trendAlignment = "conflict";
-  else if (d.emaShortBias === "neutral")
-    trendAlignment = "neutral";
-  else
-    trendAlignment = "pullback";
-
-  const tradeSide = getTradeSide(d);
-const executionZone = getExecutionZone(d, tradeSide);
+  const tradeSide = getTradeSide(dWithVerdict);
+  const executionZone = getExecutionZone(dWithVerdict, tradeSide);
 
   return {
     verdict,
@@ -734,16 +724,12 @@ const executionZone = getExecutionZone(d, tradeSide);
     tierLabel: t.label,
     verdictClass: t.verdictClass,
 
-    tradeSide: getTradeSide({
-  ...d,
-  aiVerdict: verdict
-}),
+    tradeSide,
     executionZone,
 
     mainTrend: d.mainTrend || "neutral",
     microTrend: d.emaShortBias || "neutral",
     microTrendCross: d.emaShortCross || "none",
-    trendAlignment,
 
     reason
   };
@@ -850,6 +836,17 @@ function getTradeSide(d){
     return "PULLBACK ZONE";
 
   return "NO TRADE ZONE";
+  }
+
+  function getExecutionClass(zone, side){
+  if (zone === "ENTRY ZONE" && side === "LONG") return "exec-entry-long";
+  if (zone === "ENTRY ZONE" && side === "SHORT") return "exec-entry-short";
+
+  if (zone === "LATE ZONE")     return "exec-late";
+  if (zone === "PULLBACK ZONE") return "exec-pullback";
+  if (zone === "NO TRADE ZONE") return "exec-no-trade";
+
+  return "exec-no-trade";
   }
 
 
