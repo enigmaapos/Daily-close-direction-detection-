@@ -712,17 +712,32 @@ if (
     reason += " Elevated funding increases entry risk.";
   }
 
-      // 🌊 Market smoothness check (downgrade only)
+/* ================= MARKET DOMINANCE VERDICT DOWNGRADE ================= */
 if (
-  (verdict === AI_VERDICTS.STRONG_CONTINUATION ||
-   verdict === AI_VERDICTS.CONTROLLED_CONTINUATION) &&
   d.marketDom &&
-  !isSmoothDirection(d)
+  verdict === AI_VERDICTS.CONTROLLED_CONTINUATION
 ) {
-  verdict = AI_VERDICTS.WAIT_FOR_PULLBACK;
-  reason += " Market dominance shows opposing participation — execution friction expected.";
+  const net = d.marketDom.net;
+
+  if (
+    (d.bias.includes("Bullish") && net < -15) ||
+    (d.bias.includes("Bearish") && net > 15)
+  ) {
+    verdict = AI_VERDICTS.WAIT_FOR_PULLBACK;
+    reason += " Market dominance conflicts with continuation direction.";
+  }
 }
 
+/* ================= MARKET SMOOTHNESS VERDICT REFINEMENT ================= */
+if (
+  d.marketDom &&
+  verdict === AI_VERDICTS.STRONG_CONTINUATION &&
+  !isSmoothDirection(d)
+) {
+  verdict = AI_VERDICTS.CONTROLLED_CONTINUATION;
+  reason += " Symbol shows execution friction despite market participation.";
+}
+      
   return withTier(verdict, reason, d);
 }
 
@@ -796,17 +811,16 @@ function getTradeSide(d){
   
 
   function getExecutionZone(d, tradeSide){
+  let zone = "NO TRADE ZONE";
   const verdict = d.aiVerdict;
   const bias    = d.bias || "";
 
-  let zone = "NO TRADE ZONE";
-
-  /* 🧨 TRAP = PULLBACK */
+  /* 🧨 TRAP */
   if (verdict === AI_VERDICTS.TRAP_RISK) {
     zone = "PULLBACK ZONE";
   }
 
-  /* 🛡 DEFENSE = ENTRY */
+  /* 🛡 DEFENSE */
   else if (
     (bias === "Bullish Defense" && tradeSide === "LONG") ||
     (bias === "Bearish Defense" && tradeSide === "SHORT")
@@ -814,7 +828,7 @@ function getTradeSide(d){
     zone = "ENTRY ZONE";
   }
 
-  /* ▶ CONTINUATION = LATE */
+  /* ▶ CONTINUATION */
   else if (
     verdict === AI_VERDICTS.STRONG_CONTINUATION ||
     verdict === AI_VERDICTS.CONTROLLED_CONTINUATION
@@ -822,10 +836,21 @@ function getTradeSide(d){
     zone = "LATE ZONE";
   }
 
-  /* 🌊 MARKET DOMINANCE EXECUTION MODIFIER (DOWNGRADE ONLY) */
+  /* ================= EXECUTION MODIFIERS ================= */
+
+  // 1️⃣ MARKET DOMINANCE — PRIMARY (market-wide participation)
   if (
     (zone === "ENTRY ZONE" || zone === "LATE ZONE") &&
     d.marketDom &&
+    Math.abs(d.marketDom.net) < 5
+  ) {
+    return "PULLBACK ZONE";
+  }
+
+  // 2️⃣ SMOOTHNESS — SECONDARY (symbol-specific behavior)
+  if (
+    zone === "LATE ZONE" &&          // 🚫 do NOT downgrade ENTRY
+    d.marketDom &&                   // must have dominance context
     !isSmoothDirection(d)
   ) {
     return "PULLBACK ZONE";
@@ -833,6 +858,8 @@ function getTradeSide(d){
 
   return zone;
 }
+
+  
   
 
   function getExecutionClass(zone, side){
@@ -1720,6 +1747,34 @@ if (volumeAlign === "conflict") {
 
 prob = Math.max(40, Math.min(prob, 95));
 
+  /* ================= MARKET DOMINANCE PROBABILITY MODIFIER ================= */
+if (marketDom && bias.includes("Continuation")) {
+
+  // aligned participation → smoother follow-through
+  if (
+    (bias.includes("Bullish") && marketDom.net > 15) ||
+    (bias.includes("Bearish") && marketDom.net < -15)
+  ) {
+    prob += 3;
+  }
+
+  // dead / choppy market
+  if (Math.abs(marketDom.net) < 5) {
+    prob -= 5;
+  }
+
+  // continuation against participation → hidden risk
+  if (
+    (bias.includes("Bullish") && marketDom.net < -15) ||
+    (bias.includes("Bearish") && marketDom.net > 15)
+  ) {
+    prob -= 7;
+  }
+}
+
+// clamp
+prob = Math.max(40, Math.min(prob, 95));
+
 /* ================= STRUCTURE QUALITY ================= */
 let structureQuality = "normal";
 
@@ -2135,13 +2190,23 @@ ${d.volumeBreakout ? `
     🧭 Execution Zone: <b>${executionZone}</b>
   </div>
 
-  ${d.marketDom ? `
-  <div class="muted ${
-    isSmoothDirection(d) ? "bull" : "neutral"
-  }">
-    🌊 Market Flow: ${isSmoothDirection(d) ? "Smooth" : "Choppy"}
-  </div>
-` : ""}
+ <div class="muted neutral">
+  🌍 Market Dominance:
+  <b>${d.marketDom.bias}</b>
+  (Net ${d.marketDom.net}%)
+</div>
+
+<div class="muted">
+  🌍 Market Participation:
+  <b>${
+    Math.abs(d.marketDom.net) < 5
+      ? "LOW (Choppy)"
+      : "ACTIVE"
+  }</b>
+  <br>
+  🌊 Symbol Behavior:
+  <b>${isSmoothDirection(d) ? "SMOOTH" : "CHOPPY"}</b>
+</div>
 
   <div class="muted ${aiVerdict.verdictClass}">
     🧠 AI Verdict: <b>${aiVerdict.verdict}</b>
@@ -2430,6 +2495,7 @@ GLOBAL_MARKET_DOM = dom;
     let done = 0;
     for (const x of all) {
       const d = await analyze(x.symbol, +x.priceChangePercent);
+      d.marketDom = dom;
       renderCard(d, x.priceChangePercent >= 0 ? greenGrid : redGrid);
       done++;
       progressFill.style.width = Math.round(done / all.length * 100) + "%";
