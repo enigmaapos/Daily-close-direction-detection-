@@ -1715,13 +1715,34 @@ const postVolBreakRSIConfirmSafe =
 
   const fundingRate = await getFundingRate(sym);
 
+  const aiVerdict = getAIFinalVerdict({
+  sym,
+  price,
+  prob,
+  bias,
+  structure,
+  structureType,
+  volumeStructure,
+  structureQuality,
+  volumeAlign,
+  mainTrend,
+  emaShortBias,
+  emaShortCross,
+  rsi15,
+  rsi15Momentum,
+  volumeBreakout,
+  fakeVolumeBreak,
+  dailyRSI,
+  fundingRate
+});
+
   return {sym,price,change,bull,prob,bias,structure,structureType,volumeStructure,structureQuality,volumeAlign,S:sw.S,R:sw.R,dailyRSI,rsi15,rsi15Momentum,volumeBreakout,
   breakoutAge,volumeBreakoutType,fakeVolumeBreak,postVolBreakRSIConfirm: postVolBreakRSIConfirmSafe,
   domV,
   lastVol,mainTrend,volAI,fundingRate,ema14: ema14Last,
   ema21: ema21Last,
   emaShortBias,
-  emaShortCross};
+  emaShortCross,aiVerdict};
 }
 
 /* ================= FILTERS ================= */
@@ -1832,7 +1853,7 @@ const id = `card-${scope}-${d.sym}`;
 
   const fundingInfo = getFundingInfo(d.fundingRate);
 
-  const aiVerdict = getAIFinalVerdict(d);
+  const aiVerdict = d.aiVerdict;
   const executionZone = aiVerdict.executionZone;
 
   function getExecutionClass(zone, side){
