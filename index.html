@@ -2047,19 +2047,20 @@ card.innerHTML = `
     </div>
   ` : ""}
 
-  ${d.rsi15 !== null ? `
+${d.rsi15 !== null ? `
   <div class="muted ${
     d.rsi15 >= 50 ? "bull" :
-    d.rsi15 <= 50 ? "bear" : "neutral"
+    d.rsi15 < 50 ? "bear" : "neutral"
   }">
     ⏱ 15m RSI14: ${d.rsi15}
   </div>
 ` : ""}
 
-<div class="muted neutral">
-      📊 No 24h Volume Breakout
-    </div>
-  `}
+${!d.volumeBreakout ? `
+  <div class="muted neutral">
+    📊 No 24h Volume Breakout
+  </div>
+` : ""}
 
 <div class="muted ${d.bull ? "bull" : "bear"}">
     Dominant Volume: <b>${d.bull ? "BUYERS" : "SELLERS"}</b>
