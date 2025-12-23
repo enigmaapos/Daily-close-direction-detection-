@@ -2062,11 +2062,6 @@ card.innerHTML = `
     💸 Funding Fee: ${fundingInfo.label}
   </div>
 
-  <div class="muted neutral">
-  🌍 Market Dominance:
-  <b>${d.marketDom?.bias || "—"}</b>
-(Net ${d.marketDom?.net ?? "—"}%)
-</div>
 
   <div class="prob ${
     d.bias.includes("Bull") ? "bull" :
@@ -2104,6 +2099,12 @@ ${d.structure === "none" && d.volumeStructure?.name !== "none" ? `
 
   <!-- ================= STRUCTURE ================= -->
   <div class="muted"><b>📈 Trend Structure</b></div>
+
+    <div class="muted neutral">
+  🌍 Market Dominance:
+  <b>${d.marketDom?.bias || "—"}</b>
+(Net ${d.marketDom?.net ?? "—"}%)
+</div>
 
   <div class="muted ${
     d.mainTrend === "bullish" ? "bull" :
