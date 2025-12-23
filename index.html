@@ -925,41 +925,13 @@ function getTrendStructureBias(structureType){
   }
 
   function isSmoothDirection(d){
-  let score = 0;
+  if (!d.marketDom) return false;
 
-  /* 1️⃣ Market dominance aligned */
-  if (
-    d.marketDom &&
-    (
-      (d.mainTrend === "bullish" && d.marketDom.net > 0) ||
-      (d.mainTrend === "bearish" && d.marketDom.net < 0)
-    )
-  ) score++;
-
-  /* 2️⃣ RSI trending, not ranging */
-  if (
-    d.rsi15 !== null &&
-    (
-      (d.mainTrend === "bullish" && d.rsi15 >= 55) ||
-      (d.mainTrend === "bearish" && d.rsi15 <= 45)
-    )
-  ) score++;
-
-  /* 3️⃣ No EMA chop */
-  if (d.emaShortCross === "none") score++;
-
-  /* 4️⃣ Structure quality */
-  if (
-    d.structureQuality === "accepted" ||
-    d.structureQuality === "confirmed"
-  ) score++;
-
-  /* 5️⃣ Volume follow-through */
-  if (!d.fakeVolumeBreak && d.volumeAlign !== "conflict") score++;
-
-  // 🧠 interpretation
-  return score >= 3;
-}
+  return (
+    (d.mainTrend === "bullish" && d.marketDom.net > 0) ||
+    (d.mainTrend === "bearish" && d.marketDom.net < 0)
+  );
+  }
   
 
 /* === IMPROVED 15m SWING DETECTION (CONFIRMED) === */
