@@ -1948,6 +1948,8 @@ function applyFilters(){
 const id = `card-${scope}-${d.sym}`;
   let card = document.getElementById(id);
 
+    const isNewCard = !card;
+
   // create only once
   if(!card){
     card = document.createElement("div");
@@ -2056,29 +2058,37 @@ const volumeStructClass =
     : "muted";
 
 
-    // ================= EXECUTION ALERT =================
-const now = Date.now();
-const alertKey = `${d.sym}-${aiVerdict.tradeSide}`;
+ /* ================= EXECUTION ALERT ================= */
+  const now = Date.now();
+  const alertKey = `${d.sym}-${aiVerdict.tradeSide}`;
 
-const isLongExecution =
-  aiVerdict.tradeSide === "LONG" &&
-  aiVerdict.executionZone === "ENTRY ZONE" &&
-  el.id === "redGrid";        // 🔴 Top 30 Red
+  const isManual = card.dataset.manual === "true";
+  const isFavGrid = el.id === "favGrid";
 
-const isShortExecution =
-  aiVerdict.tradeSide === "SHORT" &&
-  aiVerdict.executionZone === "ENTRY ZONE" &&
-  el.id === "greenGrid";      // 🟢 Top 30 Green
+  const isLongExecution =
+    aiVerdict.tradeSide === "LONG" &&
+    aiVerdict.executionZone === "ENTRY ZONE" &&
+    el.id === "redGrid";     // 🔴 Top 30 Red
 
-if ((isLongExecution || isShortExecution)) {
+  const isShortExecution =
+    aiVerdict.tradeSide === "SHORT" &&
+    aiVerdict.executionZone === "ENTRY ZONE" &&
+    el.id === "greenGrid";   // 🟢 Top 30 Green
+
   if (
-    !execAlertCooldown[alertKey] ||
-    now - execAlertCooldown[alertKey] > EXEC_ALERT_COOLDOWN
+    isNewCard &&
+    !isManual &&
+    !isFavGrid &&
+    (isLongExecution || isShortExecution)
   ) {
-    executionAlert.play().catch(()=>{});
-    execAlertCooldown[alertKey] = now;
+    if (
+      !execAlertCooldown[alertKey] ||
+      now - execAlertCooldown[alertKey] > EXEC_ALERT_COOLDOWN
+    ) {
+      executionAlert.play().catch(()=>{});
+      execAlertCooldown[alertKey] = now;
+    }
   }
-}
     
 
 card.innerHTML = `
