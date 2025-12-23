@@ -1931,6 +1931,11 @@ const id = `card-${scope}-${d.sym}`;
     ? "bear"
     : "neutral";
 
+    const volumeStruct = d.volumeStructure || {
+  name: "none",
+  label: "No Active Volume Structure"
+};
+
   
   card.dataset.bias = d.bias;
 card.dataset.vol  = d.bull ? "bull" : "bear";
@@ -1978,12 +1983,6 @@ if (d.volumeBreakout) {
     const volumeStateLabel = getVolumeStateLabel(d);
 const volumeStructureView = getVolumeStructureView(d);
 
-    
-
-  const volumeStruct = d.volumeStructure || {
-  name: "none",
-  label: "No Active Volume Structure"
-};
 
 const volumeStructClass =
   volumeStruct.name.includes("support holding") ||
