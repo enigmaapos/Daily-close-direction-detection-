@@ -1396,8 +1396,8 @@ async function getDailyRSIContext(sym){
   const dominantBuy  = d.bull === true;
   const dominantSell = d.bull === false;
 
-  // ❗ No structure → truly neutral
-  if (structure === "none" || structure === "") {
+  // No structure → no volume story
+  if (!structure || structure === "none") {
     return "⚪ No Active Volume Structure";
   }
 
@@ -1405,38 +1405,37 @@ async function getDailyRSIContext(sym){
   if (dominantBuy) {
 
     if (structure.includes("support holding"))
-      return "🟢 Buy-Side Defense (Demand Holding)";
+      return "🟢 Buy-Side Defense (Demand Absorbing Sells)";
 
     if (structure.includes("resistance broken") && structure.includes("accepted"))
       return "🟢 Buy-Side Acceptance (Higher Prices Accepted)";
 
     if (structure.includes("support weak"))
-      return "🟡 Buy-Side Weakening (Demand Losing Strength)";
+      return "🟡 Buy-Side Weakening (Demand Losing Control)";
 
     if (structure.includes("resistance weak"))
-      return "🟡 Buy-Side Pressure Weakening (Rejection Risk)";
+      return "🟡 Buy-Side Rejection (Supply Still Present)";
   }
 
   /* ================= SELL-SIDE DOMINANT ================= */
   if (dominantSell) {
 
     if (structure.includes("resistance failed"))
-      return "🔴 Sell-Side Defense (Supply Holding)";
+      return "🔴 Sell-Side Defense (Supply Absorbing Buys)";
 
     if (structure.includes("support broken") && structure.includes("accepted"))
       return "🔴 Sell-Side Acceptance (Lower Prices Accepted)";
 
-    // ⭐ THIS IS THE CASE YOU CARE ABOUT
+    // ⭐ YOUR IMPORTANT CASE
     if (structure.includes("resistance weak"))
       return "🟡 Sell-Side Weakening (Supply Losing Control)";
 
     if (structure.includes("support weak"))
-      return "🟡 Sell-Side Pressure Weakening (Bounce Risk)";
+      return "🟡 Sell-Side Rejection (Demand Still Present)";
   }
 
-  // fallback (should rarely hit)
   return "⚪ Volume Structure Mixed";
-  }
+}
   
   
   function getVolumeStructureView(d){
