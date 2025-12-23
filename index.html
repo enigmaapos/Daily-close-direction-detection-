@@ -799,37 +799,39 @@ function getTradeSide(d){
   const verdict = d.aiVerdict;
   const bias    = d.bias || "";
 
+  let zone = "NO TRADE ZONE";
+
   /* 🧨 TRAP = PULLBACK */
   if (verdict === AI_VERDICTS.TRAP_RISK) {
-    return "PULLBACK ZONE";
+    zone = "PULLBACK ZONE";
   }
 
   /* 🛡 DEFENSE = ENTRY */
-  if (
+  else if (
     (bias === "Bullish Defense" && tradeSide === "LONG") ||
     (bias === "Bearish Defense" && tradeSide === "SHORT")
   ) {
-    return "ENTRY ZONE";
+    zone = "ENTRY ZONE";
   }
 
   /* ▶ CONTINUATION = LATE */
-  if (
+  else if (
     verdict === AI_VERDICTS.STRONG_CONTINUATION ||
     verdict === AI_VERDICTS.CONTROLLED_CONTINUATION
   ) {
-    return "LATE ZONE";
+    zone = "LATE ZONE";
   }
 
-    // 🌊 downgrade execution if market is choppy
-if (
-  (zone === "ENTRY ZONE" || zone === "LATE ZONE") &&
-  d.marketDom &&
-  !isSmoothDirection(d)
-) {
-  return "PULLBACK ZONE";
-}
+  /* 🌊 MARKET DOMINANCE EXECUTION MODIFIER (DOWNGRADE ONLY) */
+  if (
+    (zone === "ENTRY ZONE" || zone === "LATE ZONE") &&
+    d.marketDom &&
+    !isSmoothDirection(d)
+  ) {
+    return "PULLBACK ZONE";
+  }
 
-  return "NO TRADE ZONE";
+  return zone;
 }
   
 
