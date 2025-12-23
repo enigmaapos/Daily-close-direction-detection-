@@ -837,6 +837,10 @@ if (bias.includes("Continuation")) {
   // ⏰ Otherwise it's continuation / chase
   return "LATE ZONE";
 }
+
+      /* ================= FALLBACK ================= */
+  return "NO TRADE ZONE";
+  }
   
 
   function getExecutionClass(zone, side){
