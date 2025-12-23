@@ -1437,29 +1437,36 @@ async function getDailyRSIContext(sym){
   return "⚪ Volume Structure Mixed";
 }
   
-  
+
   function getVolumeStructureView(d){
-  const bull = d.bull === true;
   const structure = d.structure || "none";
+  const dominantBuy  = d.bull === true;
+  const dominantSell = d.bull === false;
 
-  if (bull) {
-    if (structure.includes("resistance broken"))
-      return "Volume Suggests: Bullish Continuation Pressure";
-    if (structure.includes("support holding"))
-      return "Volume Suggests: Bullish Defense";
-    if (structure.includes("support weak"))
-      return "Volume Suggests: Bull Trap Pressure";
-  } else {
-    if (structure.includes("support broken"))
-      return "Volume Suggests: Bearish Continuation Pressure";
-    if (structure.includes("resistance failed"))
-      return "Volume Suggests: Bearish Defense";
+  if (!structure || structure === "none") {
+    return "Volume Suggests: No Structural Interaction";
+  }
+
+  if (dominantSell) {
     if (structure.includes("resistance weak"))
-      return "Volume Suggests: Bear Trap Pressure";
+      return "Volume Suggests: Sell-Side Failing (Trap Pressure)";
+    if (structure.includes("resistance failed"))
+      return "Volume Suggests: Sell-Side Defending Supply";
+    if (structure.includes("support broken"))
+      return "Volume Suggests: Sell-Side Acceptance";
   }
 
-  return "Volume Suggests: No Clear Structural Bias";
+  if (dominantBuy) {
+    if (structure.includes("support weak"))
+      return "Volume Suggests: Buy-Side Failing (Trap Pressure)";
+    if (structure.includes("support holding"))
+      return "Volume Suggests: Buy-Side Defending Demand";
+    if (structure.includes("resistance broken"))
+      return "Volume Suggests: Buy-Side Acceptance";
   }
+
+  return "Volume Suggests: Mixed Participation";
+    }
   
 
 /* ================= ANALYZE ================= */
