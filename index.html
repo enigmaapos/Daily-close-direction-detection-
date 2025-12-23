@@ -745,48 +745,45 @@ function getTradeSide(d){
   const trend   = d.mainTrend;
   const bias    = d.bias || "";
 
-  /* ================= HARD BLOCKS ================= */
+  /* ⛔ HARD INVALID ONLY */
   if (
-  verdict === AI_VERDICTS.AVOID ||
-  verdict === AI_VERDICTS.STRUCTURE_WEAK ||
-  verdict === AI_VERDICTS.COUNTER_TREND
-) {
-  return "WAIT";
-}
+    verdict === AI_VERDICTS.AVOID ||
+    verdict === AI_VERDICTS.STRUCTURE_WEAK ||
+    verdict === AI_VERDICTS.COUNTER_TREND
+  ) {
+    return "WAIT";
+  }
 
-  /* ================= CONTINUATION ================= */
+  /* ▶ CONTINUATION */
   if (
     verdict === AI_VERDICTS.STRONG_CONTINUATION ||
     verdict === AI_VERDICTS.CONTROLLED_CONTINUATION
   ) {
-    if (trend === "bullish") return "LONG";
-    if (trend === "bearish") return "SHORT";
+    return trend === "bullish" ? "LONG"
+         : trend === "bearish" ? "SHORT"
+         : "WAIT";
   }
 
-  /* ================= DEFENSE ================= */
-  if (bias === "Bullish Defense" && trend === "bullish") {
-    return "LONG";
-  }
+  /* 🛡 DEFENSE (ALLOWED EVEN IF TIMING IS WAIT) */
+  if (bias === "Bullish Defense" && trend === "bullish") return "LONG";
+  if (bias === "Bearish Defense" && trend === "bearish") return "SHORT";
 
-  if (bias === "Bearish Defense" && trend === "bearish") {
-    return "SHORT";
-  }
-
-  /* ================= TRAP ================= */
-  if (verdict === AI_VERDICTS.TRAP_RISK) {
-    return "WAIT";
-  }
-
+  /* 🧨 TRAP = NO DIRECT ENTRY */
   return "WAIT";
 }
   
   
 
   function getExecutionZone(d, tradeSide){
-  const verdict  = d.aiVerdict;
-  const bias     = d.bias || "";
+  const verdict = d.aiVerdict;
+  const bias    = d.bias || "";
 
-  /* ================= DEFENSE = ENTRY ================= */
+  /* 🧨 TRAP = PULLBACK */
+  if (verdict === AI_VERDICTS.TRAP_RISK) {
+    return "PULLBACK ZONE";
+  }
+
+  /* 🛡 DEFENSE = ENTRY */
   if (
     (bias === "Bullish Defense" && tradeSide === "LONG") ||
     (bias === "Bearish Defense" && tradeSide === "SHORT")
@@ -794,17 +791,12 @@ function getTradeSide(d){
     return "ENTRY ZONE";
   }
 
-  /* ================= CONTINUATION = LATE ================= */
+  /* ▶ CONTINUATION = LATE */
   if (
     verdict === AI_VERDICTS.STRONG_CONTINUATION ||
     verdict === AI_VERDICTS.CONTROLLED_CONTINUATION
   ) {
     return "LATE ZONE";
-  }
-
-  /* ================= TRAP = PULLBACK ================= */
-  if (verdict === AI_VERDICTS.TRAP_RISK) {
-    return "PULLBACK ZONE";
   }
 
   return "NO TRADE ZONE";
