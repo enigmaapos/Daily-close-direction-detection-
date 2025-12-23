@@ -459,6 +459,7 @@ let dailyRSIScanned = 0;
   let pending24hVolumeScan = false;
   let statusLocked = false;
   let auto24hVolumeEnabled = false; // ✅ default ON
+  let GLOBAL_MARKET_DOM = null;
   
 
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
@@ -717,10 +718,8 @@ if (
   }
 
       // ================= MARKET DOMINANCE TRAP AMPLIFIER =================
-if (
-  d.marketDom &&
-  verdict === AI_VERDICTS.CONTROLLED_CONTINUATION
-) {
+if (d.marketDom?.net !== undefined && verdict === AI_VERDICTS.CONTROLLED_CONTINUATION) 
+{
   const net = d.marketDom.net;
 
   // continuation against market participation
@@ -1386,7 +1385,7 @@ async function getDailyRSIContext(sym){
   
 
 /* ================= ANALYZE ================= */
-async function analyze(sym, change, marketDom){
+async function analyze(sym, change, marketDom = GLOBAL_MARKET_DOM){
   const k=await fetchJSON(`${API}/fapi/v1/klines?symbol=${sym}&interval=15m&limit=240`);
   await sleep(DELAY);
 
@@ -2056,8 +2055,8 @@ ${d.structure === "none" && d.volumeStructure?.name !== "none" ? `
 
   <div class="muted neutral">
   🌍 Market Dominance:
-  ${d.marketDom.bias}
-  (Net ${d.marketDom.net}%)
+  ${d.marketDom ? d.marketDom.bias : "—"}
+(Net ${d.marketDom ? d.marketDom.net : "—"}%)
 </div>
 
   <div class="muted ${
@@ -2420,6 +2419,7 @@ async function runScan() {
     );
 
     const dom = computeMarketDominance(usdtAll);
+GLOBAL_MARKET_DOM = dom;
 
     marketGreen.textContent = `🟢 Green: ${dom.green.toLocaleString()}%`;
     marketRed.textContent   = `🔴 Red: ${dom.red.toLocaleString()}%`;
