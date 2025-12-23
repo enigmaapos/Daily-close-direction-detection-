@@ -2056,11 +2056,23 @@ ${d.rsi15 !== null ? `
   </div>
 ` : ""}
 
-${!d.volumeBreakout ? `
+${d.volumeBreakout ? `
+  <div class="muted ${
+    d.volumeBreakoutType.includes("Bull") ? "bull" : "bear"
+  }">
+    🔥 ${d.volumeBreakoutType}
+    <br>
+    <span class="muted">
+      15m: ${d.lastVol.toLocaleString()}
+      &nbsp;›&nbsp;
+      24h High: ${d.domV.toLocaleString()}
+    </span>
+  </div>
+` : `
   <div class="muted neutral">
     📊 No 24h Volume Breakout
   </div>
-` : ""}
+`}
 
 <div class="muted ${d.bull ? "bull" : "bear"}">
     Dominant Volume: <b>${d.bull ? "BUYERS" : "SELLERS"}</b>
@@ -2099,20 +2111,6 @@ ${!d.volumeBreakout ? `
   <div class="muted neutral">
     ${volumeStruct.label}
   </div>
-
-  ${d.volumeBreakout ? `
-    <div class="muted ${
-      d.volumeBreakoutType.includes("Bull") ? "bull" : "bear"
-    }">
-      🔥 ${d.volumeBreakoutType}
-      <br>
-      <span class="muted">
-        15m: ${d.lastVol.toLocaleString()}
-        &nbsp;›&nbsp;
-        24h High: ${d.domV.toLocaleString()}
-      </span>
-    </div>
-  ` : `
 
   <div class="muted volume-hint">
     ℹ Volume structure reflects pressure behavior, not trend direction
