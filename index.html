@@ -831,13 +831,17 @@ function getTradeSide(d){
 
   /* ▶ CONTINUATION = LATE */
   if (
-    verdict === AI_VERDICTS.STRONG_CONTINUATION ||
-    verdict === AI_VERDICTS.CONTROLLED_CONTINUATION
+  verdict === AI_VERDICTS.STRONG_CONTINUATION ||
+  verdict === AI_VERDICTS.CONTROLLED_CONTINUATION
+) {
+  if (
+    d.marketDom &&
+    Math.abs(d.marketDom.net) < 5
   ) {
-    return "LATE ZONE";
+    return "LATE ZONE (LOW FOLLOW-THROUGH)";
   }
 
-  return "NO TRADE ZONE";
+  return "LATE ZONE";
 }
   
 
@@ -1803,7 +1807,8 @@ const postVolBreakRSIConfirmSafe =
   volumeBreakout,
   fakeVolumeBreak,
   dailyRSI,
-  fundingRate
+  fundingRate,
+    marketDom
 });
 
   return {sym,price,change,bull,prob,bias,structure,structureType,volumeStructure,structureQuality,volumeAlign,S:sw.S,R:sw.R,dailyRSI,rsi15,rsi15Momentum,volumeBreakout,
@@ -1926,22 +1931,7 @@ const id = `card-${scope}-${d.sym}`;
   const aiVerdict = d.aiVerdict;
   const executionZone = aiVerdict.executionZone;
 
-  function getExecutionClass(zone, side){
-  if (zone === "ENTRY ZONE") {
-    return side === "LONG"
-      ? "exec-entry-long"
-      : side === "SHORT"
-      ? "exec-entry-short"
-      : "exec-no-trade";
-  }
-
-  if (zone === "PULLBACK ZONE") return "exec-pullback";
-  if (zone === "LATE ZONE")     return "exec-late";
-  if (zone === "NO TRADE ZONE") return "exec-no-trade";
-
-  return "exec-no-trade";
-}
-
+  
   const execClass = getExecutionClass(
   executionZone,
   aiVerdict.tradeSide
