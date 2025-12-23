@@ -740,11 +740,9 @@ function withTier(verdict, reason, d){
 function getTradeSide(d){
   const verdict = d.aiVerdict;
   const trend   = d.mainTrend;
-  const micro   = d.emaShortBias;
-  const meaning = d.volAI?.meaning || "";
   const bias    = d.bias || "";
 
-  /* ❌ HARD BLOCKS */
+  /* ================= HARD BLOCKS ================= */
   if (
     verdict === AI_VERDICTS.AVOID ||
     verdict === AI_VERDICTS.STRUCTURE_WEAK ||
@@ -754,38 +752,43 @@ function getTradeSide(d){
     return "WAIT";
   }
 
-  /* 🧨 TRAPS (ALLOWED BUT CONTROLLED) */
+  /* ================= 1️⃣ CONTINUATION (TOP PRIORITY) ================= */
+  if (
+    verdict === AI_VERDICTS.STRONG_CONTINUATION ||
+    verdict === AI_VERDICTS.CONTROLLED_CONTINUATION
+  ) {
+    if (trend === "bullish") return "LONG";
+    if (trend === "bearish") return "SHORT";
+  }
+
+  /* ================= 2️⃣ DEFENSE (TREND-ALIGNED ONLY) ================= */
+  if (bias === "Bullish Defense" && trend === "bullish") {
+    return "LONG";
+  }
+
+  if (bias === "Bearish Defense" && trend === "bearish") {
+    return "SHORT";
+  }
+
+  /* ================= 3️⃣ TRAP (LAST PRIORITY) ================= */
   if (verdict === AI_VERDICTS.TRAP_RISK) {
-    if (bias.includes("Bear Trap")) return "LONG";
-    if (bias.includes("Bull Trap")) return "SHORT";
+
+    // Bear trap = bearish trend failed → bounce attempt
+    if (bias.includes("Bear Trap") && trend === "bearish") {
+      return "LONG";
+    }
+
+    // Bull trap = bullish trend failed → rejection
+    if (bias.includes("Bull Trap") && trend === "bullish") {
+      return "SHORT";
+    }
+
     return "WAIT";
   }
 
-  /* 🚫 CLIMAX */
-  if (meaning.includes("Buy climax") || meaning.includes("Sell climax")) {
-    return "WAIT";
-  }
-
-  /* 📦 DISTRIBUTION / ACCUMULATION */
-  if (meaning.includes("Distribution"))
-    return trend === "bearish" ? "SHORT" : "WAIT";
-
-  if (meaning.includes("Accumulation"))
-    return trend === "bullish" ? "LONG" : "WAIT";
-
-  /* 🔥 EXHAUSTION */
-  if (meaning.includes("Sell exhaustion"))
-    return trend === "bullish" ? "LONG" : "WAIT";
-
-  if (meaning.includes("Buy exhaustion"))
-    return trend === "bearish" ? "SHORT" : "WAIT";
-
-  /* ✅ TREND + MICRO */
-  if (trend === "bullish" && micro === "bullish") return "LONG";
-  if (trend === "bearish" && micro === "bearish") return "SHORT";
-
+  /* ================= FALLBACK ================= */
   return "WAIT";
-     }
+}
   
   
 
