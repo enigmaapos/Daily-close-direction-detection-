@@ -2011,6 +2011,13 @@ card.innerHTML = `
     💸 Funding Fee: ${fundingInfo.label}
   </div>
 
+  <div class="prob ${
+    d.bias.includes("Bull") ? "bull" :
+    d.bias.includes("Bear") ? "bear" : "neutral"
+  }">
+    ${d.bias} — ${d.prob}%
+  </div>
+
   <hr style="opacity:.15">
 
   <!-- ================= STRUCTURE ================= -->
@@ -2095,15 +2102,6 @@ ${d.volumeBreakout ? `
     </div>
   ` : ""}
 
-  <div class="muted"><b>📦 Volume Structure</b></div>
-
-  <div class="muted ${
-    structureBias === "bullish" ? "bull" :
-    structureBias === "bearish" ? "bear" : "neutral"
-  }">
-    Structure: ${d.structure}
-  </div>
-
   <div class="muted ${volumeStructClass}">
     Volume Structure: <b>${volumeStruct.name}</b>
   </div>
@@ -2116,16 +2114,11 @@ ${d.volumeBreakout ? `
     ℹ Volume structure reflects pressure behavior, not trend direction
   </div>
 
-  <hr style="opacity:.15">
-
-  <!-- ================= CONFLUENCE / EXECUTION ================= -->
-  <div class="muted"><b>🧭 Confluence & Execution</b></div>
-
-  <div class="prob ${
-    d.bias.includes("Bull") ? "bull" :
-    d.bias.includes("Bear") ? "bear" : "neutral"
+  <div class="muted ${
+    structureBias === "bullish" ? "bull" :
+    structureBias === "bearish" ? "bear" : "neutral"
   }">
-    ${d.bias} — ${d.prob}%
+   Trend Structure: ${d.structure}
   </div>
 
   <div class="muted ${aiVerdict.verdictClass}">
@@ -2140,6 +2133,11 @@ ${d.volumeBreakout ? `
     ${aiVerdict.reason}
   </div>
 
+  ${d.S[0] ? `<div class="muted bear">S1: ${d.S[0].toFixed(4)}</div>` : ""}
+  ${d.S[1] ? `<div class="muted bear">S2: ${d.S[1].toFixed(4)}</div>` : ""}
+  ${d.R[0] ? `<div class="muted bull">R1: ${d.R[0].toFixed(4)}</div>` : ""}
+  ${d.R[1] ? `<div class="muted bull">R2: ${d.R[1].toFixed(4)}</div>` : ""}
+
   <div class="muted ${tradeSideClass}">
     🎯 Trade Side: <b>${aiVerdict.tradeSide}</b>
   </div>
@@ -2147,11 +2145,6 @@ ${d.volumeBreakout ? `
   <div class="muted ${execClass}">
     🧭 Execution Zone: <b>${executionZone}</b>
   </div>
-
-  ${d.S[0] ? `<div class="muted bear">S1: ${d.S[0].toFixed(4)}</div>` : ""}
-  ${d.S[1] ? `<div class="muted bear">S2: ${d.S[1].toFixed(4)}</div>` : ""}
-  ${d.R[0] ? `<div class="muted bull">R1: ${d.R[0].toFixed(4)}</div>` : ""}
-  ${d.R[1] ? `<div class="muted bull">R2: ${d.R[1].toFixed(4)}</div>` : ""}
 `;
 
     // ================= VOLUME → STRUCTURE WAIT MESSAGE =================
