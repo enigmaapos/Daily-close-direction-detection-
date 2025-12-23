@@ -1702,57 +1702,58 @@ else {
    - Causes UI inconsistency
    - Volume dominance ≠ structure environment
 */
- if (bull) {
-   if (rb) {
-     if (bullishBreakAccepted) {
-       bias = "Bullish Continuation";
-      prob = 90;
-       structure = "resistance broken (accepted)";
-    } else {
-       bias = "Bull Trap Risk";
-      prob = 55;
-       structure = "resistance broken (unaccepted)";
-    }
-   }
-   else if (sw.S.length) {
-     if (!rsi50State.consistentlyBelow50) {
-      bias = "Bullish Defense";
-       prob = 75;
-      structure = "support holding (confirmed)";
-     } else {
-       bias = "Bull Trap Risk";
-       prob = 45;
-      structure = "support weak (RSI pressure)";
-    }
-   }
- } else {
-   if (sb) {
-     if (bearishBreakAccepted) {
-       bias = "Bearish Continuation";
-      prob = 90;
-      structure = "support broken (accepted)";
-     } else {
-      bias = "Bear Trap Risk";
-       prob = 55;
-      structure = "support broken (unaccepted)";
-     }
-   }
-   else if (sw.R.length) {
-     if (!rsi50State.consistentlyAbove50) {
-       bias = "Bearish Defense";
-      prob = 75;
-       structure = "resistance failed (confirmed)";
-     } else {
-      bias = "Bear Trap Risk";
-       prob = 45;
-      structure = "resistance weak (RSI pressure)";
-     }
-  }
-   else {
-     bias = "Bear Trap Risk";
-     prob = 40;
-   }
- }
+
+// if (bull) {
+//   if (rb) {
+//     if (bullishBreakAccepted) {
+//       bias = "Bullish Continuation";
+//       prob = 90;
+//       structure = "resistance broken (accepted)";
+//     } else {
+//       bias = "Bull Trap Risk";
+//       prob = 55;
+//       structure = "resistance broken (unaccepted)";
+//     }
+//   }
+//   else if (sw.S.length) {
+//     if (!rsi50State.consistentlyBelow50) {
+//       bias = "Bullish Defense";
+//       prob = 75;
+//       structure = "support holding (confirmed)";
+//     } else {
+//       bias = "Bull Trap Risk";
+//       prob = 45;
+//       structure = "support weak (RSI pressure)";
+//     }
+//   }
+// } else {
+//   if (sb) {
+//     if (bearishBreakAccepted) {
+//       bias = "Bearish Continuation";
+//       prob = 90;
+//       structure = "support broken (accepted)";
+//     } else {
+//       bias = "Bear Trap Risk";
+//       prob = 55;
+//       structure = "support broken (unaccepted)";
+//     }
+//   }
+//   else if (sw.R.length) {
+//     if (!rsi50State.consistentlyAbove50) {
+//       bias = "Bearish Defense";
+//       prob = 75;
+//       structure = "resistance failed (confirmed)";
+//     } else {
+//       bias = "Bear Trap Risk";
+//       prob = 45;
+//       structure = "resistance weak (RSI pressure)";
+//     }
+//   }
+//   else {
+//     bias = "Bear Trap Risk";
+//     prob = 40;
+//   }
+// }
 
 /* ================= STRUCTURE HOLDING ================= */
 const structureHolding =
