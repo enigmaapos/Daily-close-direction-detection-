@@ -968,6 +968,30 @@ function getTrendStructureBias(structureType){
     (d.mainTrend === "bearish" && d.marketDom.net < 0)
   );
   }
+
+  function calculateRR(d, tradeSide) {
+  if (!d.S?.length || !d.R?.length) return null;
+
+  const price = d.price;
+  const S1 = d.S[0];
+  const R1 = d.R[0];
+
+  if (tradeSide === "LONG") {
+    const risk = price - S1;
+    const reward = R1 - price;
+    if (risk <= 0 || reward <= 0) return null;
+    return +(reward / risk).toFixed(2);
+  }
+
+  if (tradeSide === "SHORT") {
+    const risk = R1 - price;
+    const reward = price - S1;
+    if (risk <= 0 || reward <= 0) return null;
+    return +(reward / risk).toFixed(2);
+  }
+
+  return null;
+  }
   
 
 /* === IMPROVED 15m SWING DETECTION (CONFIRMED) === */
@@ -2039,6 +2063,14 @@ card.dataset.structureQuality =
   //}
 //}
 
+    const rr =
+  aiVerdict.executionZone === "ENTRY ZONE" &&
+  aiVerdict.tradeSide !== "WAIT"
+    ? calculateRR(d, aiVerdict.tradeSide)
+    : null;
+
+    const rrDisplay = rr && rr >= 1.2 ? rr : null;
+
   const structureBias = getTrendStructureBias(d.structureType);
 
   
@@ -2234,6 +2266,12 @@ ${d.volumeBreakout ? `
   ${d.S[1] ? `<div class="muted bear">S2: ${d.S[1].toFixed(4)}</div>` : ""}
   ${d.R[0] ? `<div class="muted bull">R1: ${d.R[0].toFixed(4)}</div>` : ""}
   ${d.R[1] ? `<div class="muted bull">R2: ${d.R[1].toFixed(4)}</div>` : ""}
+
+  ${rrDisplay ? `
+  <div class="muted neutral">
+    ⚖ Risk–Reward: <b>${rrDisplay}R</b>
+  </div>
+` : ""}
 
   <div class="muted ${tradeSideClass}">
     🎯 Trade Side: <b>${aiVerdict.tradeSide}</b>
