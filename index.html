@@ -2037,13 +2037,11 @@ card.innerHTML = `
     ℹ Volume structure reflects pressure behavior, not trend direction
   </div>
 
-if (d.structure === "none" && d.volumeStructure?.name !== "none") {
-  card.innerHTML += `
-    <div class="muted neutral">
-      ⏳ Volume pressure detected — waiting for structure confirmation
-    </div>
-  `;
-}
+${d.structure === "none" && d.volumeStructure?.name !== "none" ? `
+  <div class="muted neutral">
+    ⏳ Volume pressure detected — waiting for structure confirmation
+  </div>
+` : ""}
 
   <hr style="opacity:.15">
 
