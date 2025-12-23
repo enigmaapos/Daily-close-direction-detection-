@@ -203,6 +203,11 @@ button.secondary{
 .exec-pullback   { color: var(--neutral); }
 .exec-late       { color: var(--accent); }   /* blue */
 .exec-no-trade   { color: var(--muted); }
+
+  .volume-hint {
+  font-style: italic;
+  opacity: .85;
+  }
 </style>
 </head>
 
@@ -1443,6 +1448,29 @@ async function getDailyRSIContext(sym){
 
   return "⚪ Neutral Volume";
 }
+
+  function getVolumeStructureView(d){
+  const bull = d.bull === true;
+  const structure = d.structure || "none";
+
+  if (bull) {
+    if (structure.includes("resistance broken"))
+      return "Volume Suggests: Bullish Continuation Pressure";
+    if (structure.includes("support holding"))
+      return "Volume Suggests: Bullish Defense";
+    if (structure.includes("support weak"))
+      return "Volume Suggests: Bull Trap Pressure";
+  } else {
+    if (structure.includes("support broken"))
+      return "Volume Suggests: Bearish Continuation Pressure";
+    if (structure.includes("resistance failed"))
+      return "Volume Suggests: Bearish Defense";
+    if (structure.includes("resistance weak"))
+      return "Volume Suggests: Bear Trap Pressure";
+  }
+
+  return "Volume Suggests: No Clear Structural Bias";
+  }
   
 
 /* ================= ANALYZE ================= */
@@ -1952,6 +1980,7 @@ if (d.volumeBreakout) {
 
   
     const volumeStateLabel = getVolumeStateLabel(d);
+const volumeStructureView = getVolumeStructureView(d);
 
     
 
@@ -2061,6 +2090,22 @@ card.innerHTML = `
       📊 No 24h Volume Breakout
     </div>
   `}
+
+  <hr style="opacity:.15">
+
+<!-- ================= VOLUME-IMPLIED STRUCTURE (NON-BINDING) ================= -->
+<div class="muted"><b>🧪 Volume-Implied Structure (Informational)</b></div>
+
+<div class="muted ${
+  volumeStructureView.includes("Bullish") ? "bull" :
+  volumeStructureView.includes("Bearish") ? "bear" : "neutral"
+}">
+  ${volumeStructureView}
+</div>
+
+<div class="muted volume-hint">
+  ${volumeStructureView}
+</div>
 
   <hr style="opacity:.15">
 
