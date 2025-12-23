@@ -2126,19 +2126,6 @@ ${d.volumeBreakout ? `
       </span>
     </div>
   ` : ""}
- 
-
-  <div class="muted ${aiVerdict.verdictClass}">
-    🧠 AI Verdict: <b>${aiVerdict.verdict}</b>
-  </div>
-
-  <div class="muted ${aiVerdict.verdictClass}">
-    ${aiVerdict.tierLabel}
-  </div>
-
-  <div class="muted">
-    ${aiVerdict.reason}
-  </div>
 
   ${d.S[0] ? `<div class="muted bear">S1: ${d.S[0].toFixed(4)}</div>` : ""}
   ${d.S[1] ? `<div class="muted bear">S2: ${d.S[1].toFixed(4)}</div>` : ""}
@@ -2151,6 +2138,18 @@ ${d.volumeBreakout ? `
 
   <div class="muted ${execClass}">
     🧭 Execution Zone: <b>${executionZone}</b>
+  </div>
+
+  <div class="muted ${aiVerdict.verdictClass}">
+    🧠 AI Verdict: <b>${aiVerdict.verdict}</b>
+  </div>
+
+  <div class="muted ${aiVerdict.verdictClass}">
+    ${aiVerdict.tierLabel}
+  </div>
+
+  <div class="muted">
+    ${aiVerdict.reason}
   </div>
 `;
 
