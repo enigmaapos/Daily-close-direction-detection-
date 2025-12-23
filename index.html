@@ -1696,64 +1696,65 @@ else {
   structure = "none";
 }
 
-      /* ❌ VOLUME-BASED STRUCTURE LOGIC — DISABLED
-   Reason:
-   - Overwrites trend-based structure
-   - Causes UI inconsistency
-   - Volume dominance ≠ structure environment
-*/
+  const volumeStructure = {
+  name: "none",
+  label: "No Active Volume Structure"
+};
 
-// if (bull) {
-//   if (rb) {
-//     if (bullishBreakAccepted) {
-//       bias = "Bullish Continuation";
-//       prob = 90;
-//       structure = "resistance broken (accepted)";
-//     } else {
-//       bias = "Bull Trap Risk";
-//       prob = 55;
-//       structure = "resistance broken (unaccepted)";
-//     }
-//   }
-//   else if (sw.S.length) {
-//     if (!rsi50State.consistentlyBelow50) {
-//       bias = "Bullish Defense";
-//       prob = 75;
-//       structure = "support holding (confirmed)";
-//     } else {
-//       bias = "Bull Trap Risk";
-//       prob = 45;
-//       structure = "support weak (RSI pressure)";
-//     }
-//   }
-// } else {
-//   if (sb) {
-//     if (bearishBreakAccepted) {
-//       bias = "Bearish Continuation";
-//       prob = 90;
-//       structure = "support broken (accepted)";
-//     } else {
-//       bias = "Bear Trap Risk";
-//       prob = 55;
-//       structure = "support broken (unaccepted)";
-//     }
-//   }
-//   else if (sw.R.length) {
-//     if (!rsi50State.consistentlyAbove50) {
-//       bias = "Bearish Defense";
-//       prob = 75;
-//       structure = "resistance failed (confirmed)";
-//     } else {
-//       bias = "Bear Trap Risk";
-//       prob = 45;
-//       structure = "resistance weak (RSI pressure)";
-//     }
-//   }
-//   else {
-//     bias = "Bear Trap Risk";
-//     prob = 40;
-//   }
-// }
+      
+/* ================= VOLUME STRUCTURE (NON-BINDING | OLD NAMING) ================= */
+
+if (bull) {
+  // 🟢 BUYERS dominant (green pressure failed / absorbed)
+
+  // Price pushed above resistance on buy volume
+  if (rb) {
+    if (bullishBreakAccepted) {
+      volumeStructure.name  = "resistance broken (accepted)";
+      volumeStructure.label = "🟢 Buy-Side Acceptance (Resistance Broken)";
+    } else {
+      volumeStructure.name  = "resistance weak (RSI pressure)";
+      volumeStructure.label = "🟡 Buy-Side Rejection Risk (Resistance Weak)";
+    }
+  }
+
+  // Buyers defending support
+  else if (sw.S.length) {
+    if (!rsi50State.consistentlyBelow50) {
+      volumeStructure.name  = "support holding (confirmed)";
+      volumeStructure.label = "🟢 Buy-Side Defense (Support Holding)";
+    } else {
+      volumeStructure.name  = "support weak (RSI pressure)";
+      volumeStructure.label = "🟡 Buy-Side Weakening (Support Weak)";
+    }
+  }
+
+} else {
+  // 🔴 SELLERS dominant (red pressure failed / absorbed)
+
+  // Price pushed below support on sell volume
+  if (sb) {
+    if (bearishBreakAccepted) {
+      volumeStructure.name  = "support broken (accepted)";
+      volumeStructure.label = "🔴 Sell-Side Acceptance (Support Broken)";
+    } else {
+      volumeStructure.name  = "support weak (RSI pressure)";
+      volumeStructure.label = "🟡 Sell-Side Rejection Risk (Support Weak)";
+    }
+  }
+
+  // Sellers defending resistance  ⭐ THIS IS YOUR KEY CASE
+  else if (sw.R.length) {
+    if (!rsi50State.consistentlyAbove50) {
+      volumeStructure.name  = "resistance failed (confirmed)";
+      volumeStructure.label = "🔴 Sell-Side Defense (Resistance Holding)";
+    } else {
+      volumeStructure.name  = "resistance weak (RSI pressure)";
+      volumeStructure.label = "🟡 Sell-Side Weakening (Resistance Weak)";
+    }
+  }
+}
+  
 
 /* ================= STRUCTURE HOLDING ================= */
 const structureHolding =
@@ -1781,7 +1782,7 @@ const postVolBreakRSIConfirmSafe =
 
   const fundingRate = await getFundingRate(sym);
 
-  return {sym,price,change,bull,prob,bias,structure,structureType,S:sw.S,R:sw.R,dailyRSI,rsi15,rsi15Momentum,volumeBreakout,
+  return {sym,price,change,bull,prob,bias,structure,structureType,volumeStructure,S:sw.S,R:sw.R,dailyRSI,rsi15,rsi15Momentum,volumeBreakout,
   breakoutAge,volumeBreakoutType,fakeVolumeBreak,postVolBreakRSIConfirm: postVolBreakRSIConfirmSafe,
   domV,
   lastVol,mainTrend,volAI,fundingRate,ema14: ema14Last,
@@ -1980,6 +1981,22 @@ const volumeStructureView = getVolumeStructureView(d);
 
     
 
+  const volumeStruct = d.volumeStructure || {
+  name: "none",
+  label: "No Active Volume Structure"
+};
+
+const volumeStructClass =
+  volumeStruct.name.includes("support holding") ||
+  volumeStruct.name.includes("resistance broken")
+    ? "bull"
+    : volumeStruct.name.includes("support broken") ||
+      volumeStruct.name.includes("resistance failed")
+    ? "bear"
+    : volumeStruct.name.includes("weak")
+    ? "neutral"
+    : "muted";
+
 card.innerHTML = `
   ${isFav
     ? `<div class="close" onclick="removeFav('${d.sym}')">✖</div>`
@@ -1988,7 +2005,7 @@ card.innerHTML = `
 
   <b>${d.sym}</b>
   <div class="muted">Price: ${d.price.toFixed(4)}</div>
-  <div class="muted ${d.change>=0?"bull":"bear"}">
+  <div class="muted ${d.change >= 0 ? "bull" : "bear"}">
     24h Change: ${d.change.toFixed(2)}%
   </div>
 
@@ -2029,7 +2046,7 @@ card.innerHTML = `
   ${d.dailyRSI ? `
     <div class="muted ${
       d.dailyRSI.value >= 50 ? "bull" :
-      d.dailyRSI.value <= 50 ? "bear" : "neutral"
+      d.dailyRSI.value < 50 ? "bear" : "neutral"
     }">
       📅 Daily RSI14: ${d.dailyRSI.value}
       <br>
@@ -2041,11 +2058,11 @@ card.innerHTML = `
 
   <hr style="opacity:.15">
 
-  <!-- ================= VOLUME STRUCTURE ================= -->
+  <!-- ================= VOLUME STRUCTURE (NON-BINDING) ================= -->
   <div class="muted"><b>📦 Volume Structure</b></div>
 
   <div class="muted ${d.bull ? "bull" : "bear"}">
-    Dominant Volume: ${d.bull ? "BUYERS" : "SELLERS"}
+    Dominant Volume: <b>${d.bull ? "BUYERS" : "SELLERS"}</b>
   </div>
 
   ${d.volAI ? `
@@ -2065,8 +2082,12 @@ card.innerHTML = `
     </div>
   ` : ""}
 
+  <div class="muted ${volumeStructClass}">
+    Volume Structure: <b>${volumeStruct.name}</b>
+  </div>
+
   <div class="muted neutral">
-    Volume State: <b>${volumeStateLabel}</b>
+    ${volumeStruct.label}
   </div>
 
   ${d.volumeBreakout ? `
@@ -2087,21 +2108,9 @@ card.innerHTML = `
     </div>
   `}
 
-  <hr style="opacity:.15">
-
-<!-- ================= VOLUME-IMPLIED STRUCTURE (NON-BINDING) ================= -->
-<div class="muted"><b>🧪 Volume-Implied Structure (Informational)</b></div>
-
-<div class="muted ${
-  volumeStructureView.includes("Bullish") ? "bull" :
-  volumeStructureView.includes("Bearish") ? "bear" : "neutral"
-}">
-  ${volumeStructureView}
-</div>
-
-<div class="muted volume-hint">
-  ${volumeStructureView}
-</div>
+  <div class="muted volume-hint">
+    ℹ Volume structure reflects pressure behavior, not trend direction
+  </div>
 
   <hr style="opacity:.15">
 
@@ -2135,17 +2144,18 @@ card.innerHTML = `
     🧭 Execution Zone: <b>${executionZone}</b>
   </div>
 
-  ${d.S[0]?`<div class="muted bear">S1: ${d.S[0].toFixed(4)}</div>`:""}
-  ${d.S[1]?`<div class="muted bear">S2: ${d.S[1].toFixed(4)}</div>`:""}
-  ${d.R[0]?`<div class="muted bull">R1: ${d.R[0].toFixed(4)}</div>`:""}
-  ${d.R[1]?`<div class="muted bull">R2: ${d.R[1].toFixed(4)}</div>`:""}
+  ${d.S[0] ? `<div class="muted bear">S1: ${d.S[0].toFixed(4)}</div>` : ""}
+  ${d.S[1] ? `<div class="muted bear">S2: ${d.S[1].toFixed(4)}</div>` : ""}
+  ${d.R[0] ? `<div class="muted bull">R1: ${d.R[0].toFixed(4)}</div>` : ""}
+  ${d.R[1] ? `<div class="muted bull">R2: ${d.R[1].toFixed(4)}</div>` : ""}
 `;
-    
 
-  if (!skipFilter) {
+    if (!skipFilter) {
   applyFilters();
 }
-}
+  }
+
+  
 
   async function runDailyRSIScan(targetLabel){
   greenGrid.innerHTML = "";
