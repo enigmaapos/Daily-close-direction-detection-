@@ -2018,6 +2018,33 @@ card.innerHTML = `
     ${d.bias} — ${d.prob}%
   </div>
 
+  <div class="muted ${
+    structureBias === "bullish" ? "bull" :
+    structureBias === "bearish" ? "bear" : "neutral"
+  }">
+   Trend Structure: ${d.structure}
+  </div>
+
+  <div class="muted ${volumeStructClass}">
+    Volume Structure: <b>${volumeStruct.name}</b>
+  </div>
+
+  <div class="muted neutral">
+    ${volumeStruct.label}
+  </div>
+
+  <div class="muted volume-hint">
+    ℹ Volume structure reflects pressure behavior, not trend direction
+  </div>
+
+if (d.structure === "none" && d.volumeStructure?.name !== "none") {
+  card.innerHTML += `
+    <div class="muted neutral">
+      ⏳ Volume pressure detected — waiting for structure confirmation
+    </div>
+  `;
+}
+
   <hr style="opacity:.15">
 
   <!-- ================= STRUCTURE ================= -->
@@ -2101,25 +2128,7 @@ ${d.volumeBreakout ? `
       </span>
     </div>
   ` : ""}
-
-  <div class="muted ${volumeStructClass}">
-    Volume Structure: <b>${volumeStruct.name}</b>
-  </div>
-
-  <div class="muted neutral">
-    ${volumeStruct.label}
-  </div>
-
-  <div class="muted volume-hint">
-    ℹ Volume structure reflects pressure behavior, not trend direction
-  </div>
-
-  <div class="muted ${
-    structureBias === "bullish" ? "bull" :
-    structureBias === "bearish" ? "bear" : "neutral"
-  }">
-   Trend Structure: ${d.structure}
-  </div>
+ 
 
   <div class="muted ${aiVerdict.verdictClass}">
     🧠 AI Verdict: <b>${aiVerdict.verdict}</b>
@@ -2147,14 +2156,6 @@ ${d.volumeBreakout ? `
   </div>
 `;
 
-    // ================= VOLUME → STRUCTURE WAIT MESSAGE =================
-if (d.structure === "none" && d.volumeStructure?.name !== "none") {
-  card.innerHTML += `
-    <div class="muted neutral">
-      ⏳ Volume pressure detected — waiting for structure confirmation
-    </div>
-  `;
-}
 
     if (!skipFilter) {
   applyFilters();
