@@ -780,18 +780,11 @@ function getTradeSide(d){
 
   /* ⛔ HARD BLOCKS — BUT ALLOW DEFENSE */
   if (
-  verdict === AI_VERDICTS.STRONG_CONTINUATION ||
-  verdict === AI_VERDICTS.CONTROLLED_CONTINUATION
-) {
-  if (
-    d.marketDom &&
-    Math.abs(d.marketDom.net) < 5
+    verdict === AI_VERDICTS.AVOID ||
+    verdict === AI_VERDICTS.COUNTER_TREND
   ) {
-    return "LATE ZONE (LOW FOLLOW-THROUGH)";
+    return "WAIT";
   }
-
-  return "LATE ZONE";
-}
 
   /* 🛡 DEFENSE HAS PRIORITY */
   if (bias === "Bullish Defense" && trend === "bullish") return "LONG";
@@ -838,7 +831,7 @@ function getTradeSide(d){
     d.marketDom &&
     Math.abs(d.marketDom.net) < 5
   ) {
-    return "LATE ZONE (LOW FOLLOW-THROUGH)";
+    return "LATE ZONE";
   }
 
   return "LATE ZONE";
