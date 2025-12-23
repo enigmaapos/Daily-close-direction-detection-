@@ -1393,56 +1393,51 @@ async function getDailyRSIContext(sym){
   
   function getVolumeStateLabel(d) {
   const structure = d.structure || "";
-  const volAI = d.volAI || {};
-  const dominantBuy = d.bull === true;
+  const dominantBuy  = d.bull === true;
   const dominantSell = d.bull === false;
+
+  // ❗ No structure → truly neutral
+  if (structure === "none" || structure === "") {
+    return "⚪ No Active Volume Structure";
+  }
 
   /* ================= BUY-SIDE DOMINANT ================= */
   if (dominantBuy) {
 
-    // Buyers defending downside
     if (structure.includes("support holding"))
-      return "🟢 Buy-Side Defense (Demand Absorbing)";
+      return "🟢 Buy-Side Defense (Demand Holding)";
 
-    // Buyers accepted higher prices
     if (structure.includes("resistance broken") && structure.includes("accepted"))
-      return "🟢 Buy-Side Acceptance (Continuation)";
+      return "🟢 Buy-Side Acceptance (Higher Prices Accepted)";
 
-    // Buyers losing momentum
     if (structure.includes("support weak"))
-      return "🟡 Buy-Side Pressure Weakening";
+      return "🟡 Buy-Side Weakening (Demand Losing Strength)";
 
-    // Buyers failing at resistance
     if (structure.includes("resistance weak"))
-      return "🟡 Buy-Side Rejection Risk";
-
-    return "🟢 Buy-Side Control";
+      return "🟡 Buy-Side Pressure Weakening (Rejection Risk)";
   }
 
   /* ================= SELL-SIDE DOMINANT ================= */
   if (dominantSell) {
 
-    // Sellers defending upside
     if (structure.includes("resistance failed"))
-      return "🔴 Sell-Side Defense (Supply Absorbing)";
+      return "🔴 Sell-Side Defense (Supply Holding)";
 
-    // Sellers accepted lower prices
     if (structure.includes("support broken") && structure.includes("accepted"))
-      return "🔴 Sell-Side Acceptance (Continuation)";
+      return "🔴 Sell-Side Acceptance (Lower Prices Accepted)";
 
-    // Sellers losing momentum
+    // ⭐ THIS IS THE CASE YOU CARE ABOUT
     if (structure.includes("resistance weak"))
-      return "🟡 Sell-Side Pressure Weakening";
+      return "🟡 Sell-Side Weakening (Supply Losing Control)";
 
-    // Sellers failing at support
     if (structure.includes("support weak"))
-      return "🟡 Sell-Side Rejection Risk";
-
-    return "🔴 Sell-Side Control";
+      return "🟡 Sell-Side Pressure Weakening (Bounce Risk)";
   }
 
-  return "⚪ Neutral Volume";
-}
+  // fallback (should rarely hit)
+  return "⚪ Volume Structure Mixed";
+  }
+  
   
   function getVolumeStructureView(d){
   const bull = d.bull === true;
