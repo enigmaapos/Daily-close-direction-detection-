@@ -473,6 +473,15 @@ const VOLUME_BREAK_MEMORY = {
 let volumeAlertCooldown = {};
 const ALERT_COOLDOWN = 60 * 1000; // 1 minute per symbol
 
+
+  const executionAlert = new Audio(
+  "https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg"
+);
+
+const EXEC_ALERT_COOLDOWN = 2 * 60 * 1000; // 2 minutes
+const execAlertCooldown = {};
+
+  
   
 
   window.addEventListener("load", async () => {
@@ -2018,15 +2027,15 @@ card.dataset.structureQuality =
   
 
   // 🔔 SOUND ALERT — only on 24h volume breakout
-if (d.volumeBreakout) {
-  const now = Date.now();
+//if (d.volumeBreakout) {
+  //const now = Date.now();
 
   // prevent repeat spam per symbol
-  if (!volumeAlertCooldown[d.sym] || now - volumeAlertCooldown[d.sym] > ALERT_COOLDOWN) {
-    volumeAlert.play().catch(()=>{});
-    volumeAlertCooldown[d.sym] = now;
-  }
-}
+  //if (!volumeAlertCooldown[d.sym] || now - volumeAlertCooldown[d.sym] > ALERT_COOLDOWN) {
+    //volumeAlert.play().catch(()=>{});
+    //volumeAlertCooldown[d.sym] = now;
+  //}
+//}
 
   const structureBias = getTrendStructureBias(d.structureType);
 
@@ -2045,6 +2054,32 @@ const volumeStructClass =
     : volumeStruct.name.includes("weak")
     ? "neutral"
     : "muted";
+
+
+    // ================= EXECUTION ALERT =================
+const now = Date.now();
+const alertKey = `${d.sym}-${aiVerdict.tradeSide}`;
+
+const isLongExecution =
+  aiVerdict.tradeSide === "LONG" &&
+  aiVerdict.executionZone === "ENTRY ZONE" &&
+  el.id === "redGrid";        // 🔴 Top 30 Red
+
+const isShortExecution =
+  aiVerdict.tradeSide === "SHORT" &&
+  aiVerdict.executionZone === "ENTRY ZONE" &&
+  el.id === "greenGrid";      // 🟢 Top 30 Green
+
+if ((isLongExecution || isShortExecution)) {
+  if (
+    !execAlertCooldown[alertKey] ||
+    now - execAlertCooldown[alertKey] > EXEC_ALERT_COOLDOWN
+  ) {
+    executionAlert.play().catch(()=>{});
+    execAlertCooldown[alertKey] = now;
+  }
+}
+    
 
 card.innerHTML = `
   ${isFav
