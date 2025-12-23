@@ -2505,11 +2505,11 @@ GLOBAL_MARKET_DOM = dom;
     }
 
     // 🔄 auto-update manual & favorites
-if (isAutoScan) {
-  await refreshFavorites();
-  await refreshManualSymbol();
-}
+// 🔄 keep all sections aligned with scan
+await refreshFavorites();
+await refreshManualSymbol();
 
+    
   } finally {
     // 🕒 timing
     timestamp.innerText = new Date().toLocaleString();
