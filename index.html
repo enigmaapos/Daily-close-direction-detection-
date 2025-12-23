@@ -971,7 +971,8 @@ const executionZone = getExecutionZone(d, tradeSide);
   }
   
 
-  function getStructureDirectionalBias(structureType){
+  // Trend-only directional bias
+function getTrendStructureBias(structureType){
   if (
     structureType === "resistance broken" ||
     structureType === "support holding"
@@ -1946,6 +1947,7 @@ card.dataset.aiverdict = aiVerdict.verdict;
   card.dataset.tradeside = aiVerdict.tradeSide;
   card.dataset.execution = executionZone;
     card.dataset.volai = d.volAI?.meaning || "Neutral";
+    card.dataset.volstructure = volumeStruct.name;
 
 card.dataset.structureQuality =
   d.structure.includes("accepted") ? "accepted" :
@@ -1970,10 +1972,7 @@ if (d.volumeBreakout) {
   }
 }
 
-  const structureBias = getStructureDirectionalBias(
-  d.structureType,
-  d.structureQuality
-);
+  const structureBias = getTrendStructureBias(d.structureType);
 
   
     const volumeStateLabel = getVolumeStateLabel(d);
@@ -2149,6 +2148,15 @@ card.innerHTML = `
   ${d.R[0] ? `<div class="muted bull">R1: ${d.R[0].toFixed(4)}</div>` : ""}
   ${d.R[1] ? `<div class="muted bull">R2: ${d.R[1].toFixed(4)}</div>` : ""}
 `;
+
+    // ================= VOLUME → STRUCTURE WAIT MESSAGE =================
+if (d.structure === "none" && d.volumeStructure?.name !== "none") {
+  card.innerHTML += `
+    <div class="muted neutral">
+      ⏳ Volume pressure detected — waiting for structure confirmation
+    </div>
+  `;
+}
 
     if (!skipFilter) {
   applyFilters();
