@@ -824,19 +824,12 @@ function getTradeSide(d){
   }
 
 /* ================= CONTINUATION ================= */
-if (bias.includes("Continuation")) {
-
-  // ✅ Pullback = value zone + compression
-  if (
-    location === "MID" &&
-    isValidPullback(d)
-  ) {
+    if (bias.includes("Continuation")) {
+  if (isValidPullback(d)) {
     return "PULLBACK ZONE";
   }
-
-  // ⏰ Otherwise it's continuation / chase
   return "LATE ZONE";
-}
+    }
 
       /* ================= FALLBACK ================= */
   return "NO TRADE ZONE";
