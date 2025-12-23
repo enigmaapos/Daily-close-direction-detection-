@@ -747,13 +747,12 @@ function getTradeSide(d){
 
   /* ================= HARD BLOCKS ================= */
   if (
-    verdict === AI_VERDICTS.AVOID ||
-    verdict === AI_VERDICTS.STRUCTURE_WEAK ||
-    verdict === AI_VERDICTS.WAIT_FOR_PULLBACK ||
-    verdict === AI_VERDICTS.COUNTER_TREND
-  ) {
-    return "WAIT";
-  }
+  verdict === AI_VERDICTS.AVOID ||
+  verdict === AI_VERDICTS.STRUCTURE_WEAK ||
+  verdict === AI_VERDICTS.COUNTER_TREND
+) {
+  return "WAIT";
+}
 
   /* ================= CONTINUATION ================= */
   if (
@@ -786,14 +785,6 @@ function getTradeSide(d){
   function getExecutionZone(d, tradeSide){
   const verdict  = d.aiVerdict;
   const bias     = d.bias || "";
-
-  if (!tradeSide || tradeSide === "WAIT") {
-    // Trap & no-trade still show pullback or no-trade separately
-    if (verdict === AI_VERDICTS.TRAP_RISK) {
-      return "PULLBACK ZONE";
-    }
-    return "NO TRADE ZONE";
-  }
 
   /* ================= DEFENSE = ENTRY ================= */
   if (
