@@ -371,6 +371,13 @@ button.secondary{
     <option value="NO TRADE ZONE">NO TRADE ZONE</option>
   </select>
   </div>
+
+    <div class="row filter-box">
+  <select id="filterRR">
+  <option value="all">All Setups</option>
+  <option value="present">Setups With Risk Reward</option>
+  </select>
+    </div>
   
 <!-- SORT + RESET ROW -->
 <div class="row">
@@ -1889,6 +1896,8 @@ function applyFilters(){
   const ts = document.getElementById("filterTradeSide")?.value || "all";
   const ez = document.getElementById("filterExecution")?.value || "all";
   const vai = document.getElementById("filterVolAI")?.value || "all";
+  const rrFilter = document.getElementById("filterRR")?.value || "all";
+  
 
   document.querySelectorAll(".card").forEach(c => {
 
@@ -1911,6 +1920,17 @@ function applyFilters(){
   if(ts !== "all" && c.dataset.tradeside !== ts) ok = false;
   if(ez !== "all" && c.dataset.execution !== ez) ok = false;
     if (vai !== "all" && c.dataset.volai !== vai) ok = false;
+    // ================= RR FILTER =================
+if (rrFilter !== "all") {
+  const rr = parseFloat(c.dataset.rr);
+
+  if (rrFilter === "present") {
+    if (isNaN(rr)) ok = false;
+  } else {
+    const minRR = parseFloat(rrFilter);
+    if (isNaN(rr) || rr < minRR) ok = false;
+  }
+}
 
   c.style.display = ok ? "" : "none";
 });
@@ -1929,6 +1949,8 @@ function applyFilters(){
            document.getElementById("filterTradeSide").value = "all";
            document.getElementById("filterExecution").value = "all";
            document.getElementById("filterVolAI").value = "all";
+           document.getElementById("filterRR").value = "all";
+           
            
 
   applyFilters();
@@ -2046,6 +2068,11 @@ card.dataset.structureQuality =
   d.structure.includes("unaccepted") ? "unaccepted" :
   d.structure.includes("weak") ? "weak" :
   "none";
+
+// ================= RR PRESENCE FILTER =================
+if (rrFilter === "present") {
+  if (!c.dataset.rr) ok = false;
+}
 
     if (el.id === "searchGrid") {
   card.dataset.manual = "true";
@@ -2710,7 +2737,8 @@ async function runSearch(){
   "filterVolBreak",
   "filterAIVerdict",  // 👈 ADD THIS
   "filterTradeSide",
-  "filterExecution"
+  "filterExecution",
+  "filterRR"
 ].forEach(id=>{
   document.getElementById(id).addEventListener("change", applyFilters);
   document
