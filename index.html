@@ -823,14 +823,19 @@ function getTradeSide(d){
     return "ENTRY ZONE";
   }
 
-  /* ================= CONTINUATION ================= */
-  if (bias.includes("Continuation")) {
-    return location === "MID"
-      ? "PULLBACK ZONE"
-      : "LATE ZONE";
+/* ================= CONTINUATION ================= */
+if (bias.includes("Continuation")) {
+
+  // ✅ Pullback = value zone + compression
+  if (
+    location === "MID" &&
+    isValidPullback(d)
+  ) {
+    return "PULLBACK ZONE";
   }
 
-  return "NO TRADE ZONE";
+  // ⏰ Otherwise it's continuation / chase
+  return "LATE ZONE";
 }
   
 
@@ -862,6 +867,40 @@ function getTrendStructureBias(structureType){
 
   return "neutral";
 }
+
+  function isValidPullback(d){
+  // 1️⃣ trend intact
+  if (d.mainTrend !== "bullish" && d.mainTrend !== "bearish") return false;
+
+  // 2️⃣ structure must be HOLDING
+  if (
+    d.structure.includes("broken") ||
+    d.structure.includes("failed")
+  ) return false;
+
+  // 3️⃣ RSI cooling (not momentum acceleration)
+  if (
+    d.rsi15Momentum === "accel" ||
+    d.rsi15Momentum === "reclaim"
+  ) return false;
+
+  // 4️⃣ RSI near equilibrium
+  if (d.rsi15 === null || d.rsi15 < 45 || d.rsi15 > 55) return false;
+
+  // 5️⃣ EMA compression
+  const dist14 = Math.abs(d.price - d.ema14) / d.price;
+  const dist21 = Math.abs(d.price - d.ema21) / d.price;
+
+  if (dist14 > 0.003 && dist21 > 0.003) return false; // >0.3% away
+
+  // 6️⃣ No climax
+  if (
+    d.volAI?.meaning.includes("climax") ||
+    d.volAI?.meaning.includes("Distribution")
+  ) return false;
+
+  return true;
+  }
   
 
   function computeMarketDominance(tickers){
