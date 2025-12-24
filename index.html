@@ -2498,18 +2498,6 @@ ${d.structure === "none" && d.volumeStructure?.name !== "none" ? `
   </div>
 ` : ""}
 
-  <div class="muted">
-  🌍 Market Participation:
-  <b>${
-    d.marketDom && Math.abs(d.marketDom.net) < 5
-      ? "LOW (Choppy)"
-      : "ACTIVE"
-  }</b>
-  <br>
-  🌊 Symbol Behavior:
-  <b>${isSmoothDirection(d) ? "SMOOTH" : "CHOPPY"}</b>
-</div>
-
   ${d.S[0] ? `<div class="muted bear">S1: ${d.S[0].toFixed(4)}</div>` : ""}
   ${d.S[1] ? `<div class="muted bear">S2: ${d.S[1].toFixed(4)}</div>` : ""}
   ${d.R[0] ? `<div class="muted bull">R1: ${d.R[0].toFixed(4)}</div>` : ""}
@@ -2650,6 +2638,18 @@ ${d.volumeBreakout ? `
   <div class="muted ${execClass}">
     🧭 Execution Zone: <b>${executionZone}</b>
   </div>
+
+  <div class="muted">
+  🌍 Market Participation:
+  <b>${
+    d.marketDom && Math.abs(d.marketDom.net) < 5
+      ? "LOW (Choppy)"
+      : "ACTIVE"
+  }</b>
+  <br>
+  🌊 Symbol Behavior:
+  <b>${isSmoothDirection(d) ? "SMOOTH" : "CHOPPY"}</b>
+</div>
 `;
 
 
