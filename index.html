@@ -2033,28 +2033,24 @@ if (changeState === "EXTREME") {
 
 prob = Math.max(40, Math.min(prob, 95));
 
-  /* ================= RECOVERY QUALITY MODIFIER ================= */
+  /* ================= RECOVERY / DROP QUALITY MODIFIER ================= */
 
-// fake recovery / fake dump
+// Weak recovery against bearish trend → suspicious bounce
 if (
-  recoveryQuality === "REACTION" &&
-  (
-    (mainTrend === "bearish" && change > 0) ||
-    (mainTrend === "bullish" && change < 0)
-  )
+  moveType === "RECOVERY" &&
+  moveStrength === "WEAK" &&
+  mainTrend === "bearish"
 ) {
-  prob -= 5; // mild distrust
+  prob -= 5; // distrust fake recovery
 }
 
-// weak recovery against trend
+// Weak drop against bullish trend → likely pullback
 if (
-  recoveryQuality === "WEAK_RECOVERY" &&
-  (
-    (mainTrend === "bearish" && change > 0) ||
-    (mainTrend === "bullish" && change < 0)
-  )
+  moveType === "DROP" &&
+  moveStrength === "WEAK" &&
+  mainTrend === "bullish"
 ) {
-  prob -= 3;
+  prob -= 3; // mild distrust, not breakdown
 }
 
 prob = Math.max(40, Math.min(prob, 95));
