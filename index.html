@@ -1920,16 +1920,10 @@ function applyFilters(){
   if(ts !== "all" && c.dataset.tradeside !== ts) ok = false;
   if(ez !== "all" && c.dataset.execution !== ez) ok = false;
     if (vai !== "all" && c.dataset.volai !== vai) ok = false;
-    // ================= RR FILTER =================
-if (rrFilter !== "all") {
-  const rr = parseFloat(c.dataset.rr);
-
-  if (rrFilter === "present") {
-    if (isNaN(rr)) ok = false;
-  } else {
-    const minRR = parseFloat(rrFilter);
-    if (isNaN(rr) || rr < minRR) ok = false;
-  }
+    
+// ================= RR PRESENCE FILTER =================
+if (rrFilter === "present") {
+  if (!c.dataset.rr) ok = false;
 }
 
   c.style.display = ok ? "" : "none";
@@ -2069,9 +2063,11 @@ card.dataset.structureQuality =
   d.structure.includes("weak") ? "weak" :
   "none";
 
-// ================= RR PRESENCE FILTER =================
-if (rrFilter === "present") {
-  if (!c.dataset.rr) ok = false;
+    // ================= RR DATASET =================
+if (rrDisplay) {
+  card.dataset.rr = rrDisplay;
+} else {
+  delete card.dataset.rr;
 }
 
     if (el.id === "searchGrid") {
