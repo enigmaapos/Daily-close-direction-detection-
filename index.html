@@ -1673,6 +1673,16 @@ const sw = {
 
   const rsi15Momentum = getRSI15Momentum(rsi15Arr);
 
+  const defenseFailure = detectDefenseFailure({
+  structure,
+  bias,
+  mainTrend,
+  rsi50State,
+  marketDom,
+  volAI,
+  volumeAlign
+});
+
   
    const bullishBreakAccepted =
   rb &&
@@ -1897,15 +1907,6 @@ if (defenseFailure === "CRITICAL FAILURE") {
 
 prob = Math.max(40, Math.min(prob, 95));
   
-  const defenseFailure = detectDefenseFailure({
-  structure,
-  bias,
-  mainTrend,
-  rsi50State,
-  marketDom,
-  volAI,
-  volumeAlign
-});
 
 /* ================= STRUCTURE QUALITY ================= */
 let structureQuality = "normal";
