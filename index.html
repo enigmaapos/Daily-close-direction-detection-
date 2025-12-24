@@ -772,8 +772,8 @@ function getAIFinalVerdict(d) {
   }
 
   /* ================= 24H EXPANSION VERDICT SOFT DOWNGRADE ================= */
-if (
-  (changeState === "VERY_HIGH" || changeState === "EXTREME") &&
+    if (
+  (d.changeState === "VERY_HIGH" || d.changeState === "EXTREME") &&
   verdict === AI_VERDICTS.STRONG_CONTINUATION
 ) {
   verdict = AI_VERDICTS.CONTROLLED_CONTINUATION;
@@ -781,7 +781,7 @@ if (
 }
 
 if (
-  changeState === "EXTREME" &&
+  d.changeState === "EXTREME" &&
   verdict === AI_VERDICTS.CONTROLLED_CONTINUATION
 ) {
   verdict = AI_VERDICTS.WAIT_FOR_PULLBACK;
@@ -945,10 +945,11 @@ function getTradeSide(d){
     /* ================= 24H CHANGE EXECUTION TIMING ================= */
 if (
   zone === "ENTRY ZONE" &&
-  (changeState === "VERY_HIGH" || changeState === "EXTREME")
+  (d.changeState === "VERY_HIGH" || d.changeState === "EXTREME")
 ) {
   return "PULLBACK ZONE";
 }
+
 
   // 2️⃣ SMOOTHNESS — SECONDARY (symbol-specific behavior)
   if (
