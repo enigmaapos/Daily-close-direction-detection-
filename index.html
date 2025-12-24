@@ -214,31 +214,6 @@ button.secondary{
 <body>
 <h1>📊 15m Volume → Structure Probability Scanner</h1>
 <div class="muted">Dominant volume + structure confirmation only</div>
-<div class="muted">
-  Last update: <span id="timestamp">—</span><br>
-  Next scan in: <span id="nextScan">—</span>
-</div>
-
-<!-- ACTION ROW -->
-<div class="row">
-  <button class="primary" id="scanBtn" onclick="runScan()">Run Scan</button>
-<button class="secondary" id="scanVolBreakBtn">
-  🔥 Scan 24h Volume Break
-</button>
-  <div class="row filter-box">
-  <label class="muted" style="display:flex;align-items:center;gap:8px;cursor:pointer;">
-    <input
-      type="checkbox"
-      id="toggle24hVolume"
-    />
-    🔥 Auto 24h Volume Break Scan
-  </label>
-  </div>
-  <input id="symbolSearch" placeholder="BTCUSDT"/>
-  <button class="secondary" id="analyzeBtn" onclick="runSearch()">Analyze</button>
-</div>
-
-<div id="manualStatus" class="muted"></div>
 
 
 <!-- FILTERS ROW -->
@@ -392,6 +367,32 @@ button.secondary{
     <option value="asc">Ascending</option>
   </select>
 </div>
+
+  <div class="muted">
+  Last update: <span id="timestamp">—</span><br>
+  Next scan in: <span id="nextScan">—</span>
+  </div>
+
+  <!-- ACTION ROW -->
+<div class="row">
+  <button class="primary" id="scanBtn" onclick="runScan()">Run Scan</button>
+<button class="secondary" id="scanVolBreakBtn">
+  🔥 Scan 24h Volume Break
+</button>
+  <div class="row filter-box">
+  <label class="muted" style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+    <input
+      type="checkbox"
+      id="toggle24hVolume"
+    />
+    🔥 Auto 24h Volume Break Scan
+  </label>
+  </div>
+  <input id="symbolSearch" placeholder="BTCUSDT"/>
+  <button class="secondary" id="analyzeBtn" onclick="runSearch()">Analyze</button>
+</div>
+
+<div id="manualStatus" class="muted"></div>
 
 <div class="progress">
   <div id="progressFill"></div>
@@ -2440,15 +2441,15 @@ if (rrDisplay !== null) {
   
 
   // 🔔 SOUND ALERT — only on 24h volume breakout
-//if (d.volumeBreakout) {
-  //const now = Date.now();
+if (d.volumeBreakout) {
+  const now = Date.now();
 
-  // prevent repeat spam per symbol
-  //if (!volumeAlertCooldown[d.sym] || now - volumeAlertCooldown[d.sym] > ALERT_COOLDOWN) {
-    //volumeAlert.play().catch(()=>{});
-    //volumeAlertCooldown[d.sym] = now;
-  //}
-//}
+   prevent repeat spam per symbol
+  if (!volumeAlertCooldown[d.sym] || now - volumeAlertCooldown[d.sym] > ALERT_COOLDOWN) {
+    volumeAlert.play().catch(()=>{});
+    volumeAlertCooldown[d.sym] = now;
+  }
+}
 
     
 
