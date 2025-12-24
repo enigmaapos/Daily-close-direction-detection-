@@ -1756,13 +1756,13 @@ const sw = {
    const bullishBreakAccepted =
   rb &&
   rsi15 !== null &&
-  !rsi50State.consistentlyBelow50 &&
+  !rsi50State?.consistentlyBelow50 &&
   rsi15Rising;
 
 const bearishBreakAccepted =
   sb &&
   rsi15 !== null &&
-  !rsi50State.consistentlyAbove50 &&
+  !rsi50State?.consistentlyAbove50 &&
   !rsi15Rising;
 
 let bias = "Neutral";
@@ -1787,10 +1787,11 @@ if (mainTrend === "bullish") {
 
   /* ▶ Support defense */
   else if (sw.S.length && !sb) {
-    if (!rsi50State.consistentlyBelow50) {
-      bias = "Bullish Defense";
-      prob = 75;
-      structure = "support holding (confirmed)";
+    if (!rsi50State?.consistentlyBelow50) {
+  bias = "Bullish Defense";
+  prob = 75;
+  structure = "support holding (confirmed)";
+}
     } else {
       bias = "Bull Trap Risk";
       prob = 45;
@@ -1817,10 +1818,11 @@ else if (mainTrend === "bearish") {
 
   /* ▶ Resistance defense */
   else if (sw.R.length && !rb) {
-    if (!rsi50State.consistentlyAbove50) {
-      bias = "Bearish Defense";
-      prob = 75;
-      structure = "resistance failed (confirmed)";
+    if (!rsi50State?.consistentlyAbove50) {
+  bias = "Bearish Defense";
+  prob = 75;
+  structure = "resistance failed (confirmed)";
+}
     } else {
       bias = "Bear Trap Risk";
       prob = 45;
