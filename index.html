@@ -1559,6 +1559,16 @@ const rsi15Rising =
 
   const rsi50State = analyzeRSI50Behavior(rsi15Arr);
 
+    const defenseFailure = detectDefenseFailure({
+  structure,
+  bias,
+  mainTrend,
+  rsi50State,
+  marketDom,
+  volAI,
+  volumeAlign
+});
+
 
   let domV = 0;
 let domVBull = true;
@@ -1933,17 +1943,6 @@ const postVolBreakRSIConfirmSafe =
     const dailyRSI = await getDailyRSIContext(sym);
 
   const fundingRate = await getFundingRate(sym);
-
-
-  const defenseFailure = detectDefenseFailure({
-  structure,
-  bias,
-  mainTrend,
-  rsi50State,
-  marketDom,
-  volAI,
-  volumeAlign
-});
 
   
   const aiVerdict = getAIFinalVerdict({
