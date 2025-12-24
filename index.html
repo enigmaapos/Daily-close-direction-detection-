@@ -2271,13 +2271,6 @@ ${d.structure === "none" && d.volumeStructure?.name !== "none" ? `
   </div>
 ` : ""}
 
-<div class="muted ${tradeSideClass}">
-    🎯 Trade Side: <b>${aiVerdict.tradeSide}</b>
-  </div>
-
-  <div class="muted ${execClass}">
-    🧭 Execution Zone: <b>${executionZone}</b>
-  </div>
 
      ${rrDisplay ? `
   <div class="muted neutral">
@@ -2311,6 +2304,14 @@ ${d.structure === "none" && d.volumeStructure?.name !== "none" ? `
   ${d.S[1] ? `<div class="muted bear">S2: ${d.S[1].toFixed(4)}</div>` : ""}
   ${d.R[0] ? `<div class="muted bull">R1: ${d.R[0].toFixed(4)}</div>` : ""}
   ${d.R[1] ? `<div class="muted bull">R2: ${d.R[1].toFixed(4)}</div>` : ""}
+
+  <div class="muted ${tradeSideClass}">
+    🎯 Trade Side: <b>${aiVerdict.tradeSide}</b>
+  </div>
+
+  <div class="muted ${execClass}">
+    🧭 Execution Zone: <b>${executionZone}</b>
+  </div>
 
   <hr style="opacity:.15">
 
