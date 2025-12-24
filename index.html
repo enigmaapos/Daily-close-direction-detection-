@@ -2650,15 +2650,6 @@ card.innerHTML = `
     ${d.bias} — ${d.prob}%
   </div>
 
-  ${d.setupScore ? `
-  <div class="setup-score">
-    ⭐ <b>Setup Quality:</b> ${d.setupScore} / 10
-    <div class="setup-grade ${getSetupGradeClass(d.setupScore)}">
-      🏷 ${getSetupGradeLabel(d.setupScore)}
-    </div>
-  </div>
-` : ""}
-
   ${d.directionalBias ? `
   <div class="muted ${
     d.directionalBias.bias.includes("Bullish") ? "bull" :
@@ -2866,6 +2857,15 @@ ${d.volumeBreakout ? `
   🌊 Symbol Behavior:
   <b>${isSmoothDirection(d) ? "SMOOTH" : "CHOPPY"}</b>
 </div>
+
+${d.setupScore ? `
+  <div class="setup-score">
+    ⭐ <b>Setup Quality:</b> ${d.setupScore} / 10
+    <div class="setup-grade ${getSetupGradeClass(d.setupScore)}">
+      🏷 ${getSetupGradeLabel(d.setupScore)}
+    </div>
+  </div>
+` : ""}
 `;
 
 
