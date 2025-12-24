@@ -2519,12 +2519,13 @@ ${d.volumeBreakout ? `
     </div>
   ` : ""}
 
-  <div class="muted ${
-  changeState === "EXTREME" ? "bear" :
-  changeState === "VERY_HIGH" ? "neutral" : "muted"
+<div class="muted ${
+  d.changeState === "EXTREME" ? "bear" :
+  d.changeState === "VERY_HIGH" ? "neutral" : "muted"
 }">
-  ⏱ 24h Expansion: <b>${change.toFixed(2)}%</b> (${changeState})
+  ⏱ 24h Expansion: <b>${d.change.toFixed(2)}%</b> (${d.changeState})
 </div>
+
 
   <div class="muted ${aiVerdict.verdictClass}">
     🧠 AI Verdict: <b>${aiVerdict.verdict}</b>
