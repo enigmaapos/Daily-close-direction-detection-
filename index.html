@@ -649,9 +649,9 @@ const AI_VERDICT_TIERS = {
   }
 };
 
-/* ================= AI VERDICT LOGIC ================= */
 
-    function getAIFinalVerdict(d) {
+   /* ================= AI VERDICT LOGIC ================= */
+function getAIFinalVerdict(d) {
   const structure = d.structure || "none";
   const trend = d.mainTrend || "neutral";
   const prob = d.prob || 0;
@@ -664,22 +664,66 @@ const AI_VERDICT_TIERS = {
   const fakeVol = d.fakeVolumeBreak === true;
   const rsiLabel = d.dailyRSI?.label || "Neutral";
 
-  const bullishBreak = structure.includes("resistance broken") && trend === "bullish";
-  const bearishBreak = structure.includes("support broken") && trend === "bearish";
+  const bullishBreak =
+    structure.includes("resistance broken") && trend === "bullish";
+  const bearishBreak =
+    structure.includes("support broken") && trend === "bearish";
   const anyBreak = structure.includes("broken");
 
   let verdict = AI_VERDICTS.AVOID;
   let reason = "Conditions are mixed and lack a statistical edge.";
 
+  /* ================= TRAP / FAKE BREAK ================= */
   if (d.bias?.includes("Trap") || fakeVol) {
-    verdict = AI_VERDICTS.TRAP_RISK;
-    reason = "Volume spike lacks acceptance and structure stability is weak.";
+    return withTier(
+      AI_VERDICTS.TRAP_RISK,
+      "Volume spike lacks acceptance and structure stability is weak.",
+      d
+    );
   }
-  else if ((bullishBreak || bearishBreak) && hasVolumeBreak && !rsiLabel.includes("MAX")) {
+
+  /* ================= DEFENSE REGIME (WITH FAILURE STATE) ================= */
+  if (
+    d.bias === "Bullish Defense" ||
+    d.bias === "Bearish Defense"
+  ) {
+    if (d.defenseFailure === "CRITICAL FAILURE") {
+      return withTier(
+        AI_VERDICTS.TRAP_RISK,
+        "Defense failure detected · Structure reliability compromised",
+        d
+      );
+    }
+
+    if (d.defenseFailure === "EARLY WARNING") {
+      return withTier(
+        AI_VERDICTS.WAIT_FOR_PULLBACK,
+        "Defense weakening detected · Entry requires caution",
+        d
+      );
+    }
+
+    return withTier(
+      AI_VERDICTS.CONTROLLED_CONTINUATION,
+      "Structure is holding with defensive participation.",
+      d
+    );
+  }
+
+  /* ================= BREAKOUT / CONTINUATION ================= */
+  if (
+    (bullishBreak || bearishBreak) &&
+    hasVolumeBreak &&
+    !rsiLabel.includes("MAX")
+  ) {
     verdict = AI_VERDICTS.STRONG_CONTINUATION;
     reason = "Structure, trend, and sustained participation are aligned.";
   }
-  else if ((bullishBreak || bearishBreak) && !hasVolumeBreak && !rsiLabel.includes("MAX")) {
+  else if (
+    (bullishBreak || bearishBreak) &&
+    !hasVolumeBreak &&
+    !rsiLabel.includes("MAX")
+  ) {
     verdict = AI_VERDICTS.CONTROLLED_CONTINUATION;
     reason = "Structure aligns with trend, but participation remains selective.";
   }
@@ -689,32 +733,21 @@ const AI_VERDICT_TIERS = {
   }
   else if (
     anyBreak &&
-    ((structure.includes("resistance broken") && trend === "bearish") ||
-     (structure.includes("support broken") && trend === "bullish"))
+    (
+      (structure.includes("resistance broken") && trend === "bearish") ||
+      (structure.includes("support broken") && trend === "bullish")
+    )
   ) {
     verdict = AI_VERDICTS.COUNTER_TREND;
     reason = "Structure break occurred against the dominant trend.";
-  }
-    // 🛡 DEFENSE OVERRIDE
-if (
-  d.bias === "Bullish Defense" ||
-  d.bias === "Bearish Defense"
-) {
-  return withTier(
-    AI_VERDICTS.CONTROLLED_CONTINUATION,
-    "Structure is holding with defensive participation.",
-    d
-  );
   }
   else if (structure === "none" || prob < 60) {
     verdict = AI_VERDICTS.STRUCTURE_WEAK;
     reason = "No confirmed structure or probability edge present.";
   }
 
-  if (
-    verdict === AI_VERDICTS.STRONG_CONTINUATION &&
-    extreme
-  ) {
+  /* ================= FUNDING RISK ================= */
+  if (verdict === AI_VERDICTS.STRONG_CONTINUATION && extreme) {
     verdict = AI_VERDICTS.CONTROLLED_CONTINUATION;
     reason += " Funding shows crowded positioning.";
   }
@@ -728,51 +761,53 @@ if (
     reason += " Elevated funding increases entry risk.";
   }
 
-/* ================= MARKET DOMINANCE VERDICT DOWNGRADE ================= */
-if (
-  d.marketDom &&
-  verdict === AI_VERDICTS.CONTROLLED_CONTINUATION
-) {
-  const net = d.marketDom.net;
-
+  /* ================= MARKET DOMINANCE DOWNGRADE ================= */
   if (
-  ((d.bias || "").includes("Bullish") && net < -15) ||
-  ((d.bias || "").includes("Bearish") && net > 15)
-) {
-  verdict = AI_VERDICTS.WAIT_FOR_PULLBACK;
-  reason += " Market dominance conflicts with continuation direction.";
-}
-}
+    d.marketDom &&
+    verdict === AI_VERDICTS.CONTROLLED_CONTINUATION
+  ) {
+    const net = d.marketDom.net;
 
-/* ================= MARKET SMOOTHNESS VERDICT REFINEMENT ================= */
-if (
-  d.marketDom &&
-  verdict === AI_VERDICTS.STRONG_CONTINUATION &&
-  !isSmoothDirection(d)
-) {
-  verdict = AI_VERDICTS.CONTROLLED_CONTINUATION;
-  reason += " Symbol shows execution friction despite market participation.";
-}
+    if (
+      ((d.bias || "").includes("Bullish") && net < -15) ||
+      ((d.bias || "").includes("Bearish") && net > 15)
+    ) {
+      verdict = AI_VERDICTS.WAIT_FOR_PULLBACK;
+      reason += " Market dominance conflicts with continuation direction.";
+    }
+  }
 
-// ================= DEFENSE FAILURE OVERRIDE =================
-if (d.defenseFailure === "EARLY WARNING") {
-  if (verdict === AI_VERDICTS.STRONG_CONTINUATION) {
+  /* ================= MARKET SMOOTHNESS ================= */
+  if (
+    d.marketDom &&
+    verdict === AI_VERDICTS.STRONG_CONTINUATION &&
+    !isSmoothDirection(d)
+  ) {
     verdict = AI_VERDICTS.CONTROLLED_CONTINUATION;
-    reason += " · Defense weakening detected";
+    reason += " Symbol shows execution friction despite market participation.";
   }
-  else if (verdict === AI_VERDICTS.CONTROLLED_CONTINUATION) {
-    verdict = AI_VERDICTS.WAIT_FOR_PULLBACK;
-    reason += " · Defense weakening detected";
-  }
-}
 
-if (d.defenseFailure === "CRITICAL FAILURE") {
-  verdict = AI_VERDICTS.TRAP_RISK;
-  reason = "Defense failure detected · Structure reliability compromised";
-}
-      
+  /* ================= DEFENSE FAILURE (NON-DEFENSE REGIMES) ================= */
+  if (d.defenseFailure === "EARLY WARNING") {
+    if (verdict === AI_VERDICTS.STRONG_CONTINUATION) {
+      verdict = AI_VERDICTS.CONTROLLED_CONTINUATION;
+      reason += " · Defense weakening detected";
+    }
+    else if (verdict === AI_VERDICTS.CONTROLLED_CONTINUATION) {
+      verdict = AI_VERDICTS.WAIT_FOR_PULLBACK;
+      reason += " · Defense weakening detected";
+    }
+  }
+
+  if (d.defenseFailure === "CRITICAL FAILURE") {
+    verdict = AI_VERDICTS.TRAP_RISK;
+    reason = "Defense failure detected · Structure reliability compromised";
+  }
+
   return withTier(verdict, reason, d);
-}
+} 
+    
+
 
 /* ================= TIER WRAPPER ================= */
 
