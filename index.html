@@ -2338,14 +2338,6 @@ ${d.structure === "none" && d.volumeStructure?.name !== "none" ? `
   ${d.R[0] ? `<div class="muted bull">R1: ${d.R[0].toFixed(4)}</div>` : ""}
   ${d.R[1] ? `<div class="muted bull">R2: ${d.R[1].toFixed(4)}</div>` : ""}
 
-  <div class="muted ${tradeSideClass}">
-    🎯 Trade Side: <b>${aiVerdict.tradeSide}</b>
-  </div>
-
-  <div class="muted ${execClass}">
-    🧭 Execution Zone: <b>${executionZone}</b>
-  </div>
-
   <hr style="opacity:.15">
 
   <!-- ================= STRUCTURE ================= -->
@@ -2458,6 +2450,14 @@ ${d.volumeBreakout ? `
     🛡 Defense Status: <b>${d.defenseFailure}</b>
   </div>
 ` : ""}
+
+ <div class="muted ${tradeSideClass}">
+    🎯 Trade Side: <b>${aiVerdict.tradeSide}</b>
+  </div>
+
+  <div class="muted ${execClass}">
+    🧭 Execution Zone: <b>${executionZone}</b>
+  </div>
 `;
 
 
