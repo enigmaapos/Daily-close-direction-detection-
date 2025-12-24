@@ -2063,12 +2063,21 @@ card.dataset.structureQuality =
   d.structure.includes("weak") ? "weak" :
   "none";
 
-    // ================= RR DATASET =================
-if (rrDisplay) {
+// ================= RR CALCULATION =================
+const rr =
+  aiVerdict.executionZone === "ENTRY ZONE" &&
+  (aiVerdict.tradeSide === "LONG" || aiVerdict.tradeSide === "SHORT")
+    ? calculateRR(d, aiVerdict.tradeSide)
+    : null;
+
+const rrDisplay = rr && rr >= 1.2 ? rr : null;
+
+// ================= RR DATASET =================
+if (rrDisplay !== null) {
   card.dataset.rr = rrDisplay;
 } else {
   delete card.dataset.rr;
-}
+    }
 
     if (el.id === "searchGrid") {
   card.dataset.manual = "true";
@@ -2086,13 +2095,7 @@ if (rrDisplay) {
   //}
 //}
 
-    const rr =
-  aiVerdict.executionZone === "ENTRY ZONE" &&
-  aiVerdict.tradeSide !== "WAIT"
-    ? calculateRR(d, aiVerdict.tradeSide)
-    : null;
-
-    const rrDisplay = rr && rr >= 1.2 ? rr : null;
+    
 
   const structureBias = getTrendStructureBias(d.structureType);
 
