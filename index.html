@@ -1696,13 +1696,11 @@ if (typeof d.change === "number" && Math.abs(d.change) >= 25) {
 
   // ===== EXTENSION / EXHAUSTION =====
   if (d.moveType === "RECOVERY" && d.moveStrength === "STRONG") {
-    // late bullish push → caution
-    bearScore++;
+    bearScore++; // late push
   }
 
   if (d.moveType === "DROP" && d.moveStrength === "STRONG") {
-    // late bearish push → caution
-    bullScore++;
+    bullScore++; // late dump
   }
 
   // ===== DECISION =====
@@ -1724,7 +1722,7 @@ if (typeof d.change === "number" && Math.abs(d.change) >= 25) {
     bias: "Balanced / Indecision",
     reason: "Bullish and bearish pressures are currently balanced."
   };
-  }
+}
   
 
 /* ================= ANALYZE ================= */
@@ -2208,7 +2206,14 @@ moveStrength
 });
 
   const directionalBias = getDirectionalBias({
-  ...d,
+  structure,
+  mainTrend,
+  emaShortBias,
+  bull,
+  volAI,
+  marketDom,
+  moveType,
+  moveStrength,
   aiVerdict
 });
 
