@@ -371,6 +371,13 @@ button.secondary{
     <option value="NO TRADE ZONE">NO TRADE ZONE</option>
   </select>
   </div>
+
+    <div class="row filter-box">
+  <select id="filterRR">
+  <option value="all">All Setups</option>
+  <option value="present">Setups With Risk Reward</option>
+  </select>
+    </div>
   
 <!-- SORT + RESET ROW -->
 <div class="row">
@@ -409,10 +416,10 @@ button.secondary{
 <h2>🔍 Manual</h2>
 <div class="grid" id="searchGrid"></div>
 
-<h2>🟢 Top Gainers</h2>
+<h2>🟢 Top Gainers — Short Execution Zone (Sell on Strength)</h2>
 <div class="grid" id="greenGrid"></div>
 
-<h2>🔴 Top Losers</h2>
+<h2>🔴 Top Losers — Long Execution Zone (Buy on Weakness)</h2>
 <div class="grid" id="redGrid"></div>
 
   <button id="scrollTopBtn" title="Back to top">⬆</button>
@@ -454,6 +461,7 @@ let dailyRSIScanned = 0;
   let pending24hVolumeScan = false;
   let statusLocked = false;
   let auto24hVolumeEnabled = false; // ✅ default ON
+  let GLOBAL_MARKET_DOM = null;
   
 
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
@@ -472,6 +480,15 @@ const VOLUME_BREAK_MEMORY = {
 let volumeAlertCooldown = {};
 const ALERT_COOLDOWN = 60 * 1000; // 1 minute per symbol
 
+
+  const executionAlert = new Audio(
+  "https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg"
+);
+
+const EXEC_ALERT_COOLDOWN = 2 * 60 * 1000; // 2 minutes
+const execAlertCooldown = {};
+
+  
   
 
   window.addEventListener("load", async () => {
@@ -711,6 +728,32 @@ if (
     reason += " Elevated funding increases entry risk.";
   }
 
+/* ================= MARKET DOMINANCE VERDICT DOWNGRADE ================= */
+if (
+  d.marketDom &&
+  verdict === AI_VERDICTS.CONTROLLED_CONTINUATION
+) {
+  const net = d.marketDom.net;
+
+  if (
+  ((d.bias || "").includes("Bullish") && net < -15) ||
+  ((d.bias || "").includes("Bearish") && net > 15)
+) {
+  verdict = AI_VERDICTS.WAIT_FOR_PULLBACK;
+  reason += " Market dominance conflicts with continuation direction.";
+}
+}
+
+/* ================= MARKET SMOOTHNESS VERDICT REFINEMENT ================= */
+if (
+  d.marketDom &&
+  verdict === AI_VERDICTS.STRONG_CONTINUATION &&
+  !isSmoothDirection(d)
+) {
+  verdict = AI_VERDICTS.CONTROLLED_CONTINUATION;
+  reason += " Symbol shows execution friction despite market participation.";
+}
+      
   return withTier(verdict, reason, d);
 }
 
@@ -784,32 +827,55 @@ function getTradeSide(d){
   
 
   function getExecutionZone(d, tradeSide){
+  let zone = "NO TRADE ZONE";
   const verdict = d.aiVerdict;
   const bias    = d.bias || "";
 
-  /* 🧨 TRAP = PULLBACK */
+  /* 🧨 TRAP */
   if (verdict === AI_VERDICTS.TRAP_RISK) {
-    return "PULLBACK ZONE";
+    zone = "PULLBACK ZONE";
   }
 
-  /* 🛡 DEFENSE = ENTRY */
-  if (
+  /* 🛡 DEFENSE */
+  else if (
     (bias === "Bullish Defense" && tradeSide === "LONG") ||
     (bias === "Bearish Defense" && tradeSide === "SHORT")
   ) {
-    return "ENTRY ZONE";
+    zone = "ENTRY ZONE";
   }
 
-  /* ▶ CONTINUATION = LATE */
-  if (
+  /* ▶ CONTINUATION */
+  else if (
     verdict === AI_VERDICTS.STRONG_CONTINUATION ||
     verdict === AI_VERDICTS.CONTROLLED_CONTINUATION
   ) {
-    return "LATE ZONE";
+    zone = "LATE ZONE";
   }
 
-  return "NO TRADE ZONE";
+  /* ================= EXECUTION MODIFIERS ================= */
+
+  // 1️⃣ MARKET DOMINANCE — PRIMARY (market-wide participation)
+  if (
+    (zone === "ENTRY ZONE" || zone === "LATE ZONE") &&
+    d.marketDom &&
+    Math.abs(d.marketDom.net) < 5
+  ) {
+    return "PULLBACK ZONE";
+  }
+
+  // 2️⃣ SMOOTHNESS — SECONDARY (symbol-specific behavior)
+  if (
+    zone === "LATE ZONE" &&          // 🚫 do NOT downgrade ENTRY
+    d.marketDom &&                   // must have dominance context
+    !isSmoothDirection(d)
+  ) {
+    return "PULLBACK ZONE";
+  }
+
+  return zone;
 }
+
+  
   
 
   function getExecutionClass(zone, side){
@@ -900,6 +966,54 @@ function getTrendStructureBias(structureType){
       "Neutral"
   };
   }
+
+  function isSmoothDirection(d){
+  if (!d.marketDom) return false;
+
+  return (
+    (d.mainTrend === "bullish" && d.marketDom.net > 0) ||
+    (d.mainTrend === "bearish" && d.marketDom.net < 0)
+  );
+  }
+
+  function calculateRR(d, tradeSide) {
+  if (!d.S?.length || !d.R?.length) return null;
+
+  const price = d.price;
+  const S1 = d.S[0];
+  const R1 = d.R[0];
+
+  if (tradeSide === "LONG") {
+    const risk = price - S1;
+    const reward = R1 - price;
+    if (risk <= 0 || reward <= 0) return null;
+    return +(reward / risk).toFixed(2);
+  }
+
+  if (tradeSide === "SHORT") {
+    const risk = R1 - price;
+    const reward = price - S1;
+    if (risk <= 0 || reward <= 0) return null;
+    return +(reward / risk).toFixed(2);
+  }
+
+  return null;
+  }
+
+  function estimateTPProbability(d, rr) {
+  if (!rr || !d?.prob) return null;
+
+  const directionProb = d.prob / 100; // 0–1
+  const edgeBoost = 1.15;             // ENTRY ZONE structural edge
+
+  let est = (directionProb / rr) * edgeBoost;
+
+  // clamp to realistic bounds
+  est = Math.max(0.15, Math.min(est, 0.6));
+
+  return +(est * 100).toFixed(1); // %
+      }
+  
 
 /* === IMPROVED 15m SWING DETECTION (CONFIRMED) === */
 function findSwings(h, l, c, v){
@@ -1361,6 +1475,7 @@ async function getDailyRSIContext(sym){
 
 /* ================= ANALYZE ================= */
 async function analyze(sym,change){
+  const marketDom = GLOBAL_MARKET_DOM;
   const k=await fetchJSON(`${API}/fapi/v1/klines?symbol=${sym}&interval=15m&limit=240`);
   await sleep(DELAY);
 
@@ -1687,6 +1802,34 @@ if (volumeAlign === "conflict") {
 
 prob = Math.max(40, Math.min(prob, 95));
 
+  /* ================= MARKET DOMINANCE PROBABILITY MODIFIER ================= */
+if (marketDom && bias.includes("Continuation")) {
+
+  // aligned participation → smoother follow-through
+  if (
+    (bias.includes("Bullish") && marketDom.net > 15) ||
+    (bias.includes("Bearish") && marketDom.net < -15)
+  ) {
+    prob += 3;
+  }
+
+  // dead / choppy market
+  if (Math.abs(marketDom.net) < 5) {
+    prob -= 5;
+  }
+
+  // continuation against participation → hidden risk
+  if (
+    (bias.includes("Bullish") && marketDom.net < -15) ||
+    (bias.includes("Bearish") && marketDom.net > 15)
+  ) {
+    prob -= 7;
+  }
+}
+
+// clamp
+prob = Math.max(40, Math.min(prob, 95));
+
 /* ================= STRUCTURE QUALITY ================= */
 let structureQuality = "normal";
 
@@ -1751,7 +1894,7 @@ const postVolBreakRSIConfirmSafe =
   lastVol,mainTrend,volAI,fundingRate,ema14: ema14Last,
   ema21: ema21Last,
   emaShortBias,
-  emaShortCross,aiVerdict};
+  emaShortCross,aiVerdict,marketDom: GLOBAL_MARKET_DOM};
 }
 
 /* ================= FILTERS ================= */
@@ -1767,6 +1910,8 @@ function applyFilters(){
   const ts = document.getElementById("filterTradeSide")?.value || "all";
   const ez = document.getElementById("filterExecution")?.value || "all";
   const vai = document.getElementById("filterVolAI")?.value || "all";
+  const rrFilter = document.getElementById("filterRR")?.value || "all";
+  
 
   document.querySelectorAll(".card").forEach(c => {
 
@@ -1789,6 +1934,11 @@ function applyFilters(){
   if(ts !== "all" && c.dataset.tradeside !== ts) ok = false;
   if(ez !== "all" && c.dataset.execution !== ez) ok = false;
     if (vai !== "all" && c.dataset.volai !== vai) ok = false;
+    
+// ================= RR PRESENCE FILTER =================
+if (rrFilter === "present") {
+  if (!c.dataset.rr) ok = false;
+}
 
   c.style.display = ok ? "" : "none";
 });
@@ -1807,6 +1957,8 @@ function applyFilters(){
            document.getElementById("filterTradeSide").value = "all";
            document.getElementById("filterExecution").value = "all";
            document.getElementById("filterVolAI").value = "all";
+           document.getElementById("filterRR").value = "all";
+           
            
 
   applyFilters();
@@ -1849,6 +2001,8 @@ function applyFilters(){
   const scope = el.id || "global";
 const id = `card-${scope}-${d.sym}`;
   let card = document.getElementById(id);
+
+    const isNewCard = !card;
 
   // create only once
   if(!card){
@@ -1923,21 +2077,48 @@ card.dataset.structureQuality =
   d.structure.includes("weak") ? "weak" :
   "none";
 
+// ================= RR CALCULATION =================
+const rr =
+  aiVerdict.executionZone === "ENTRY ZONE" &&
+  (aiVerdict.tradeSide === "LONG" || aiVerdict.tradeSide === "SHORT")
+    ? calculateRR(d, aiVerdict.tradeSide)
+    : null;
+
+const rrDisplay = rr && rr >= 1.2 ? rr : null;
+
+    const tpProb =
+  rrDisplay ? estimateTPProbability(d, rrDisplay) : null;
+
+// ================= RR DATASET =================
+if (rrDisplay !== null) {
+  card.dataset.rr = rrDisplay;
+} else {
+  delete card.dataset.rr;
+    }
+
+    if (tpProb !== null) {
+  card.dataset.tpprob = tpProb;
+} else {
+  delete card.dataset.tpprob;
+    }
+
     if (el.id === "searchGrid") {
   card.dataset.manual = "true";
     }
   
 
   // 🔔 SOUND ALERT — only on 24h volume breakout
-if (d.volumeBreakout) {
-  const now = Date.now();
+//if (d.volumeBreakout) {
+  //const now = Date.now();
 
   // prevent repeat spam per symbol
-  if (!volumeAlertCooldown[d.sym] || now - volumeAlertCooldown[d.sym] > ALERT_COOLDOWN) {
-    volumeAlert.play().catch(()=>{});
-    volumeAlertCooldown[d.sym] = now;
-  }
-}
+  //if (!volumeAlertCooldown[d.sym] || now - volumeAlertCooldown[d.sym] > ALERT_COOLDOWN) {
+    //volumeAlert.play().catch(()=>{});
+    //volumeAlertCooldown[d.sym] = now;
+  //}
+//}
+
+    
 
   const structureBias = getTrendStructureBias(d.structureType);
 
@@ -1957,6 +2138,40 @@ const volumeStructClass =
     ? "neutral"
     : "muted";
 
+
+ /* ================= EXECUTION ALERT ================= */
+  const now = Date.now();
+  const alertKey = `${d.sym}-${aiVerdict.tradeSide}`;
+
+  const isManual = card.dataset.manual === "true";
+  const isFavGrid = el.id === "favGrid";
+
+  const isLongExecution =
+    aiVerdict.tradeSide === "LONG" &&
+    aiVerdict.executionZone === "ENTRY ZONE" &&
+    el.id === "redGrid";     // 🔴 Top 30 Red
+
+  const isShortExecution =
+    aiVerdict.tradeSide === "SHORT" &&
+    aiVerdict.executionZone === "ENTRY ZONE" &&
+    el.id === "greenGrid";   // 🟢 Top 30 Green
+
+  if (
+    isNewCard &&
+    !isManual &&
+    !isFavGrid &&
+    (isLongExecution || isShortExecution)
+  ) {
+    if (
+      !execAlertCooldown[alertKey] ||
+      now - execAlertCooldown[alertKey] > EXEC_ALERT_COOLDOWN
+    ) {
+      executionAlert.play().catch(()=>{});
+      execAlertCooldown[alertKey] = now;
+    }
+  }
+    
+
 card.innerHTML = `
   ${isFav
     ? `<div class="close" onclick="removeFav('${d.sym}')">✖</div>`
@@ -1973,12 +2188,14 @@ card.innerHTML = `
     💸 Funding Fee: ${fundingInfo.label}
   </div>
 
+
   <div class="prob ${
     d.bias.includes("Bull") ? "bull" :
     d.bias.includes("Bear") ? "bear" : "neutral"
   }">
     ${d.bias} — ${d.prob}%
   </div>
+
 
   <div class="muted ${
     structureBias === "bullish" ? "bull" :
@@ -2005,10 +2222,52 @@ ${d.structure === "none" && d.volumeStructure?.name !== "none" ? `
   </div>
 ` : ""}
 
+<div class="muted ${tradeSideClass}">
+    🎯 Trade Side: <b>${aiVerdict.tradeSide}</b>
+  </div>
+
+  <div class="muted ${execClass}">
+    🧭 Execution Zone: <b>${executionZone}</b>
+  </div>
+
+     ${rrDisplay ? `
+  <div class="muted neutral">
+    ⚖ Risk–Reward: <b>${rrDisplay}R</b>
+  </div>
+` : ""}
+
+  ${tpProb !== null ? `
+  <div class="muted ${
+    tpProb >= 40 ? "bull" :
+    tpProb >= 30 ? "neutral" :
+    "bear"
+  }">
+    🎯 Estimated TP Hit: <b>${tpProb}%</b>
+  </div>
+` : ""}
+
+  <div class="muted">
+  🌍 Market Participation:
+  <b>${
+    d.marketDom && Math.abs(d.marketDom.net) < 5
+      ? "LOW (Choppy)"
+      : "ACTIVE"
+  }</b>
+  <br>
+  🌊 Symbol Behavior:
+  <b>${isSmoothDirection(d) ? "SMOOTH" : "CHOPPY"}</b>
+</div>
+
   <hr style="opacity:.15">
 
   <!-- ================= STRUCTURE ================= -->
-  <div class="muted"><b>📈 Trend Structure</b></div>
+  <div class="muted"><b>📈 Market Structure & Trend</b></div>
+
+    <div class="muted neutral">
+  🌍 Market Dominance:
+  <b>${d.marketDom?.bias || "—"}</b>
+(Net ${d.marketDom?.net ?? "—"}%)
+</div>
 
   <div class="muted ${
     d.mainTrend === "bullish" ? "bull" :
@@ -2093,14 +2352,6 @@ ${d.volumeBreakout ? `
   ${d.S[1] ? `<div class="muted bear">S2: ${d.S[1].toFixed(4)}</div>` : ""}
   ${d.R[0] ? `<div class="muted bull">R1: ${d.R[0].toFixed(4)}</div>` : ""}
   ${d.R[1] ? `<div class="muted bull">R2: ${d.R[1].toFixed(4)}</div>` : ""}
-
-  <div class="muted ${tradeSideClass}">
-    🎯 Trade Side: <b>${aiVerdict.tradeSide}</b>
-  </div>
-
-  <div class="muted ${execClass}">
-    🧭 Execution Zone: <b>${executionZone}</b>
-  </div>
 
   <div class="muted ${aiVerdict.verdictClass}">
     🧠 AI Verdict: <b>${aiVerdict.verdict}</b>
@@ -2370,6 +2621,7 @@ async function runScan() {
     );
 
     const dom = computeMarketDominance(usdtAll);
+GLOBAL_MARKET_DOM = dom;
 
     marketGreen.textContent = `🟢 Green: ${dom.green.toLocaleString()}%`;
     marketRed.textContent   = `🔴 Red: ${dom.red.toLocaleString()}%`;
@@ -2388,6 +2640,7 @@ async function runScan() {
     let done = 0;
     for (const x of all) {
       const d = await analyze(x.symbol, +x.priceChangePercent);
+      d.marketDom = dom;
       renderCard(d, x.priceChangePercent >= 0 ? greenGrid : redGrid);
       done++;
       progressFill.style.width = Math.round(done / all.length * 100) + "%";
@@ -2395,11 +2648,11 @@ async function runScan() {
     }
 
     // 🔄 auto-update manual & favorites
-if (isAutoScan) {
-  await refreshFavorites();
-  await refreshManualSymbol();
-}
+// 🔄 keep all sections aligned with scan
+await refreshFavorites();
+await refreshManualSymbol();
 
+    
   } finally {
     // 🕒 timing
     timestamp.innerText = new Date().toLocaleString();
@@ -2508,22 +2761,25 @@ async function runSearch(){
   });
 });
 
-[
+
+  [
   "filterBias",
   "filterVol",
   "filterProb",
   "filterStructure",
   "filterStructureQuality",
   "filterVolBreak",
-  "filterAIVerdict",  // 👈 ADD THIS
+  "filterAIVerdict",
   "filterTradeSide",
-  "filterExecution"
+  "filterExecution",
+  "filterRR"
 ].forEach(id=>{
-  document.getElementById(id).addEventListener("change", applyFilters);
-  document
-  .getElementById("filterVolAI")
-  .addEventListener("change", applyFilters);
+  document.getElementById(id)?.addEventListener("change", applyFilters);
 });
+
+document
+  .getElementById("filterVolAI")
+  ?.addEventListener("change", applyFilters);
 
   document.getElementById("filterDailyRSI").addEventListener("change", async ()=>{
   if(filterDailyRSI.value === "all"){
