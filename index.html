@@ -999,6 +999,20 @@ function getTrendStructureBias(structureType){
 
   return null;
   }
+
+  function estimateTPProbability(d, rr) {
+  if (!rr || !d?.prob) return null;
+
+  const directionProb = d.prob / 100; // 0–1
+  const edgeBoost = 1.15;             // ENTRY ZONE structural edge
+
+  let est = (directionProb / rr) * edgeBoost;
+
+  // clamp to realistic bounds
+  est = Math.max(0.15, Math.min(est, 0.6));
+
+  return +(est * 100).toFixed(1); // %
+      }
   
 
 /* === IMPROVED 15m SWING DETECTION (CONFIRMED) === */
@@ -2072,11 +2086,20 @@ const rr =
 
 const rrDisplay = rr && rr >= 1.2 ? rr : null;
 
+    const tpProb =
+  rrDisplay ? estimateTPProbability(d, rrDisplay) : null;
+
 // ================= RR DATASET =================
 if (rrDisplay !== null) {
   card.dataset.rr = rrDisplay;
 } else {
   delete card.dataset.rr;
+    }
+
+    if (tpProb !== null) {
+  card.dataset.tpprob = tpProb;
+} else {
+  delete card.dataset.tpprob;
     }
 
     if (el.id === "searchGrid") {
@@ -2172,6 +2195,22 @@ card.innerHTML = `
   }">
     ${d.bias} — ${d.prob}%
   </div>
+
+    ${rrDisplay ? `
+  <div class="muted neutral">
+    ⚖ Risk–Reward: <b>${rrDisplay}R</b>
+  </div>
+` : ""}
+
+  ${tpProb !== null ? `
+  <div class="muted ${
+    tpProb >= 40 ? "bull" :
+    tpProb >= 30 ? "neutral" :
+    "bear"
+  }">
+    🎯 Estimated TP Hit: <b>${tpProb}%</b>
+  </div>
+` : ""}
 
   <div class="muted ${
     structureBias === "bullish" ? "bull" :
@@ -2293,11 +2332,6 @@ ${d.volumeBreakout ? `
   ${d.R[0] ? `<div class="muted bull">R1: ${d.R[0].toFixed(4)}</div>` : ""}
   ${d.R[1] ? `<div class="muted bull">R2: ${d.R[1].toFixed(4)}</div>` : ""}
 
-  ${rrDisplay ? `
-  <div class="muted neutral">
-    ⚖ Risk–Reward: <b>${rrDisplay}R</b>
-  </div>
-` : ""}
 
   <div class="muted ${tradeSideClass}">
     🎯 Trade Side: <b>${aiVerdict.tradeSide}</b>
