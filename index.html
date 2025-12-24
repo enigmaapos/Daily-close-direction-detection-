@@ -2724,23 +2724,25 @@ async function runSearch(){
   });
 });
 
-[
+
+  [
   "filterBias",
   "filterVol",
   "filterProb",
   "filterStructure",
   "filterStructureQuality",
   "filterVolBreak",
-  "filterAIVerdict",  // 👈 ADD THIS
+  "filterAIVerdict",
   "filterTradeSide",
   "filterExecution",
   "filterRR"
 ].forEach(id=>{
-  document.getElementById(id).addEventListener("change", applyFilters);
-  document
-  .getElementById("filterVolAI")
-  .addEventListener("change", applyFilters);
+  document.getElementById(id)?.addEventListener("change", applyFilters);
 });
+
+document
+  .getElementById("filterVolAI")
+  ?.addEventListener("change", applyFilters);
 
   document.getElementById("filterDailyRSI").addEventListener("change", async ()=>{
   if(filterDailyRSI.value === "all"){
