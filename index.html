@@ -1673,16 +1673,6 @@ const sw = {
 
   const rsi15Momentum = getRSI15Momentum(rsi15Arr);
 
-  const defenseFailure = detectDefenseFailure({
-  structure,
-  bias,
-  mainTrend,
-  rsi50State,
-  marketDom,
-  volAI,
-  volumeAlign
-});
-
   
    const bullishBreakAccepted =
   rb &&
@@ -1892,6 +1882,16 @@ if (marketDom && bias.includes("Continuation")) {
     prob -= 7;
   }
 }
+
+  const defenseFailure = detectDefenseFailure({
+  structure,
+  bias,
+  mainTrend,
+  rsi50State,
+  marketDom,
+  volAI,
+  volumeAlign
+});
 
 // clamp
 prob = Math.max(40, Math.min(prob, 95));
