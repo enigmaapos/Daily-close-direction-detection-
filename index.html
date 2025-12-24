@@ -1662,6 +1662,69 @@ if (typeof d.change === "number" && Math.abs(d.change) >= 25) {
   if (score === 2) return "EARLY WARNING";
   return "NONE";
   }
+
+
+  function getDirectionalBias(d){
+  // Only allowed in neutral / no-edge states
+  if (
+    d.structure !== "none" ||
+    d.aiVerdict?.verdict !== AI_VERDICTS.STRUCTURE_WEAK
+  ) {
+    return null;
+  }
+
+  let bullScore = 0;
+  let bearScore = 0;
+
+  // ===== TREND PRESSURE =====
+  if (d.mainTrend === "bullish") bullScore++;
+  if (d.mainTrend === "bearish") bearScore++;
+
+  if (d.emaShortBias === "bullish") bullScore++;
+  if (d.emaShortBias === "bearish") bearScore++;
+
+  // ===== VOLUME PRESSURE =====
+  if (d.bull === true) bullScore++;
+  if (d.bull === false) bearScore++;
+
+  if (d.volAI?.intent === "Bullish") bullScore++;
+  if (d.volAI?.intent === "Bearish") bearScore++;
+
+  // ===== MARKET CONTEXT =====
+  if (d.marketDom?.net > 0) bullScore++;
+  if (d.marketDom?.net < 0) bearScore++;
+
+  // ===== EXTENSION / EXHAUSTION =====
+  if (d.moveType === "RECOVERY" && d.moveStrength === "STRONG") {
+    // late bullish push → caution
+    bearScore++;
+  }
+
+  if (d.moveType === "DROP" && d.moveStrength === "STRONG") {
+    // late bearish push → caution
+    bullScore++;
+  }
+
+  // ===== DECISION =====
+  if (bullScore >= bearScore + 2) {
+    return {
+      bias: "Bullish (Conditional)",
+      reason: "Bullish pressure present, but structure confirmation is required."
+    };
+  }
+
+  if (bearScore >= bullScore + 2) {
+    return {
+      bias: "Bearish (Conditional)",
+      reason: "Bearish pressure present, but structure confirmation is required."
+    };
+  }
+
+  return {
+    bias: "Balanced / Indecision",
+    reason: "Bullish and bearish pressures are currently balanced."
+  };
+  }
   
 
 /* ================= ANALYZE ================= */
@@ -2144,6 +2207,11 @@ const postVolBreakRSIConfirmSafe =
 moveStrength
 });
 
+  const directionalBias = getDirectionalBias({
+  ...d,
+  aiVerdict
+});
+
   
 
   return {sym,price,change,bull,prob,bias,structure,structureType,volumeStructure,structureQuality,volumeAlign,defenseFailure,S:sw.S,R:sw.R,dailyRSI,rsi15,rsi15Momentum,volumeBreakout,
@@ -2153,7 +2221,7 @@ moveStrength
   ema21: ema21Last,
   emaShortBias,
   emaShortCross,aiVerdict,marketDom: GLOBAL_MARKET_DOM,changeState,moveType,
-moveStrength};
+moveStrength,directionalBias};
 }
 
 /* ================= FILTERS ================= */
@@ -2454,6 +2522,18 @@ card.innerHTML = `
   }">
     ${d.bias} — ${d.prob}%
   </div>
+
+  ${d.directionalBias ? `
+  <div class="muted ${
+    d.directionalBias.bias.includes("Bullish") ? "bull" :
+    d.directionalBias.bias.includes("Bearish") ? "bear" :
+    "neutral"
+  }">
+    🧭 Directional Bias: <b>${d.directionalBias.bias}</b>
+    <br>
+    <span class="muted">${d.directionalBias.reason}</span>
+  </div>
+` : ""}
 
 
   <div class="muted ${
