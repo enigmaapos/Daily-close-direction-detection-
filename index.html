@@ -753,6 +753,22 @@ if (
   verdict = AI_VERDICTS.CONTROLLED_CONTINUATION;
   reason += " Symbol shows execution friction despite market participation.";
 }
+
+      // ================= DEFENSE FAILURE OVERRIDE =================
+if (d.defenseFailure === "EARLY WARNING") {
+  verdict.tier = Math.max(verdict.tier - 1, 3);
+
+  verdict.verdict = "WAIT FOR CONFIRMATION";
+  verdict.reason += " · Defense weakening detected";
+}
+
+if (d.defenseFailure === "CRITICAL FAILURE") {
+  verdict.tier = 6;
+
+  verdict.verdict = "TRAP RISK";
+  verdict.reason = "Defense failure detected · Structure reliability compromised";
+  verdict.executionZone = "NO TRADE ZONE";
+    }
       
   return withTier(verdict, reason, d);
 }
@@ -1868,6 +1884,17 @@ if (marketDom && bias.includes("Continuation")) {
 
 // clamp
 prob = Math.max(40, Math.min(prob, 95));
+
+  // ================= DEFENSE FAILURE PROBABILITY MODIFIER =================
+if (defenseFailure === "EARLY WARNING") {
+  prob -= 6;
+}
+
+if (defenseFailure === "CRITICAL FAILURE") {
+  prob -= 15;
+    }
+
+  prob = Math.max(40, Math.min(prob, 95));
 
 /* ================= STRUCTURE QUALITY ================= */
 let structureQuality = "normal";
