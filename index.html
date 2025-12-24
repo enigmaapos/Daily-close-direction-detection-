@@ -1594,8 +1594,11 @@ async function getDailyRSIContext(sym){
     d.volumeAlign === "conflict"
   ) score += 1;
 
+
     // 5️⃣ Excessive 24h expansion (late-cycle stress)
-if (Math.abs(d.change) >= 25) score += 1;
+if (typeof d.change === "number" && Math.abs(d.change) >= 25) {
+  score += 1;
+}
 
   if (score >= 3) return "CRITICAL FAILURE";
   if (score === 2) return "EARLY WARNING";
