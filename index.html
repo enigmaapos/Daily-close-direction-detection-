@@ -754,21 +754,22 @@ if (
   reason += " Symbol shows execution friction despite market participation.";
 }
 
-      // ================= DEFENSE FAILURE OVERRIDE =================
+// ================= DEFENSE FAILURE OVERRIDE =================
 if (d.defenseFailure === "EARLY WARNING") {
-  verdict.tier = Math.max(verdict.tier - 1, 3);
-
-  verdict.verdict = "WAIT FOR CONFIRMATION";
-  verdict.reason += " · Defense weakening detected";
+  if (verdict === AI_VERDICTS.STRONG_CONTINUATION) {
+    verdict = AI_VERDICTS.CONTROLLED_CONTINUATION;
+    reason += " · Defense weakening detected";
+  }
+  else if (verdict === AI_VERDICTS.CONTROLLED_CONTINUATION) {
+    verdict = AI_VERDICTS.WAIT_FOR_PULLBACK;
+    reason += " · Defense weakening detected";
+  }
 }
 
 if (d.defenseFailure === "CRITICAL FAILURE") {
-  verdict.tier = 6;
-
-  verdict.verdict = "TRAP RISK";
-  verdict.reason = "Defense failure detected · Structure reliability compromised";
-  verdict.executionZone = "NO TRADE ZONE";
-    }
+  verdict = AI_VERDICTS.TRAP_RISK;
+  reason = "Defense failure detected · Structure reliability compromised";
+}
       
   return withTier(verdict, reason, d);
 }
@@ -1933,6 +1934,18 @@ const postVolBreakRSIConfirmSafe =
 
   const fundingRate = await getFundingRate(sym);
 
+
+  const defenseFailure = detectDefenseFailure({
+  structure,
+  bias,
+  mainTrend,
+  rsi50State,
+  marketDom,
+  volAI,
+  volumeAlign
+});
+
+  
   const aiVerdict = getAIFinalVerdict({
   sym,
   price,
@@ -1951,18 +1964,11 @@ const postVolBreakRSIConfirmSafe =
   volumeBreakout,
   fakeVolumeBreak,
   dailyRSI,
-  fundingRate
+  fundingRate,
+    defenseFailure
 });
 
-  const defenseFailure = detectDefenseFailure({
-  structure,
-  bias,
-  mainTrend,
-  rsi50State,
-  marketDom,
-  volAI,
-  volumeAlign
-});
+  
 
   return {sym,price,change,bull,prob,bias,structure,structureType,volumeStructure,structureQuality,volumeAlign,defenseFailure,S:sw.S,R:sw.R,dailyRSI,rsi15,rsi15Momentum,volumeBreakout,
   breakoutAge,volumeBreakoutType,fakeVolumeBreak,postVolBreakRSIConfirm: postVolBreakRSIConfirmSafe,
