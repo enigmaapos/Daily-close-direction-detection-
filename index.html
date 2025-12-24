@@ -1886,17 +1886,17 @@ if (marketDom && bias.includes("Continuation")) {
 // clamp
 prob = Math.max(40, Math.min(prob, 95));
 
-  // ================= DEFENSE FAILURE PROBABILITY MODIFIER =================
+// ================= DEFENSE FAILURE PROBABILITY MODIFIER =================
 if (defenseFailure === "EARLY WARNING") {
   prob -= 6;
 }
 
 if (defenseFailure === "CRITICAL FAILURE") {
   prob -= 15;
-    }
+}
 
-  prob = Math.max(40, Math.min(prob, 95));
-
+prob = Math.max(40, Math.min(prob, 95));
+  
   const defenseFailure = detectDefenseFailure({
   structure,
   bias,
