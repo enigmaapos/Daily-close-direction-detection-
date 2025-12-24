@@ -589,6 +589,16 @@ async function refreshFavorites() {
   return { label: `${rate.toFixed(3)}% (Balanced)`, cls: "neutral" };
   }
 
+  function getChange24hState(change) {
+  const abs = Math.abs(change);
+
+  if (abs >= 35) return "EXTREME";
+  if (abs >= 25) return "VERY_HIGH";
+  if (abs >= 15) return "HIGH";
+  if (abs >= 8)  return "MODERATE";
+  return "NORMAL";
+  }
+
   
   
       /* ================= AI VERDICTS ================= */
@@ -761,6 +771,23 @@ function getAIFinalVerdict(d) {
     reason += " Elevated funding increases entry risk.";
   }
 
+  /* ================= 24H EXPANSION VERDICT SOFT DOWNGRADE ================= */
+if (
+  (changeState === "VERY_HIGH" || changeState === "EXTREME") &&
+  verdict === AI_VERDICTS.STRONG_CONTINUATION
+) {
+  verdict = AI_VERDICTS.CONTROLLED_CONTINUATION;
+  reason += " Recent 24h expansion suggests late participation risk.";
+}
+
+if (
+  changeState === "EXTREME" &&
+  verdict === AI_VERDICTS.CONTROLLED_CONTINUATION
+) {
+  verdict = AI_VERDICTS.WAIT_FOR_PULLBACK;
+  reason += " Extreme 24h extension increases pullback probability.";
+}
+
   /* ================= MARKET DOMINANCE DOWNGRADE ================= */
   if (
     d.marketDom &&
@@ -914,6 +941,14 @@ function getTradeSide(d){
   ) {
     return "PULLBACK ZONE";
   }
+
+    /* ================= 24H CHANGE EXECUTION TIMING ================= */
+if (
+  zone === "ENTRY ZONE" &&
+  (changeState === "VERY_HIGH" || changeState === "EXTREME")
+) {
+  return "PULLBACK ZONE";
+}
 
   // 2️⃣ SMOOTHNESS — SECONDARY (symbol-specific behavior)
   if (
@@ -1572,6 +1607,8 @@ async function analyze(sym,change){
 
   const mappedK = mapKlines(k);
 
+  const changeState = getChange24hState(change);
+
 
   const c=k.map(x=>+x[4]),h=k.map(x=>+x[2]),l=k.map(x=>+x[3]),v=k.map(x=>+x[5]);
   const price=c.at(-1);
@@ -1918,6 +1955,20 @@ if (marketDom && bias.includes("Continuation")) {
   }
 }
 
+  /* ================= 24H CHANGE RISK MODIFIER ================= */
+if (
+  (changeState === "HIGH" || changeState === "VERY_HIGH") &&
+  prob >= 70
+) {
+  prob -= 5;
+}
+
+if (changeState === "EXTREME") {
+  prob -= 8;
+}
+
+prob = Math.max(40, Math.min(prob, 95));
+
   const defenseFailure = detectDefenseFailure({
   structure,
   bias,
@@ -1939,6 +1990,9 @@ if (defenseFailure === "EARLY WARNING") {
 if (defenseFailure === "CRITICAL FAILURE") {
   prob -= 15;
 }
+
+  // 5️⃣ Excessive 24h expansion (late-cycle stress)
+if (Math.abs(d.change) >= 25) score += 1;
 
 prob = Math.max(40, Math.min(prob, 95));
   
@@ -2462,6 +2516,13 @@ ${d.volumeBreakout ? `
       </span>
     </div>
   ` : ""}
+
+  <div class="muted ${
+  changeState === "EXTREME" ? "bear" :
+  changeState === "VERY_HIGH" ? "neutral" : "muted"
+}">
+  ⏱ 24h Expansion: <b>${change.toFixed(2)}%</b> (${changeState})
+</div>
 
   <div class="muted ${aiVerdict.verdictClass}">
     🧠 AI Verdict: <b>${aiVerdict.verdict}</b>
