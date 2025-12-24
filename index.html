@@ -2402,17 +2402,6 @@ ${d.volumeBreakout ? `
     </div>
   ` : ""}
 
-
-  ${d.defenseFailure !== "NONE" ? `
-  <div class="muted ${
-    d.defenseFailure === "CRITICAL FAILURE"
-      ? "bear"
-      : "neutral"
-  }">
-    🛡 Defense Status: <b>${d.defenseFailure}</b>
-  </div>
-` : ""}
-
   <div class="muted ${aiVerdict.verdictClass}">
     🧠 AI Verdict: <b>${aiVerdict.verdict}</b>
   </div>
@@ -2425,6 +2414,16 @@ ${d.volumeBreakout ? `
     ${aiVerdict.reason}
   </div>
 `;
+
+    ${d.defenseFailure !== "NONE" ? `
+  <div class="muted ${
+    d.defenseFailure === "CRITICAL FAILURE"
+      ? "bear"
+      : "neutral"
+  }">
+    🛡 Defense Status: <b>${d.defenseFailure}</b>
+  </div>
+` : ""}
 
 
     if (!skipFilter) {
