@@ -2562,15 +2562,15 @@ if (rrDisplay !== null) {
   
 
   // 🔔 SOUND ALERT — only on 24h volume breakout
-if (d.volumeBreakout) {
-  const now = Date.now();
+//if (d.volumeBreakout) {
+  //const now = Date.now();
 
    //prevent repeat spam per symbol
-  if (!volumeAlertCooldown[d.sym] || now - volumeAlertCooldown[d.sym] > ALERT_COOLDOWN) {
-    volumeAlert.play().catch(()=>{});
-    volumeAlertCooldown[d.sym] = now;
-  }
-}
+  //if (!volumeAlertCooldown[d.sym] || now - volumeAlertCooldown[d.sym] > ALERT_COOLDOWN) {
+    //volumeAlert.play().catch(()=>{});
+    //volumeAlertCooldown[d.sym] = now;
+  //}
+//}
 
     
 
