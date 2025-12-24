@@ -599,20 +599,13 @@ async function refreshFavorites() {
   return "NORMAL";
   }
 
-  function getRecoveryQuality(change, mainTrend) {
+  function getRecoveryQuality(change) {
   const abs = Math.abs(change);
 
-  // below reaction threshold
   if (abs < 8) return "REACTION";
-
-  // decision zone
-  if (abs >= 8 && abs < 15) return "WEAK_RECOVERY";
-
-  // meaningful expansion
-  if (abs >= 15) return "STRONG_RECOVERY";
-
-  return "NORMAL";
-  }
+  if (abs < 15) return "WEAK_RECOVERY";
+  return "STRONG_RECOVERY";
+}
 
   
   
@@ -1648,7 +1641,8 @@ async function analyze(sym,change){
   const mappedK = mapKlines(k);
 
   const changeState = getChange24hState(change);
-  const recoveryQuality = getRecoveryQuality(change, mainTrend);
+  const recoveryQuality = getRecoveryQuality(change);
+  
 
 
   const c=k.map(x=>+x[4]),h=k.map(x=>+x[2]),l=k.map(x=>+x[3]),v=k.map(x=>+x[5]);
@@ -2040,8 +2034,7 @@ prob = Math.max(40, Math.min(prob, 95));
   marketDom,
   volAI,
   volumeAlign,
-    change,
-  mainTrend
+    change
 });
 
 // clamp
