@@ -208,6 +208,37 @@ button.secondary{
   font-style: italic;
   opacity: .85;
   }
+
+  .setup-score {
+  margin-top: 6px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.setup-grade {
+  margin-top: 2px;
+  font-weight: 600;
+}
+
+.grade-elite {
+  color: #22c55e; /* strong green */
+}
+
+.grade-high {
+  color: #4ade80; /* green */
+}
+
+.grade-good {
+  color: #facc15; /* yellow */
+}
+
+.grade-average {
+  color: #fb923c; /* orange */
+}
+
+.grade-low {
+  color: #ef4444; /* red */
+}
 </style>
 </head>
 
@@ -1724,6 +1755,84 @@ if (typeof d.change === "number" && Math.abs(d.change) >= 25) {
     reason: "Bullish and bearish pressures are currently balanced."
   };
 }
+
+  function calculateSetupScore(d) {
+  let score = 0;
+
+  /* ================= STRUCTURE (max 2.5) ================= */
+  if (
+    d.structure === "support holding (confirmed)" ||
+    d.structure === "resistance failed (confirmed)"
+  ) score += 2.5;
+  else if (d.structure.includes("accepted")) score += 2.0;
+  else if (d.structure.includes("weak")) score += 1.0;
+
+  /* ================= VOLUME ALIGNMENT (max 2.0) ================= */
+  if (d.volumeAlign === "confirmed") score += 2.0;
+  else if (d.volumeAlign === "neutral") score += 1.0;
+
+  /* ================= RSI QUALITY (max 1.5) ================= */
+  if (
+    d.dailyRSI &&
+    d.dailyRSI.value >= 50 &&
+    d.dailyRSI.value <= 60 &&
+    d.rsi15 >= 50 &&
+    d.rsi15 <= 60
+  ) {
+    score += 1.5;
+  } else if (d.rsi15 >= 45 && d.rsi15 <= 65) {
+    score += 1.0;
+  }
+
+  /* ================= MARKET DOMINANCE (max 2.0) ================= */
+  if (d.marketDom) {
+    if (
+      (d.bias.includes("Bullish") && d.marketDom.net > 100) ||
+      (d.bias.includes("Bearish") && d.marketDom.net < -100)
+    ) {
+      score += 2.0;
+    } else if (Math.abs(d.marketDom.net) > 30) {
+      score += 1.0;
+    }
+  }
+
+  /* ================= TIMING / EXTENSION (max 1.0) ================= */
+  if (d.changeState === "NORMAL" || d.changeState === "MODERATE") {
+    score += 1.0;
+  } else if (d.changeState === "HIGH") {
+    score += 0.5;
+  }
+
+  /* ================= PENALTIES ================= */
+  if (d.defenseFailure === "EARLY WARNING") score -= 0.5;
+  if (d.defenseFailure === "CRITICAL FAILURE") score -= 2.0;
+
+  if (d.volAI?.meaning?.includes("climax")) score -= 0.5;
+  if (d.volAI?.meaning?.includes("Distribution")) score -= 0.5;
+
+  /* ================= CLAMP ================= */
+  score = Math.max(0, Math.min(score, 10));
+
+  return +score.toFixed(1);
+  }
+
+  
+
+  function getSetupGradeLabel(score) {
+  if (score >= 9.5) return "ELITE / INSTITUTIONAL";
+  if (score >= 8.5) return "HIGH QUALITY";
+  if (score >= 7.5) return "GOOD";
+  if (score >= 6.5) return "AVERAGE";
+  return "LOW QUALITY";
+}
+
+function getSetupGradeClass(score) {
+  if (score >= 9.5) return "grade-elite";
+  if (score >= 8.5) return "grade-high";
+  if (score >= 7.5) return "grade-good";
+  if (score >= 6.5) return "grade-average";
+  return "grade-low";
+  }
   
 
 /* ================= ANALYZE ================= */
@@ -2206,6 +2315,18 @@ const postVolBreakRSIConfirmSafe =
 moveStrength
 });
 
+  const setupScore = calculateSetupScore({
+  structure,
+  volumeAlign,
+  dailyRSI,
+  rsi15,
+  bias,
+  marketDom: GLOBAL_MARKET_DOM,
+  changeState,
+  defenseFailure,
+  volAI
+});
+
   const directionalBias = getDirectionalBias({
   structure,
   mainTrend,
@@ -2227,7 +2348,7 @@ moveStrength
   ema21: ema21Last,
   emaShortBias,
   emaShortCross,aiVerdict,marketDom: GLOBAL_MARKET_DOM,changeState,moveType,
-moveStrength,directionalBias};
+moveStrength,directionalBias,setupScore};
 }
 
 /* ================= FILTERS ================= */
@@ -2528,6 +2649,15 @@ card.innerHTML = `
   }">
     ${d.bias} — ${d.prob}%
   </div>
+
+  ${d.setupScore ? `
+  <div class="setup-score">
+    ⭐ <b>Setup Quality:</b> ${d.setupScore} / 10
+    <div class="setup-grade ${getSetupGradeClass(d.setupScore)}">
+      🏷 ${getSetupGradeLabel(d.setupScore)}
+    </div>
+  </div>
+` : ""}
 
   ${d.directionalBias ? `
   <div class="muted ${
