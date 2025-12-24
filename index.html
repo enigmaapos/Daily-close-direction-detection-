@@ -872,6 +872,10 @@ function getTradeSide(d){
     return "PULLBACK ZONE";
   }
 
+    if (d.defenseFailure === "CRITICAL FAILURE" && zone === "ENTRY ZONE") {
+  return "PULLBACK ZONE";
+    }
+
   return zone;
 }
 
@@ -1471,6 +1475,41 @@ async function getDailyRSIContext(sym){
 
   return "Volume Suggests: Mixed Participation";
     }
+
+  function detectDefenseFailure(d) {
+  let score = 0;
+
+  // 1️⃣ Structural weakness
+  if (
+    d.structure.includes("weak") ||
+    d.structure.includes("unaccepted")
+  ) score += 1;
+
+  // 2️⃣ RSI pressure persistence
+  if (
+    (d.mainTrend === "bullish" && d.rsi50State?.consistentlyBelow50) ||
+    (d.mainTrend === "bearish" && d.rsi50State?.consistentlyAbove50)
+  ) score += 1;
+
+  // 3️⃣ Market dominance against defense
+  if (
+    d.marketDom &&
+    (
+      (d.bias.includes("Bullish") && d.marketDom.net < -15) ||
+      (d.bias.includes("Bearish") && d.marketDom.net > 15)
+    )
+  ) score += 1;
+
+  // 4️⃣ Climactic or conflicting volume
+  if (
+    d.volAI?.meaning.includes("climax") ||
+    d.volumeAlign === "conflict"
+  ) score += 1;
+
+  if (score >= 3) return "CRITICAL FAILURE";
+  if (score === 2) return "EARLY WARNING";
+  return "NONE";
+  }
   
 
 /* ================= ANALYZE ================= */
@@ -1888,7 +1927,17 @@ const postVolBreakRSIConfirmSafe =
   fundingRate
 });
 
-  return {sym,price,change,bull,prob,bias,structure,structureType,volumeStructure,structureQuality,volumeAlign,S:sw.S,R:sw.R,dailyRSI,rsi15,rsi15Momentum,volumeBreakout,
+  const defenseFailure = detectDefenseFailure({
+  structure,
+  bias,
+  mainTrend,
+  rsi50State,
+  marketDom,
+  volAI,
+  volumeAlign
+});
+
+  return {sym,price,change,bull,prob,bias,structure,structureType,volumeStructure,structureQuality,volumeAlign,defenseFailure,S:sw.S,R:sw.R,dailyRSI,rsi15,rsi15Momentum,volumeBreakout,
   breakoutAge,volumeBreakoutType,fakeVolumeBreak,postVolBreakRSIConfirm: postVolBreakRSIConfirmSafe,
   domV,
   lastVol,mainTrend,volAI,fundingRate,ema14: ema14Last,
@@ -2258,6 +2307,11 @@ ${d.structure === "none" && d.volumeStructure?.name !== "none" ? `
   <b>${isSmoothDirection(d) ? "SMOOTH" : "CHOPPY"}</b>
 </div>
 
+  ${d.S[0] ? `<div class="muted bear">S1: ${d.S[0].toFixed(4)}</div>` : ""}
+  ${d.S[1] ? `<div class="muted bear">S2: ${d.S[1].toFixed(4)}</div>` : ""}
+  ${d.R[0] ? `<div class="muted bull">R1: ${d.R[0].toFixed(4)}</div>` : ""}
+  ${d.R[1] ? `<div class="muted bull">R2: ${d.R[1].toFixed(4)}</div>` : ""}
+
   <hr style="opacity:.15">
 
   <!-- ================= STRUCTURE ================= -->
@@ -2348,10 +2402,16 @@ ${d.volumeBreakout ? `
     </div>
   ` : ""}
 
-  ${d.S[0] ? `<div class="muted bear">S1: ${d.S[0].toFixed(4)}</div>` : ""}
-  ${d.S[1] ? `<div class="muted bear">S2: ${d.S[1].toFixed(4)}</div>` : ""}
-  ${d.R[0] ? `<div class="muted bull">R1: ${d.R[0].toFixed(4)}</div>` : ""}
-  ${d.R[1] ? `<div class="muted bull">R2: ${d.R[1].toFixed(4)}</div>` : ""}
+
+  ${d.defenseFailure !== "NONE" ? `
+  <div class="muted ${
+    d.defenseFailure === "CRITICAL FAILURE"
+      ? "bear"
+      : "neutral"
+  }">
+    🛡 Defense Status: <b>${d.defenseFailure}</b>
+  </div>
+` : ""}
 
   <div class="muted ${aiVerdict.verdictClass}">
     🧠 AI Verdict: <b>${aiVerdict.verdict}</b>
