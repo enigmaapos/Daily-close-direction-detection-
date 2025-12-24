@@ -599,14 +599,20 @@ async function refreshFavorites() {
   return "NORMAL";
   }
 
-  function getRecoveryQuality(change) {
-  const abs = Math.abs(change);
-
-  if (abs < 8) return "REACTION";
-  if (abs < 15) return "WEAK_RECOVERY";
-  return "STRONG_RECOVERY";
+  function get24hMoveType(change) {
+  if (change > 0) return "RECOVERY";
+  if (change < 0) return "DROP";
+  return "FLAT";
 }
 
+  
+function get24hMoveStrength(change) {
+  const abs = Math.abs(change);
+
+  if (abs < 8) return "WEAK";
+  if (abs < 15) return "MODERATE";
+  return "STRONG";
+  }
   
   
       /* ================= AI VERDICTS ================= */
@@ -839,14 +845,27 @@ if (
     reason = "Defense failure detected · Structure reliability compromised";
   }
 
-  /* ================= FAKE RECOVERY AWARENESS ================= */
+  /* ================= FAKE RECOVERY/DROP AWARENESS ================= */
+// Weak recovery against bearish trend = suspicious
 if (
-  d.recoveryQuality === "REACTION" &&
-  d.change * (d.mainTrend === "bullish" ? 1 : -1) < 0 &&
-  d.verdict === AI_VERDICTS.CONTROLLED_CONTINUATION
+  d.moveType === "RECOVERY" &&
+  d.moveStrength === "WEAK" &&
+  d.mainTrend === "bearish" &&
+  verdict === AI_VERDICTS.CONTROLLED_CONTINUATION
 ) {
   verdict = AI_VERDICTS.WAIT_FOR_PULLBACK;
-  reason += " Short-term move lacks recovery acceptance.";
+  reason += " Weak recovery lacks structural acceptance.";
+}
+
+// Weak drop against bullish trend = likely pullback
+if (
+  d.moveType === "DROP" &&
+  d.moveStrength === "WEAK" &&
+  d.mainTrend === "bullish" &&
+  verdict === AI_VERDICTS.CONTROLLED_CONTINUATION
+) {
+  verdict = AI_VERDICTS.WAIT_FOR_PULLBACK;
+  reason += " Weak drop likely represents a pullback, not breakdown.";
 }
 
   return withTier(verdict, reason, d);
@@ -983,9 +1002,22 @@ if (
     }
 
     /* ================= FAKE RECOVERY ENTRY BLOCK ================= */
+// Block early entries on fake recovery
 if (
   zone === "ENTRY ZONE" &&
-  d.recoveryQuality === "REACTION"
+  d.moveType === "RECOVERY" &&
+  d.moveStrength === "WEAK" &&
+  d.mainTrend === "bearish"
+) {
+  return "PULLBACK ZONE";
+}
+
+// Block early entries on fake breakdown
+if (
+  zone === "ENTRY ZONE" &&
+  d.moveType === "DROP" &&
+  d.moveStrength === "WEAK" &&
+  d.mainTrend === "bullish"
 ) {
   return "PULLBACK ZONE";
 }
@@ -1641,7 +1673,8 @@ async function analyze(sym,change){
   const mappedK = mapKlines(k);
 
   const changeState = getChange24hState(change);
-  const recoveryQuality = getRecoveryQuality(change);
+const moveType = get24hMoveType(change);
+const moveStrength = get24hMoveStrength(change);
   
 
 
@@ -2111,7 +2144,8 @@ const postVolBreakRSIConfirmSafe =
   fundingRate,
     defenseFailure,
   changeState,
-    recoveryQuality
+    moveType,
+moveStrength
 });
 
   
@@ -2122,7 +2156,8 @@ const postVolBreakRSIConfirmSafe =
   lastVol,mainTrend,volAI,fundingRate,ema14: ema14Last,
   ema21: ema21Last,
   emaShortBias,
-  emaShortCross,aiVerdict,marketDom: GLOBAL_MARKET_DOM,changeState,recoveryQuality};
+  emaShortCross,aiVerdict,marketDom: GLOBAL_MARKET_DOM,changeState,moveType,
+moveStrength};
 }
 
 /* ================= FILTERS ================= */
@@ -2593,15 +2628,13 @@ ${d.volumeBreakout ? `
   ⏱ 24h Expansion: <b>${d.change.toFixed(2)}%</b> (${d.changeState})
 </div>
 
-${d.recoveryQuality !== "NORMAL" ? `
-  <div class="muted ${
-    d.recoveryQuality === "STRONG_RECOVERY" ? "bull" :
-    d.recoveryQuality === "WEAK_RECOVERY" ? "neutral" :
-    "bear"
-  }">
-    ♻ Recovery Quality: <b>${d.recoveryQuality.replace("_"," ")}</b>
-  </div>
-` : ""}
+<div class="muted ${
+  d.moveType === "RECOVERY" ? "bull" :
+  d.moveType === "DROP" ? "bear" :
+  "muted"
+}">
+  ⏱ 24h Move: <b>${d.moveType}</b> (${d.moveStrength})
+</div>
 
 
     ${d.defenseFailure !== "NONE" ? `
