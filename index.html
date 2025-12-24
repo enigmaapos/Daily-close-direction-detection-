@@ -1593,6 +1593,9 @@ async function getDailyRSIContext(sym){
     d.volumeAlign === "conflict"
   ) score += 1;
 
+    // 5️⃣ Excessive 24h expansion (late-cycle stress)
+if (Math.abs(d.change) >= 25) score += 1;
+
   if (score >= 3) return "CRITICAL FAILURE";
   if (score === 2) return "EARLY WARNING";
   return "NONE";
@@ -1976,7 +1979,8 @@ prob = Math.max(40, Math.min(prob, 95));
   rsi50State,
   marketDom,
   volAI,
-  volumeAlign
+  volumeAlign,
+    change
 });
 
 // clamp
@@ -1990,9 +1994,6 @@ if (defenseFailure === "EARLY WARNING") {
 if (defenseFailure === "CRITICAL FAILURE") {
   prob -= 15;
 }
-
-  // 5️⃣ Excessive 24h expansion (late-cycle stress)
-if (Math.abs(d.change) >= 25) score += 1;
 
 prob = Math.max(40, Math.min(prob, 95));
   
@@ -2065,7 +2066,7 @@ const postVolBreakRSIConfirmSafe =
   lastVol,mainTrend,volAI,fundingRate,ema14: ema14Last,
   ema21: ema21Last,
   emaShortBias,
-  emaShortCross,aiVerdict,marketDom: GLOBAL_MARKET_DOM,changeState};
+  emaShortCross,aiVerdict,marketDom: GLOBAL_MARKET_DOM};
 }
 
 /* ================= FILTERS ================= */
