@@ -3125,6 +3125,49 @@ ${d.structure === "none" && d.volumeStructure?.name !== "none" ? `
 (Net ${d.marketDom?.net ?? "—"}%)
 </div>
 
+    <div class="muted neutral">
+  ⏱ 4H Context:
+<b>${(d.htfTrend || "neutral").toUpperCase()}</b>
+  RSI ${["normal","overbought","oversold"].includes(d.htfRSIState)
+  ? d.htfRSIState
+  : "normal"}
+  Support ${
+  d.htfStructure?.support
+    ? d.htfStructure.support
+    : isDailyRSIActive()
+      ? "HTF disabled"
+      : "N/A"
+}
+</div>
+
+ ${d.volAI?.futureOutcome ? `
+  <div class="muted neutral">
+    ⚠ Volume Expectation: <b>${d.volAI.futureOutcome}</b>
+  </div>
+` : ""}
+
+<div class="muted ${d.bull ? "bull" : "bear"}">
+    Dominant Volume: <b>${d.bull ? "BUYERS" : "SELLERS"}</b>
+  </div>
+
+  ${d.volAI ? `
+    <div class="muted ${
+      d.volAI.bias === "Bullish" ? "bull" :
+      d.volAI.bias === "Bearish" ? "bear" : "neutral"
+    }">
+      🧠 24h Volume AI
+      <br>
+      <span class="muted">
+        ${d.volAI.color} candle · ${d.volAI.location} range
+      </span>
+      <br>
+      <span class="muted">
+        ${d.volAI.meaning}
+      </span>
+    </div>
+  ` : ""}
+
+
 <div class="muted ${
   d.changeState === "EXTREME" ? "bear" :
   d.changeState === "VERY_HIGH" ? "neutral" : "muted"
@@ -3158,20 +3201,6 @@ ${d.structure === "none" && d.volumeStructure?.name !== "none" ? `
     }
   </div>
 
-    <div class="muted neutral">
-  ⏱ 4H Context:
-<b>${(d.htfTrend || "neutral").toUpperCase()}</b>
-  RSI ${["normal","overbought","oversold"].includes(d.htfRSIState)
-  ? d.htfRSIState
-  : "normal"}
-  Support ${
-  d.htfStructure?.support
-    ? d.htfStructure.support
-    : isDailyRSIActive()
-      ? "HTF disabled"
-      : "N/A"
-}
-</div>
 
   ${d.dailyRSI ? `
     <div class="muted ${
@@ -3213,32 +3242,6 @@ ${d.volumeBreakout ? `
   </div>
 `}
 
-<div class="muted ${d.bull ? "bull" : "bear"}">
-    Dominant Volume: <b>${d.bull ? "BUYERS" : "SELLERS"}</b>
-  </div>
-
-  ${d.volAI?.futureOutcome ? `
-  <div class="muted neutral">
-    ⚠ Volume Expectation: <b>${d.volAI.futureOutcome}</b>
-  </div>
-` : ""}
-
-  ${d.volAI ? `
-    <div class="muted ${
-      d.volAI.bias === "Bullish" ? "bull" :
-      d.volAI.bias === "Bearish" ? "bear" : "neutral"
-    }">
-      🧠 24h Volume AI
-      <br>
-      <span class="muted">
-        ${d.volAI.color} candle · ${d.volAI.location} range
-      </span>
-      <br>
-      <span class="muted">
-        ${d.volAI.meaning}
-      </span>
-    </div>
-  ` : ""}
 
   <div class="muted ${aiVerdict.verdictClass}">
     🧠 AI Verdict: <b>${aiVerdict.verdict}</b>
