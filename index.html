@@ -453,7 +453,6 @@ button.secondary{
 
 <h2>🔍 Manual</h2>
 <div class="grid" id="searchGrid"></div>
-  <div class="close" title="Close manual analysis">✖</div>
 
 <h2>🟢 Top Gainers — Short Execution Zone (Sell on Strength)</h2>
 <div class="grid" id="greenGrid"></div>
@@ -2599,17 +2598,15 @@ if (rrFilter === "present") {
 
   
   function closeManualSearch() {
-  const card = searchGrid.querySelector(".card");
-  if (card) {
-    card.classList.add("closing");
-    setTimeout(() => {
-      searchGrid.innerHTML = "";
-    }, 150);
-  }
-
   activeSearchSymbol = null;
+  searchGrid.innerHTML = "";
+
+  const status = document.getElementById("manualStatus");
+  status.textContent = "Manual status: Closed";
+  status.className = "muted";
+
   symbolSearch.value = "";
-  }
+}
   
 /* ================= RENDER ================= */
   function renderCard(d, el, isFav=false, skipFilter=false){
