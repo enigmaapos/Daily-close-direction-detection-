@@ -979,38 +979,47 @@ function getTradeSide(d){
   const verdict = d.aiVerdict;
   const bias    = d.bias || "";
 
-  /* 🧨 TRAP */
-  if (verdict === AI_VERDICTS.TRAP_RISK) {
+  /* 🧨 TRAP — highest danger, act early */
+  if (
+    verdict === AI_VERDICTS.TRAP_RISK &&
+    hasValidTrapVolume(d, tradeSide)
+  ) {
     zone = "PULLBACK ZONE";
   }
 
-  /* 🛡 DEFENSE — STRUCTURE + CORRECT VOLUME */
-else if (
-  (
-    (bias === "Bullish Defense" && tradeSide === "LONG") ||
-    (bias === "Bearish Defense" && tradeSide === "SHORT")
-  ) &&
-  hasValidDefenseVolume(d, tradeSide) &&
-  isBest24hDefenseForEntry(d.volume24hAI, tradeSide)
-) {
-  zone = "ENTRY ZONE";
-}
-
-  /* 🚫 WEAK DEFENSE — VOLUME NOT CONFIRMED */
-else if (
-  bias === "Bullish Defense" ||
-  bias === "Bearish Defense"
-) {
-  zone = "PULLBACK ZONE";
-}
-  
-  /* ▶ CONTINUATION */
+  /* 🛡 DEFENSE — BEST ENTRY ONLY */
   else if (
-    verdict === AI_VERDICTS.STRONG_CONTINUATION ||
-    verdict === AI_VERDICTS.CONTROLLED_CONTINUATION
+    (
+      (bias === "Bullish Defense" && tradeSide === "LONG") ||
+      (bias === "Bearish Defense" && tradeSide === "SHORT")
+    ) &&
+    hasValidDefenseVolume(d, tradeSide) &&
+    isBest24hDefenseForEntry(d.volume24hAI, tradeSide)
+  ) {
+    zone = "ENTRY ZONE";
+  }
+
+  /* ▶ CONTINUATION — late by nature */
+  else if (
+    (
+      verdict === AI_VERDICTS.STRONG_CONTINUATION ||
+      verdict === AI_VERDICTS.CONTROLLED_CONTINUATION
+    ) &&
+    hasValidContinuationVolume(d, tradeSide)
   ) {
     zone = "LATE ZONE";
   }
+
+  /* 🚫 WEAK DEFENSE */
+  else if (
+    bias === "Bullish Defense" ||
+    bias === "Bearish Defense"
+  ) {
+    zone = "PULLBACK ZONE";
+  }
+
+  return zone;
+}
 
   /* ================= EXECUTION MODIFIERS ================= */
 
@@ -1588,6 +1597,7 @@ async function getDailyRSIContext(sym){
   };
 }
 
+
   function isBest24hDefenseForEntry(volume24hAI, tradeSide) {
   if (!volume24hAI) return true; // do not block if missing
 
@@ -1638,6 +1648,62 @@ async function getDailyRSIContext(sym){
 
   return false;
   }
+
+
+  function hasValidTrapVolume(d, tradeSide) {
+  if (!d.volumeContext) return false;
+  const v = d.volumeContext;
+
+  // 🧨 Bull Trap (buyers trapped → SHORT bias)
+  if (tradeSide === "SHORT") {
+    return (
+      v.dominantSide === "BUY" &&
+      v.initiative === "BUY" &&
+      v.isAbsorption === true &&      // breakout fails
+      v.isClimax !== "SELL_CLIMAX"    // not seller exhaustion
+    );
+  }
+
+  // 🧨 Bear Trap (sellers trapped → LONG bias)
+  if (tradeSide === "LONG") {
+    return (
+      v.dominantSide === "SELL" &&
+      v.initiative === "SELL" &&
+      v.isAbsorption === true &&      // breakdown fails
+      v.isClimax !== "BUY_CLIMAX"     // not buyer exhaustion
+    );
+  }
+
+  return false;
+  }
+
+
+  function hasValidContinuationVolume(d, tradeSide) {
+  if (!d.volumeContext) return false;
+  const v = d.volumeContext;
+
+  // ▶ Bullish continuation
+  if (tradeSide === "LONG") {
+    return (
+      v.dominantSide === "BUY" &&
+      v.initiative === "BUY" &&
+      v.isAbsorption === false &&
+      v.isClimax !== "BUY_CLIMAX"
+    );
+  }
+
+  // ▶ Bearish continuation
+  if (tradeSide === "SHORT") {
+    return (
+      v.dominantSide === "SELL" &&
+      v.initiative === "SELL" &&
+      v.isAbsorption === false &&
+      v.isClimax !== "SELL_CLIMAX"
+    );
+  }
+
+  return false;
+}
 
   
   function getVolumeStateLabel(d) {
