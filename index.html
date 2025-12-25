@@ -2840,6 +2840,14 @@ ${d.structure === "none" && d.volumeStructure?.name !== "none" ? `
 
   <!-- ================= STRUCTURE ================= -->
   <div class="muted"><b>📈 Market Structure & Trend</b></div>
+  ${d.setupScore ? `
+  <div class="setup-score">
+    ⭐ <b>Setup Quality:</b> ${d.setupScore} / 10
+    <div class="setup-grade ${getSetupGradeClass(d.setupScore)}">
+      🏷 ${getSetupGradeLabel(d.setupScore)}
+    </div>
+  </div>
+` : ""}
 
     <div class="muted neutral">
   🌍 Market Dominance:
@@ -2960,7 +2968,19 @@ ${d.volumeBreakout ? `
 </div>
 
 
-    ${d.defenseFailure !== "NONE" ? `
+  <div class="muted">
+  🌍 Market Participation:
+  <b>${
+    d.marketDom && Math.abs(d.marketDom.net) < 5
+      ? "LOW (Choppy)"
+      : "ACTIVE"
+  }</b>
+  <br>
+  🌊 Symbol Behavior:
+  <b>${isSmoothDirection(d) ? "SMOOTH" : "CHOPPY"}</b>
+</div>
+
+${d.defenseFailure !== "NONE" ? `
   <div class="muted ${
     d.defenseFailure === "CRITICAL FAILURE"
       ? "bear"
@@ -2977,27 +2997,6 @@ ${d.volumeBreakout ? `
   <div class="muted ${execClass}">
     🧭 Execution Zone: <b>${executionZone}</b>
   </div>
-
-  <div class="muted">
-  🌍 Market Participation:
-  <b>${
-    d.marketDom && Math.abs(d.marketDom.net) < 5
-      ? "LOW (Choppy)"
-      : "ACTIVE"
-  }</b>
-  <br>
-  🌊 Symbol Behavior:
-  <b>${isSmoothDirection(d) ? "SMOOTH" : "CHOPPY"}</b>
-</div>
-
-${d.setupScore ? `
-  <div class="setup-score">
-    ⭐ <b>Setup Quality:</b> ${d.setupScore} / 10
-    <div class="setup-grade ${getSetupGradeClass(d.setupScore)}">
-      🏷 ${getSetupGradeLabel(d.setupScore)}
-    </div>
-  </div>
-` : ""}
 `;
 
 
