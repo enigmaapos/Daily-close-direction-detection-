@@ -2138,7 +2138,7 @@ function getSetupGradeClass(score) {
 
   function applyHTFProbabilityAdjustment(d) {
   let prob = d.probability;
-  const state = d.aiVerdict; // DEFENSE / TRAP / CONTINUATION
+  const state = d.aiVerdict?.verdict; // DEFENSE / TRAP / CONTINUATION
   const side = d.tradeSide;
 
   if (!d.htfTrend) return prob;
@@ -2183,7 +2183,11 @@ async function analyze(sym,change){
 
 
   const htf = isDailyRSIActive()
-  ? { htfTrend:"neutral", htfRSIState:"normal", htfStructure:{} }
+  ? {
+      htfTrend: "neutral",
+      htfRSIState: "normal",
+      htfStructure: { support: "holding", resistance: "holding" }
+    }
   : await getHTFContext(sym);
 
   const mappedK = mapKlines(k);
@@ -2682,10 +2686,13 @@ moveStrength,
     volumeContext
 });
 
-  // after getAIFinalVerdict()
 prob = applyHTFProbabilityAdjustment({
-  ...d,
-  probability: prob
+  probability: prob,
+  aiVerdict,
+  tradeSide: aiVerdict.tradeSide,
+  htfTrend: htf.htfTrend,
+  htfRSIState: htf.htfRSIState,
+  htfStructure: htf.htfStructure
 });
 
   const setupScore = calculateSetupScore({
