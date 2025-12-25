@@ -2838,6 +2838,13 @@ ${d.volumeBreakout ? `
   </div>
 ` : ""}
 
+ <div class="muted ${tradeSideClass}">
+    🎯 Trade Side: <b>${aiVerdict.tradeSide}</b>
+  </div>
+
+  <div class="muted ${execClass}">
+    🧭 Execution Zone: <b>${executionZone}</b>
+  </div>
 
   <div class="muted">
   🌍 Market Participation:
@@ -2859,14 +2866,6 @@ ${d.setupScore ? `
     </div>
   </div>
 ` : ""}
-
- <div class="muted ${tradeSideClass}">
-    🎯 Trade Side: <b>${aiVerdict.tradeSide}</b>
-  </div>
-
-  <div class="muted ${execClass}">
-    🧭 Execution Zone: <b>${executionZone}</b>
-  </div>
 `;
 
 
