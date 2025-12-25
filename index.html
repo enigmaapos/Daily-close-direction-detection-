@@ -2800,6 +2800,12 @@ ${d.volumeBreakout ? `
     </div>
   ` : ""}
 
+  ${d.volAI?.futureOutcome ? `
+  <div class="muted neutral">
+    ⚠ Volume Expectation: <b>${d.volAI.futureOutcome}</b>
+  </div>
+` : ""}
+
   <div class="muted ${aiVerdict.verdictClass}">
     🧠 AI Verdict: <b>${aiVerdict.verdict}</b>
   </div>
