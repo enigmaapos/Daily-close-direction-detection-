@@ -208,37 +208,49 @@ button.secondary{
   font-style: italic;
   opacity: .85;
   }
+
+  .setup-score {
+  margin-top: 6px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.setup-grade {
+  margin-top: 2px;
+  font-weight: 600;
+}
+
+.grade-elite {
+  color: #22c55e; /* strong green */
+}
+
+.grade-high {
+  color: #4ade80; /* green */
+}
+
+.grade-good {
+  color: #facc15; /* yellow */
+}
+
+.grade-average {
+  color: #fb923c; /* orange */
+}
+
+.grade-low {
+  color: #ef4444; /* red */
+}
+
+  .card.closing {
+  opacity: 0;
+  transform: scale(0.98);
+  transition: all .15s ease;
+  }
 </style>
 </head>
 
 <body>
 <h1>📊 15m Volume → Structure Probability Scanner</h1>
 <div class="muted">Dominant volume + structure confirmation only</div>
-<div class="muted">
-  Last update: <span id="timestamp">—</span><br>
-  Next scan in: <span id="nextScan">—</span>
-</div>
-
-<!-- ACTION ROW -->
-<div class="row">
-  <button class="primary" id="scanBtn" onclick="runScan()">Run Scan</button>
-<button class="secondary" id="scanVolBreakBtn">
-  🔥 Scan 24h Volume Break
-</button>
-  <div class="row filter-box">
-  <label class="muted" style="display:flex;align-items:center;gap:8px;cursor:pointer;">
-    <input
-      type="checkbox"
-      id="toggle24hVolume"
-    />
-    🔥 Auto 24h Volume Break Scan
-  </label>
-  </div>
-  <input id="symbolSearch" placeholder="BTCUSDT"/>
-  <button class="secondary" id="analyzeBtn" onclick="runSearch()">Analyze</button>
-</div>
-
-<div id="manualStatus" class="muted"></div>
 
 
 <!-- FILTERS ROW -->
@@ -393,6 +405,32 @@ button.secondary{
   </select>
 </div>
 
+  <div class="muted">
+  Last update: <span id="timestamp">—</span><br>
+  Next scan in: <span id="nextScan">—</span>
+  </div>
+
+  <!-- ACTION ROW -->
+<div class="row">
+  <button class="primary" id="scanBtn" onclick="runScan()">Run Scan</button>
+<button class="secondary" id="scanVolBreakBtn">
+  🔥 Scan 24h Volume Break
+</button>
+  <div class="row filter-box">
+  <label class="muted" style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+    <input
+      type="checkbox"
+      id="toggle24hVolume"
+    />
+    🔥 Auto 24h Volume Break Scan
+  </label>
+  </div>
+  <input id="symbolSearch" placeholder="BTCUSDT"/>
+  <button class="secondary" id="analyzeBtn" onclick="runSearch()">Analyze</button>
+</div>
+
+<div id="manualStatus" class="muted"></div>
+
 <div class="progress">
   <div id="progressFill"></div>
 </div>
@@ -501,6 +539,90 @@ const execAlertCooldown = {};
   await runScan();
 });
 
+
+    /* ================= 4H HTF CACHE ================= */
+const HTF_CACHE = {};
+const HTF_TTL = 15 * 60 * 1000; // 15 minutes
+
+  async function getHTFContext(sym) {
+  const cached = HTF_CACHE[sym];
+  if (cached && Date.now() - cached.ts < HTF_TTL) {
+    return cached.data;
+  }
+
+  const k4h = await fetchJSON(
+    `${API}/fapi/v1/klines?symbol=${sym}&interval=4h&limit=200`
+  );
+
+  const data = computeHTFState(k4h);
+
+  HTF_CACHE[sym] = {
+    data,
+    ts: Date.now()
+  };
+
+  return data;
+  }
+
+  function map4hKlines(k) {
+  return k.map(x => ({
+    open: +x[1],
+    high: +x[2],
+    low:  +x[3],
+    close:+x[4]
+  }));
+  }
+
+  function computeHTFTrend(closes) {
+  const ema50 = ema(closes, 50);
+  const ema200 = ema(closes, 200);
+
+  const last50 = ema50.at(-1);
+  const last200 = ema200.at(-1);
+
+  if (last50 > last200) return "bullish";
+  if (last50 < last200) return "bearish";
+  return "neutral";
+  }
+
+  function computeHTFRSIState(closes) {
+  const rsiArr = calculateRSI(closes, 14);
+  if (!rsiArr.length) return "normal";
+
+  const rsi = rsiArr.at(-1);
+
+  if (rsi >= 70) return "overbought";
+  if (rsi <= 30) return "oversold";
+  return "normal";
+  }
+
+  function computeHTFStructure(h, l, c) {
+  const lookback = 20;
+
+  const recentHigh = Math.max(...h.slice(-lookback));
+  const recentLow  = Math.min(...l.slice(-lookback));
+  const lastClose  = c.at(-1);
+
+  return {
+    support: lastClose < recentLow ? "broken" : "holding",
+    resistance: lastClose > recentHigh ? "broken" : "holding"
+  };
+  }
+
+  function computeHTFState(k4h) {
+  const mapped = map4hKlines(k4h);
+
+  const closes = mapped.map(x => x.close);
+  const highs  = mapped.map(x => x.high);
+  const lows   = mapped.map(x => x.low);
+
+  return {
+    htfTrend: computeHTFTrend(closes),
+    htfRSIState: computeHTFRSIState(closes),
+    htfStructure: computeHTFStructure(highs, lows, closes)
+  };
+  }
+
   
 /* ================= COUNTDOWN ================= */
 function startCountdown(){
@@ -531,6 +653,7 @@ function startAutoScan(){
 
 async function refreshFavorites() {
   if (favSet.size === 0) return;
+  if (favSet.size > 8) return;
 
   favGrid.innerHTML = "";
 
@@ -566,6 +689,19 @@ async function refreshFavorites() {
   if (statusLocked) return;
   dailyRSIStatus.textContent = text;
 }
+
+  const SIDE_REFRESH_INTERVAL = 30 * 1000; // 30s
+
+setInterval(async () => {
+  if (scanLock) return;
+
+  // refresh favorites independently
+  await refreshFavorites();
+
+  // refresh manual symbol independently
+  await refreshManualSymbol();
+
+}, SIDE_REFRESH_INTERVAL);
   
 
   async function getFundingRate(sym){
@@ -589,6 +725,30 @@ async function refreshFavorites() {
   return { label: `${rate.toFixed(3)}% (Balanced)`, cls: "neutral" };
   }
 
+  function getChange24hState(change) {
+  const abs = Math.abs(change);
+
+  if (abs >= 35) return "EXTREME";
+  if (abs >= 25) return "VERY_HIGH";
+  if (abs >= 15) return "HIGH";
+  if (abs >= 8)  return "MODERATE";
+  return "NORMAL";
+  }
+
+  function get24hMoveType(change) {
+  if (change > 0) return "RECOVERY";
+  if (change < 0) return "DROP";
+  return "FLAT";
+}
+
+  
+function get24hMoveStrength(change) {
+  const abs = Math.abs(change);
+
+  if (abs < 8) return "WEAK";
+  if (abs < 15) return "MODERATE";
+  return "STRONG";
+  }
   
   
       /* ================= AI VERDICTS ================= */
@@ -649,9 +809,9 @@ const AI_VERDICT_TIERS = {
   }
 };
 
-/* ================= AI VERDICT LOGIC ================= */
 
-    function getAIFinalVerdict(d) {
+   /* ================= AI VERDICT LOGIC ================= */
+function getAIFinalVerdict(d) {
   const structure = d.structure || "none";
   const trend = d.mainTrend || "neutral";
   const prob = d.prob || 0;
@@ -664,22 +824,66 @@ const AI_VERDICT_TIERS = {
   const fakeVol = d.fakeVolumeBreak === true;
   const rsiLabel = d.dailyRSI?.label || "Neutral";
 
-  const bullishBreak = structure.includes("resistance broken") && trend === "bullish";
-  const bearishBreak = structure.includes("support broken") && trend === "bearish";
+  const bullishBreak =
+    structure.includes("resistance broken") && trend === "bullish";
+  const bearishBreak =
+    structure.includes("support broken") && trend === "bearish";
   const anyBreak = structure.includes("broken");
 
   let verdict = AI_VERDICTS.AVOID;
   let reason = "Conditions are mixed and lack a statistical edge.";
 
+  /* ================= TRAP / FAKE BREAK ================= */
   if (d.bias?.includes("Trap") || fakeVol) {
-    verdict = AI_VERDICTS.TRAP_RISK;
-    reason = "Volume spike lacks acceptance and structure stability is weak.";
+    return withTier(
+      AI_VERDICTS.TRAP_RISK,
+      "Volume spike lacks acceptance and structure stability is weak.",
+      d
+    );
   }
-  else if ((bullishBreak || bearishBreak) && hasVolumeBreak && !rsiLabel.includes("MAX")) {
+
+  /* ================= DEFENSE REGIME (WITH FAILURE STATE) ================= */
+  if (
+    d.bias === "Bullish Defense" ||
+    d.bias === "Bearish Defense"
+  ) {
+    if (d.defenseFailure === "CRITICAL FAILURE") {
+      return withTier(
+        AI_VERDICTS.TRAP_RISK,
+        "Defense failure detected · Structure reliability compromised",
+        d
+      );
+    }
+
+    if (d.defenseFailure === "EARLY WARNING") {
+      return withTier(
+        AI_VERDICTS.WAIT_FOR_PULLBACK,
+        "Defense weakening detected · Entry requires caution",
+        d
+      );
+    }
+
+    return withTier(
+      AI_VERDICTS.CONTROLLED_CONTINUATION,
+      "Structure is holding with defensive participation.",
+      d
+    );
+  }
+
+  /* ================= BREAKOUT / CONTINUATION ================= */
+  if (
+    (bullishBreak || bearishBreak) &&
+    hasVolumeBreak &&
+    !rsiLabel.includes("MAX")
+  ) {
     verdict = AI_VERDICTS.STRONG_CONTINUATION;
     reason = "Structure, trend, and sustained participation are aligned.";
   }
-  else if ((bullishBreak || bearishBreak) && !hasVolumeBreak && !rsiLabel.includes("MAX")) {
+  else if (
+    (bullishBreak || bearishBreak) &&
+    !hasVolumeBreak &&
+    !rsiLabel.includes("MAX")
+  ) {
     verdict = AI_VERDICTS.CONTROLLED_CONTINUATION;
     reason = "Structure aligns with trend, but participation remains selective.";
   }
@@ -689,32 +893,21 @@ const AI_VERDICT_TIERS = {
   }
   else if (
     anyBreak &&
-    ((structure.includes("resistance broken") && trend === "bearish") ||
-     (structure.includes("support broken") && trend === "bullish"))
+    (
+      (structure.includes("resistance broken") && trend === "bearish") ||
+      (structure.includes("support broken") && trend === "bullish")
+    )
   ) {
     verdict = AI_VERDICTS.COUNTER_TREND;
     reason = "Structure break occurred against the dominant trend.";
-  }
-    // 🛡 DEFENSE OVERRIDE
-if (
-  d.bias === "Bullish Defense" ||
-  d.bias === "Bearish Defense"
-) {
-  return withTier(
-    AI_VERDICTS.CONTROLLED_CONTINUATION,
-    "Structure is holding with defensive participation.",
-    d
-  );
   }
   else if (structure === "none" || prob < 60) {
     verdict = AI_VERDICTS.STRUCTURE_WEAK;
     reason = "No confirmed structure or probability edge present.";
   }
 
-  if (
-    verdict === AI_VERDICTS.STRONG_CONTINUATION &&
-    extreme
-  ) {
+  /* ================= FUNDING RISK ================= */
+  if (verdict === AI_VERDICTS.STRONG_CONTINUATION && extreme) {
     verdict = AI_VERDICTS.CONTROLLED_CONTINUATION;
     reason += " Funding shows crowded positioning.";
   }
@@ -728,34 +921,93 @@ if (
     reason += " Elevated funding increases entry risk.";
   }
 
-/* ================= MARKET DOMINANCE VERDICT DOWNGRADE ================= */
-if (
-  d.marketDom &&
-  verdict === AI_VERDICTS.CONTROLLED_CONTINUATION
-) {
-  const net = d.marketDom.net;
-
-  if (
-  ((d.bias || "").includes("Bullish") && net < -15) ||
-  ((d.bias || "").includes("Bearish") && net > 15)
-) {
-  verdict = AI_VERDICTS.WAIT_FOR_PULLBACK;
-  reason += " Market dominance conflicts with continuation direction.";
-}
-}
-
-/* ================= MARKET SMOOTHNESS VERDICT REFINEMENT ================= */
-if (
-  d.marketDom &&
-  verdict === AI_VERDICTS.STRONG_CONTINUATION &&
-  !isSmoothDirection(d)
+  /* ================= 24H EXPANSION VERDICT SOFT DOWNGRADE ================= */
+    if (
+  (d.changeState === "VERY_HIGH" || d.changeState === "EXTREME") &&
+  verdict === AI_VERDICTS.STRONG_CONTINUATION
 ) {
   verdict = AI_VERDICTS.CONTROLLED_CONTINUATION;
-  reason += " Symbol shows execution friction despite market participation.";
+  reason += " Recent 24h expansion suggests late participation risk.";
 }
-      
+
+if (
+  d.changeState === "EXTREME" &&
+  verdict === AI_VERDICTS.CONTROLLED_CONTINUATION
+) {
+  verdict = AI_VERDICTS.WAIT_FOR_PULLBACK;
+  reason += " Extreme 24h extension increases pullback probability.";
+}
+
+  /* ================= MARKET DOMINANCE DOWNGRADE ================= */
+  if (
+    d.marketDom &&
+    verdict === AI_VERDICTS.CONTROLLED_CONTINUATION
+  ) {
+    const net = d.marketDom.net;
+
+    if (
+      ((d.bias || "").includes("Bullish") && net < -15) ||
+      ((d.bias || "").includes("Bearish") && net > 15)
+    ) {
+      verdict = AI_VERDICTS.WAIT_FOR_PULLBACK;
+      reason += " Market dominance conflicts with continuation direction.";
+    }
+  }
+
+  /* ================= MARKET SMOOTHNESS ================= */
+  if (
+    d.marketDom &&
+    verdict === AI_VERDICTS.STRONG_CONTINUATION &&
+    !isSmoothDirection(d)
+  ) {
+    verdict = AI_VERDICTS.CONTROLLED_CONTINUATION;
+    reason += " Symbol shows execution friction despite market participation.";
+  }
+
+  /* ================= DEFENSE FAILURE (NON-DEFENSE REGIMES) ================= */
+  if (d.defenseFailure === "EARLY WARNING") {
+    if (verdict === AI_VERDICTS.STRONG_CONTINUATION) {
+      verdict = AI_VERDICTS.CONTROLLED_CONTINUATION;
+      reason += " · Defense weakening detected";
+    }
+    else if (verdict === AI_VERDICTS.CONTROLLED_CONTINUATION) {
+      verdict = AI_VERDICTS.WAIT_FOR_PULLBACK;
+      reason += " · Defense weakening detected";
+    }
+  }
+
+  if (d.defenseFailure === "CRITICAL FAILURE") {
+    verdict = AI_VERDICTS.TRAP_RISK;
+    reason = "Defense failure detected · Structure reliability compromised";
+  }
+
+  /* ================= FAKE RECOVERY/DROP AWARENESS ================= */
+// Weak recovery against bearish trend = suspicious
+if (
+  d.moveType === "RECOVERY" &&
+  d.moveStrength === "WEAK" &&
+  d.mainTrend === "bearish" &&
+  verdict === AI_VERDICTS.CONTROLLED_CONTINUATION
+) {
+  verdict = AI_VERDICTS.WAIT_FOR_PULLBACK;
+  reason += " Weak recovery lacks structural acceptance.";
+}
+
+// Weak drop against bullish trend = likely pullback
+if (
+  d.moveType === "DROP" &&
+  d.moveStrength === "WEAK" &&
+  d.mainTrend === "bullish" &&
+  verdict === AI_VERDICTS.CONTROLLED_CONTINUATION
+) {
+  verdict = AI_VERDICTS.WAIT_FOR_PULLBACK;
+  reason += " Weak drop likely represents a pullback, not breakdown.";
+}
+
   return withTier(verdict, reason, d);
-}
+} 
+    
+
 
 /* ================= TIER WRAPPER ================= */
 
@@ -774,6 +1026,12 @@ function withTier(verdict, reason, d){
 
   const tradeSide = getTradeSide(dWithVerdict);
   const executionZone = getExecutionZone(dWithVerdict, tradeSide);
+  const finalExecutionZone =
+  applyHTFGuards(
+    { ...dWithVerdict },
+    executionZone,
+    tradeSide
+  );
 
   return {
     verdict,
@@ -782,7 +1040,8 @@ function withTier(verdict, reason, d){
     verdictClass: t.verdictClass,
 
     tradeSide,
-    executionZone,
+    executionZone: finalExecutionZone,
+rawExecutionZone: executionZone,
 
     mainTrend: d.mainTrend || "neutral",
     microTrend: d.emaShortBias || "neutral",
@@ -831,25 +1090,43 @@ function getTradeSide(d){
   const verdict = d.aiVerdict;
   const bias    = d.bias || "";
 
-  /* 🧨 TRAP */
-  if (verdict === AI_VERDICTS.TRAP_RISK) {
+  /* 🧨 TRAP — highest danger, act early */
+  if (
+    verdict === AI_VERDICTS.TRAP_RISK &&
+    hasValidTrapVolume(d, tradeSide)
+  ) {
     zone = "PULLBACK ZONE";
   }
 
-  /* 🛡 DEFENSE */
+  /* 🛡 DEFENSE — BEST ENTRY ONLY */
   else if (
-    (bias === "Bullish Defense" && tradeSide === "LONG") ||
-    (bias === "Bearish Defense" && tradeSide === "SHORT")
+    (
+      (bias === "Bullish Defense" && tradeSide === "LONG") ||
+      (bias === "Bearish Defense" && tradeSide === "SHORT")
+    ) &&
+    hasValidDefenseVolume(d, tradeSide) &&
+    isBest24hDefenseForEntry(d.volume24hAI, tradeSide)
   ) {
     zone = "ENTRY ZONE";
   }
 
-  /* ▶ CONTINUATION */
+  /* ▶ CONTINUATION — late by nature */
   else if (
-    verdict === AI_VERDICTS.STRONG_CONTINUATION ||
-    verdict === AI_VERDICTS.CONTROLLED_CONTINUATION
+    (
+      verdict === AI_VERDICTS.STRONG_CONTINUATION ||
+      verdict === AI_VERDICTS.CONTROLLED_CONTINUATION
+    ) &&
+    hasValidContinuationVolume(d, tradeSide)
   ) {
     zone = "LATE ZONE";
+  }
+
+  /* 🚫 WEAK DEFENSE */
+  else if (
+    bias === "Bullish Defense" ||
+    bias === "Bearish Defense"
+  ) {
+    zone = "PULLBACK ZONE";
   }
 
   /* ================= EXECUTION MODIFIERS ================= */
@@ -863,6 +1140,15 @@ function getTradeSide(d){
     return "PULLBACK ZONE";
   }
 
+    /* ================= 24H CHANGE EXECUTION TIMING ================= */
+if (
+  zone === "ENTRY ZONE" &&
+  (d.changeState === "VERY_HIGH" || d.changeState === "EXTREME")
+) {
+  return "PULLBACK ZONE";
+}
+
+
   // 2️⃣ SMOOTHNESS — SECONDARY (symbol-specific behavior)
   if (
     zone === "LATE ZONE" &&          // 🚫 do NOT downgrade ENTRY
@@ -871,6 +1157,39 @@ function getTradeSide(d){
   ) {
     return "PULLBACK ZONE";
   }
+
+    if (d.defenseFailure === "CRITICAL FAILURE" && zone === "ENTRY ZONE") {
+  return "PULLBACK ZONE";
+    }
+
+    /* ================= FAKE RECOVERY ENTRY BLOCK ================= */
+// Block early entries on fake recovery
+if (
+  zone === "ENTRY ZONE" &&
+  d.moveType === "RECOVERY" &&
+  d.moveStrength === "WEAK" &&
+  d.mainTrend === "bearish"
+) {
+  return "PULLBACK ZONE";
+}
+
+// Block early entries on fake breakdown
+if (
+  zone === "ENTRY ZONE" &&
+  d.moveType === "DROP" &&
+  d.moveStrength === "WEAK" &&
+  d.mainTrend === "bullish"
+) {
+  return "PULLBACK ZONE";
+}
+
+  // 🧯 SAFETY FALLBACK — prevent empty execution
+if (
+  zone === "NO TRADE ZONE" &&
+  tradeSide !== "WAIT"
+) {
+  return "PULLBACK ZONE";
+}
 
   return zone;
 }
@@ -887,6 +1206,42 @@ function getTradeSide(d){
   if (zone === "NO TRADE ZONE") return "exec-no-trade";
 
   return "exec-no-trade";
+  }
+
+
+  function applyHTFGuards(d, zone, tradeSide) {
+  // 1️⃣ Trend permission
+  if (
+    (tradeSide === "LONG" && d.htfTrend === "bearish") ||
+    (tradeSide === "SHORT" && d.htfTrend === "bullish")
+  ) {
+    return "PULLBACK ZONE";
+  }
+
+  // 2️⃣ Structure authority
+  if (
+    tradeSide === "LONG" &&
+    d.htfStructure?.support === "broken"
+  ) {
+    return "PULLBACK ZONE";
+  }
+
+  if (
+    tradeSide === "SHORT" &&
+    d.htfStructure?.resistance === "broken"
+  ) {
+    return "PULLBACK ZONE";
+  }
+
+  // 3️⃣ Exhaustion timing (soft)
+  if (
+    zone === "ENTRY ZONE" &&
+    d.htfRSIState !== "normal"
+  ) {
+    return "PULLBACK ZONE";
+  }
+
+  return zone;
   }
 
 
@@ -1394,6 +1749,114 @@ async function getDailyRSIContext(sym){
   };
 }
 
+
+  function isBest24hDefenseForEntry(volume24hAI, tradeSide) {
+  if (!volume24hAI) return true; // do not block if missing
+
+  const { meaning, bias, futureOutcome } = volume24hAI;
+
+  // 🟢 BEST LONG DEFENSE
+  if (tradeSide === "LONG") {
+    return (
+      meaning === "Distribution" &&
+      futureOutcome === "Bullish Pullback"
+    );
+  }
+
+  // 🔴 BEST SHORT DEFENSE
+  if (tradeSide === "SHORT") {
+    return (
+      meaning === "Short covering" ||
+      meaning === "Accumulation attempt"
+    );
+  }
+
+  return false;
+}
+  
+
+  function hasValidDefenseVolume(d, tradeSide) {
+  if (!d.volumeContext) return false;
+
+  const v = d.volumeContext;
+
+  if (tradeSide === "LONG") {
+    return (
+      v.dominantSide === "SELL" &&        // sellers active
+      v.isAbsorption === true &&          // absorption present
+      v.isClimax !== "BUY_CLIMAX" &&      // no buyer exhaustion
+      v.initiative !== "SELL"             // no aggressive selling
+    );
+  }
+
+  if (tradeSide === "SHORT") {
+    return (
+      v.dominantSide === "BUY" &&         // buyers active
+      v.isAbsorption === true &&          // absorption present
+      v.isClimax !== "SELL_CLIMAX" &&     // no seller exhaustion
+      v.initiative !== "BUY"              // no aggressive buying
+    );
+  }
+
+  return false;
+  }
+
+
+  function hasValidTrapVolume(d, tradeSide) {
+  if (!d.volumeContext) return false;
+  const v = d.volumeContext;
+
+  // 🧨 Bull Trap (buyers trapped → SHORT bias)
+  if (tradeSide === "SHORT") {
+    return (
+      v.dominantSide === "BUY" &&
+      v.initiative === "BUY" &&
+      v.isAbsorption === true &&      // breakout fails
+      v.isClimax !== "SELL_CLIMAX"    // not seller exhaustion
+    );
+  }
+
+  // 🧨 Bear Trap (sellers trapped → LONG bias)
+  if (tradeSide === "LONG") {
+    return (
+      v.dominantSide === "SELL" &&
+      v.initiative === "SELL" &&
+      v.isAbsorption === true &&      // breakdown fails
+      v.isClimax !== "BUY_CLIMAX"     // not buyer exhaustion
+    );
+  }
+
+  return false;
+  }
+
+
+  function hasValidContinuationVolume(d, tradeSide) {
+  if (!d.volumeContext) return false;
+  const v = d.volumeContext;
+
+  // ▶ Bullish continuation
+  if (tradeSide === "LONG") {
+    return (
+      v.dominantSide === "BUY" &&
+      v.initiative === "BUY" &&
+      v.isAbsorption === false &&
+      v.isClimax !== "BUY_CLIMAX"
+    );
+  }
+
+  // ▶ Bearish continuation
+  if (tradeSide === "SHORT") {
+    return (
+      v.dominantSide === "SELL" &&
+      v.initiative === "SELL" &&
+      v.isAbsorption === false &&
+      v.isClimax !== "SELL_CLIMAX"
+    );
+  }
+
+  return false;
+}
+
   
   function getVolumeStateLabel(d) {
   const structure = d.structure || "";
@@ -1471,6 +1934,186 @@ async function getDailyRSIContext(sym){
 
   return "Volume Suggests: Mixed Participation";
     }
+
+  function detectDefenseFailure(d) {
+  let score = 0;
+
+  // 1️⃣ Structural weakness
+  if (
+    d.structure.includes("weak") ||
+    d.structure.includes("unaccepted")
+  ) score += 1;
+
+  // 2️⃣ RSI pressure persistence
+  if (
+    (d.mainTrend === "bullish" && d.rsi50State?.consistentlyBelow50) ||
+    (d.mainTrend === "bearish" && d.rsi50State?.consistentlyAbove50)
+  ) score += 1;
+
+  // 3️⃣ Market dominance against defense
+  if (
+    d.marketDom &&
+    (
+      (d.bias.includes("Bullish") && d.marketDom.net < -15) ||
+      (d.bias.includes("Bearish") && d.marketDom.net > 15)
+    )
+  ) score += 1;
+
+  // 4️⃣ Climactic or conflicting volume
+  if (
+    d.volAI?.meaning.includes("climax") ||
+    d.volumeAlign === "conflict"
+  ) score += 1;
+
+
+    // 5️⃣ Excessive 24h expansion (late-cycle stress)
+if (typeof d.change === "number" && Math.abs(d.change) >= 25) {
+  score += 1;
+}
+
+  if (score >= 3) return "CRITICAL FAILURE";
+  if (score === 2) return "EARLY WARNING";
+  return "NONE";
+  }
+
+
+  function getDirectionalBias(d){
+  // Only allowed in neutral / no-edge states
+  if (
+    d.structure !== "none" ||
+    d.aiVerdict?.verdict !== AI_VERDICTS.STRUCTURE_WEAK
+  ) {
+    return null;
+  }
+
+  let bullScore = 0;
+  let bearScore = 0;
+
+  // ===== TREND PRESSURE =====
+  if (d.mainTrend === "bullish") bullScore++;
+  if (d.mainTrend === "bearish") bearScore++;
+
+  if (d.emaShortBias === "bullish") bullScore++;
+  if (d.emaShortBias === "bearish") bearScore++;
+
+  // ===== VOLUME PRESSURE =====
+  if (d.bull === true) bullScore++;
+  if (d.bull === false) bearScore++;
+
+  if (d.volAI?.intent === "Bullish") bullScore++;
+  if (d.volAI?.intent === "Bearish") bearScore++;
+
+  // ===== MARKET CONTEXT =====
+  if (d.marketDom?.net > 0) bullScore++;
+  if (d.marketDom?.net < 0) bearScore++;
+
+  // ===== EXTENSION / EXHAUSTION =====
+  if (d.moveType === "RECOVERY" && d.moveStrength === "STRONG") {
+    bearScore++; // late push
+  }
+
+  if (d.moveType === "DROP" && d.moveStrength === "STRONG") {
+    bullScore++; // late dump
+  }
+
+  // ===== DECISION =====
+  if (bullScore >= bearScore + 2) {
+    return {
+      bias: "Bullish (Conditional)",
+      reason: "Bullish pressure present, but structure confirmation is required."
+    };
+  }
+
+  if (bearScore >= bullScore + 2) {
+    return {
+      bias: "Bearish (Conditional)",
+      reason: "Bearish pressure present, but structure confirmation is required."
+    };
+  }
+
+  return {
+    bias: "Balanced / Indecision",
+    reason: "Bullish and bearish pressures are currently balanced."
+  };
+}
+
+  function calculateSetupScore(d) {
+  let score = 0;
+
+  /* ================= STRUCTURE (max 2.5) ================= */
+  if (
+    d.structure === "support holding (confirmed)" ||
+    d.structure === "resistance failed (confirmed)"
+  ) score += 2.5;
+  else if (d.structure.includes("accepted")) score += 2.0;
+  else if (d.structure.includes("weak")) score += 1.0;
+
+  /* ================= VOLUME ALIGNMENT (max 2.0) ================= */
+  if (d.volumeAlign === "confirmed") score += 2.0;
+  else if (d.volumeAlign === "neutral") score += 1.0;
+
+  /* ================= RSI QUALITY (max 1.5) ================= */
+  if (
+    d.dailyRSI &&
+    d.dailyRSI.value >= 50 &&
+    d.dailyRSI.value <= 60 &&
+    d.rsi15 >= 50 &&
+    d.rsi15 <= 60
+  ) {
+    score += 1.5;
+  } else if (d.rsi15 >= 45 && d.rsi15 <= 65) {
+    score += 1.0;
+  }
+
+  /* ================= MARKET DOMINANCE (max 2.0) ================= */
+  if (d.marketDom) {
+    if (
+      (d.bias.includes("Bullish") && d.marketDom.net > 100) ||
+      (d.bias.includes("Bearish") && d.marketDom.net < -100)
+    ) {
+      score += 2.0;
+    } else if (Math.abs(d.marketDom.net) > 30) {
+      score += 1.0;
+    }
+  }
+
+  /* ================= TIMING / EXTENSION (max 1.0) ================= */
+  if (d.changeState === "NORMAL" || d.changeState === "MODERATE") {
+    score += 1.0;
+  } else if (d.changeState === "HIGH") {
+    score += 0.5;
+  }
+
+  /* ================= PENALTIES ================= */
+  if (d.defenseFailure === "EARLY WARNING") score -= 0.5;
+  if (d.defenseFailure === "CRITICAL FAILURE") score -= 2.0;
+
+  if (d.volAI?.meaning?.includes("climax")) score -= 0.5;
+  if (d.volAI?.meaning?.includes("Distribution")) score -= 0.5;
+
+  /* ================= CLAMP ================= */
+  score = Math.max(0, Math.min(score, 10));
+
+  return +score.toFixed(1);
+  }
+
+  
+
+  function getSetupGradeLabel(score) {
+  if (score >= 9.5) return "ELITE / INSTITUTIONAL";
+  if (score >= 8.5) return "HIGH QUALITY";
+  if (score >= 7.5) return "GOOD";
+  if (score >= 6.5) return "AVERAGE";
+  return "LOW QUALITY";
+}
+
+function getSetupGradeClass(score) {
+  if (score >= 9.5) return "grade-elite";
+  if (score >= 8.5) return "grade-high";
+  if (score >= 7.5) return "grade-good";
+  if (score >= 6.5) return "grade-average";
+  return "grade-low";
+  }
   
 
 /* ================= ANALYZE ================= */
@@ -1479,7 +2122,14 @@ async function analyze(sym,change){
   const k=await fetchJSON(`${API}/fapi/v1/klines?symbol=${sym}&interval=15m&limit=240`);
   await sleep(DELAY);
 
+  const htf = await getHTFContext(sym);
+
   const mappedK = mapKlines(k);
+
+  const changeState = getChange24hState(change);
+const moveType = get24hMoveType(change);
+const moveStrength = get24hMoveStrength(change);
+  
 
 
   const c=k.map(x=>+x[4]),h=k.map(x=>+x[2]),l=k.map(x=>+x[3]),v=k.map(x=>+x[5]);
@@ -1621,13 +2271,13 @@ const sw = {
    const bullishBreakAccepted =
   rb &&
   rsi15 !== null &&
-  !rsi50State.consistentlyBelow50 &&
+  !rsi50State?.consistentlyBelow50 &&
   rsi15Rising;
 
 const bearishBreakAccepted =
   sb &&
   rsi15 !== null &&
-  !rsi50State.consistentlyAbove50 &&
+  !rsi50State?.consistentlyAbove50 &&
   !rsi15Rising;
 
 let bias = "Neutral";
@@ -1637,7 +2287,6 @@ let structure = "none";
 /* ================= BULLISH ENVIRONMENT ================= */
 if (mainTrend === "bullish") {
 
-  /* ▶ Resistance break */
   if (rb) {
     if (bullishBreakAccepted) {
       bias = "Bullish Continuation";
@@ -1650,9 +2299,8 @@ if (mainTrend === "bullish") {
     }
   }
 
-  /* ▶ Support defense */
   else if (sw.S.length && !sb) {
-    if (!rsi50State.consistentlyBelow50) {
+    if (!rsi50State?.consistentlyBelow50) {
       bias = "Bullish Defense";
       prob = 75;
       structure = "support holding (confirmed)";
@@ -1662,12 +2310,11 @@ if (mainTrend === "bullish") {
       structure = "support weak (RSI pressure)";
     }
   }
-}
+  }
 
 /* ================= BEARISH ENVIRONMENT ================= */
 else if (mainTrend === "bearish") {
 
-  /* ▶ Support break */
   if (sb) {
     if (bearishBreakAccepted) {
       bias = "Bearish Continuation";
@@ -1680,9 +2327,8 @@ else if (mainTrend === "bearish") {
     }
   }
 
-  /* ▶ Resistance defense */
   else if (sw.R.length && !rb) {
-    if (!rsi50State.consistentlyAbove50) {
+    if (!rsi50State?.consistentlyAbove50) {
       bias = "Bearish Defense";
       prob = 75;
       structure = "resistance failed (confirmed)";
@@ -1725,7 +2371,7 @@ if (bull) {
 
   // Buyers defending support
   else if (sw.S.length) {
-    if (!rsi50State.consistentlyBelow50) {
+    if (!rsi50State?.consistentlyBelow50) {
       volumeStructure.name  = "support holding (confirmed)";
       volumeStructure.label = "🟢 Buy-Side Defense (Support Holding)";
     } else {
@@ -1750,7 +2396,7 @@ if (bull) {
 
   // Sellers defending resistance  ⭐ THIS IS YOUR KEY CASE
   else if (sw.R.length) {
-    if (!rsi50State.consistentlyAbove50) {
+    if (!rsi50State?.consistentlyAbove50) {
       volumeStructure.name  = "resistance failed (confirmed)";
       volumeStructure.label = "🔴 Sell-Side Defense (Resistance Holding)";
     } else {
@@ -1827,8 +2473,67 @@ if (marketDom && bias.includes("Continuation")) {
   }
 }
 
+  /* ================= 24H CHANGE RISK MODIFIER ================= */
+if (
+  (changeState === "HIGH" || changeState === "VERY_HIGH") &&
+  prob >= 70
+) {
+  prob -= 5;
+}
+
+if (changeState === "EXTREME") {
+  prob -= 8;
+}
+
+prob = Math.max(40, Math.min(prob, 95));
+
+  /* ================= RECOVERY / DROP QUALITY MODIFIER ================= */
+
+// Weak recovery against bearish trend → suspicious bounce
+if (
+  moveType === "RECOVERY" &&
+  moveStrength === "WEAK" &&
+  mainTrend === "bearish"
+) {
+  prob -= 5; // distrust fake recovery
+}
+
+// Weak drop against bullish trend → likely pullback
+if (
+  moveType === "DROP" &&
+  moveStrength === "WEAK" &&
+  mainTrend === "bullish"
+) {
+  prob -= 3; // mild distrust, not breakdown
+}
+
+prob = Math.max(40, Math.min(prob, 95));
+
+  const defenseFailure = detectDefenseFailure({
+  structure,
+  bias,
+  mainTrend,
+  rsi50State,
+  marketDom,
+  volAI,
+  volumeAlign,
+    change
+});
+
 // clamp
 prob = Math.max(40, Math.min(prob, 95));
+
+// ================= DEFENSE FAILURE PROBABILITY MODIFIER =================
+if (defenseFailure === "EARLY WARNING") {
+  prob -= 6;
+}
+
+if (defenseFailure === "CRITICAL FAILURE") {
+  prob -= 15;
+}
+
+prob = Math.max(40, Math.min(prob, 95));
+  
 
 /* ================= STRUCTURE QUALITY ================= */
 let structureQuality = "normal";
@@ -1867,6 +2572,7 @@ const postVolBreakRSIConfirmSafe =
 
   const fundingRate = await getFundingRate(sym);
 
+  
   const aiVerdict = getAIFinalVerdict({
   sym,
   price,
@@ -1885,16 +2591,50 @@ const postVolBreakRSIConfirmSafe =
   volumeBreakout,
   fakeVolumeBreak,
   dailyRSI,
-  fundingRate
+  fundingRate,
+    defenseFailure,
+  changeState,
+    moveType,
+moveStrength,
+  htfTrend: htf.htfTrend,
+  htfRSIState: htf.htfRSIState,
+  htfStructure: htf.htfStructure
 });
 
-  return {sym,price,change,bull,prob,bias,structure,structureType,volumeStructure,structureQuality,volumeAlign,S:sw.S,R:sw.R,dailyRSI,rsi15,rsi15Momentum,volumeBreakout,
+  const setupScore = calculateSetupScore({
+  structure,
+  volumeAlign,
+  dailyRSI,
+  rsi15,
+  bias,
+  marketDom: GLOBAL_MARKET_DOM,
+  changeState,
+  defenseFailure,
+  volAI
+});
+
+  const directionalBias = getDirectionalBias({
+  structure,
+  mainTrend,
+  emaShortBias,
+  bull,
+  volAI,
+  marketDom,
+  moveType,
+  moveStrength,
+  aiVerdict
+});
+
+  
+
+  return {sym,price,change,bull,prob,bias,structure,structureType,volumeStructure,structureQuality,volumeAlign,defenseFailure,S:sw.S,R:sw.R,dailyRSI,rsi15,rsi15Momentum,volumeBreakout,
   breakoutAge,volumeBreakoutType,fakeVolumeBreak,postVolBreakRSIConfirm: postVolBreakRSIConfirmSafe,
   domV,
   lastVol,mainTrend,volAI,fundingRate,ema14: ema14Last,
   ema21: ema21Last,
   emaShortBias,
-  emaShortCross,aiVerdict,marketDom: GLOBAL_MARKET_DOM};
+  emaShortCross,aiVerdict,marketDom: GLOBAL_MARKET_DOM,changeState,moveType,
+moveStrength,directionalBias,setupScore,htf};
 }
 
 /* ================= FILTERS ================= */
@@ -1995,6 +2735,18 @@ if (rrFilter === "present") {
     cards.forEach(c=>grid.appendChild(c));
   });
     }
+
+  
+  function closeManualSearch() {
+  activeSearchSymbol = null;
+  searchGrid.innerHTML = "";
+
+  const status = document.getElementById("manualStatus");
+  status.textContent = "Manual status: Closed";
+  status.className = "muted";
+
+  symbolSearch.value = "";
+}
   
 /* ================= RENDER ================= */
   function renderCard(d, el, isFav=false, skipFilter=false){
@@ -2108,15 +2860,15 @@ if (rrDisplay !== null) {
   
 
   // 🔔 SOUND ALERT — only on 24h volume breakout
-//if (d.volumeBreakout) {
-  //const now = Date.now();
+if (d.volumeBreakout) {
+  const now = Date.now();
 
-  // prevent repeat spam per symbol
-  //if (!volumeAlertCooldown[d.sym] || now - volumeAlertCooldown[d.sym] > ALERT_COOLDOWN) {
-    //volumeAlert.play().catch(()=>{});
-    //volumeAlertCooldown[d.sym] = now;
-  //}
-//}
+   //prevent repeat spam per symbol
+  if (!volumeAlertCooldown[d.sym] || now - volumeAlertCooldown[d.sym] > ALERT_COOLDOWN) {
+    volumeAlert.play().catch(()=>{});
+    volumeAlertCooldown[d.sym] = now;
+  }
+}
 
     
 
@@ -2173,10 +2925,12 @@ const volumeStructClass =
     
 
 card.innerHTML = `
-  ${isFav
+  ${card.dataset.manual === "true"
+  ? `<div class="close" onclick="closeManualSearch()">✖</div>`
+  : isFav
     ? `<div class="close" onclick="removeFav('${d.sym}')">✖</div>`
     : `<div class="star" onclick="addFav('${d.sym}')">⭐</div>`
-  }
+}
 
   <b>${d.sym}</b>
   <div class="muted">Price: ${d.price.toFixed(4)}</div>
@@ -2195,6 +2949,18 @@ card.innerHTML = `
   }">
     ${d.bias} — ${d.prob}%
   </div>
+
+  ${d.directionalBias ? `
+  <div class="muted ${
+    d.directionalBias.bias.includes("Bullish") ? "bull" :
+    d.directionalBias.bias.includes("Bearish") ? "bear" :
+    "neutral"
+  }">
+    🧭 Directional Bias: <b>${d.directionalBias.bias}</b>
+    <br>
+    <span class="muted">${d.directionalBias.reason}</span>
+  </div>
+` : ""}
 
 
   <div class="muted ${
@@ -2222,13 +2988,6 @@ ${d.structure === "none" && d.volumeStructure?.name !== "none" ? `
   </div>
 ` : ""}
 
-<div class="muted ${tradeSideClass}">
-    🎯 Trade Side: <b>${aiVerdict.tradeSide}</b>
-  </div>
-
-  <div class="muted ${execClass}">
-    🧭 Execution Zone: <b>${executionZone}</b>
-  </div>
 
      ${rrDisplay ? `
   <div class="muted neutral">
@@ -2246,27 +3005,43 @@ ${d.structure === "none" && d.volumeStructure?.name !== "none" ? `
   </div>
 ` : ""}
 
-  <div class="muted">
-  🌍 Market Participation:
-  <b>${
-    d.marketDom && Math.abs(d.marketDom.net) < 5
-      ? "LOW (Choppy)"
-      : "ACTIVE"
-  }</b>
-  <br>
-  🌊 Symbol Behavior:
-  <b>${isSmoothDirection(d) ? "SMOOTH" : "CHOPPY"}</b>
-</div>
+  ${d.S[0] ? `<div class="muted bear">S1: ${d.S[0].toFixed(4)}</div>` : ""}
+  ${d.S[1] ? `<div class="muted bear">S2: ${d.S[1].toFixed(4)}</div>` : ""}
+  ${d.R[0] ? `<div class="muted bull">R1: ${d.R[0].toFixed(4)}</div>` : ""}
+  ${d.R[1] ? `<div class="muted bull">R2: ${d.R[1].toFixed(4)}</div>` : ""}
 
   <hr style="opacity:.15">
 
   <!-- ================= STRUCTURE ================= -->
   <div class="muted"><b>📈 Market Structure & Trend</b></div>
+  ${d.setupScore ? `
+  <div class="setup-score">
+    ⭐ <b>Setup Quality:</b> ${d.setupScore} / 10
+    <div class="setup-grade ${getSetupGradeClass(d.setupScore)}">
+      🏷 ${getSetupGradeLabel(d.setupScore)}
+    </div>
+  </div>
+` : ""}
 
     <div class="muted neutral">
   🌍 Market Dominance:
   <b>${d.marketDom?.bias || "—"}</b>
 (Net ${d.marketDom?.net ?? "—"}%)
+</div>
+
+<div class="muted ${
+  d.changeState === "EXTREME" ? "bear" :
+  d.changeState === "VERY_HIGH" ? "neutral" : "muted"
+}">
+  ⏱ 24h Expansion: <b>${d.change.toFixed(2)}%</b> (${d.changeState})
+</div>
+
+<div class="muted ${
+  d.moveType === "RECOVERY" ? "bull" :
+  d.moveType === "DROP" ? "bear" :
+  "muted"
+}">
+  ⏱ 24h Move: <b>${d.moveType}</b> (${d.moveStrength})
 </div>
 
   <div class="muted ${
@@ -2286,6 +3061,13 @@ ${d.structure === "none" && d.volumeStructure?.name !== "none" ? `
       d.emaShortCross === "bearish-cross" ? " ⬇ Cross" : ""
     }
   </div>
+
+    <div class="muted neutral">
+  ⏱ 4H Context:
+<b>${(d.htfTrend || "neutral").toUpperCase()}</b>
+  RSI ${d.htfRSIState},
+  Support ${d.htfStructure?.support || "—"}
+</div>
 
   ${d.dailyRSI ? `
     <div class="muted ${
@@ -2331,6 +3113,12 @@ ${d.volumeBreakout ? `
     Dominant Volume: <b>${d.bull ? "BUYERS" : "SELLERS"}</b>
   </div>
 
+  ${d.volAI?.futureOutcome ? `
+  <div class="muted neutral">
+    ⚠ Volume Expectation: <b>${d.volAI.futureOutcome}</b>
+  </div>
+` : ""}
+
   ${d.volAI ? `
     <div class="muted ${
       d.volAI.bias === "Bullish" ? "bull" :
@@ -2348,11 +3136,6 @@ ${d.volumeBreakout ? `
     </div>
   ` : ""}
 
-  ${d.S[0] ? `<div class="muted bear">S1: ${d.S[0].toFixed(4)}</div>` : ""}
-  ${d.S[1] ? `<div class="muted bear">S2: ${d.S[1].toFixed(4)}</div>` : ""}
-  ${d.R[0] ? `<div class="muted bull">R1: ${d.R[0].toFixed(4)}</div>` : ""}
-  ${d.R[1] ? `<div class="muted bull">R2: ${d.R[1].toFixed(4)}</div>` : ""}
-
   <div class="muted ${aiVerdict.verdictClass}">
     🧠 AI Verdict: <b>${aiVerdict.verdict}</b>
   </div>
@@ -2363,6 +3146,37 @@ ${d.volumeBreakout ? `
 
   <div class="muted">
     ${aiVerdict.reason}
+  </div>
+
+
+  <div class="muted">
+  🌍 Market Participation:
+  <b>${
+    d.marketDom && Math.abs(d.marketDom.net) < 5
+      ? "LOW (Choppy)"
+      : "ACTIVE"
+  }</b>
+  <br>
+  🌊 Symbol Behavior:
+  <b>${isSmoothDirection(d) ? "SMOOTH" : "CHOPPY"}</b>
+</div>
+
+${d.defenseFailure !== "NONE" ? `
+  <div class="muted ${
+    d.defenseFailure === "CRITICAL FAILURE"
+      ? "bear"
+      : "neutral"
+  }">
+    🛡 Defense Status: <b>${d.defenseFailure}</b>
+  </div>
+` : ""}
+
+ <div class="muted ${tradeSideClass}">
+    🎯 Trade Side: <b>${aiVerdict.tradeSide}</b>
+  </div>
+
+  <div class="muted ${execClass}">
+    🧭 Execution Zone: <b>${executionZone}</b>
   </div>
 `;
 
