@@ -3115,8 +3115,16 @@ ${d.structure === "none" && d.volumeStructure?.name !== "none" ? `
     <div class="muted neutral">
   ⏱ 4H Context:
 <b>${(d.htfTrend || "neutral").toUpperCase()}</b>
-  RSI ${d.htfRSIState},
-  Support ${d.htfStructure?.support || "—"}
+  RSI ${["normal","overbought","oversold"].includes(d.htfRSIState)
+  ? d.htfRSIState
+  : "normal"}
+  Support ${
+  d.htfStructure?.support
+    ? d.htfStructure.support
+    : isDailyRSIActive()
+      ? "HTF disabled"
+      : "N/A"
+}
 </div>
 
   ${d.dailyRSI ? `
