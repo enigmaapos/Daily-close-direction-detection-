@@ -1040,8 +1040,8 @@ function withTier(verdict, reason, d){
     verdictClass: t.verdictClass,
 
     tradeSide,
-    executionZone,
     executionZone: finalExecutionZone,
+rawExecutionZone: executionZone,
 
     mainTrend: d.mainTrend || "neutral",
     microTrend: d.emaShortBias || "neutral",
@@ -2587,7 +2587,10 @@ const postVolBreakRSIConfirmSafe =
     defenseFailure,
   changeState,
     moveType,
-moveStrength
+moveStrength,
+  htfTrend: htf.htfTrend,
+  htfRSIState: htf.htfRSIState,
+  htfStructure: htf.htfStructure
 });
 
   const setupScore = calculateSetupScore({
