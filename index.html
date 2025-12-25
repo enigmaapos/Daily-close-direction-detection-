@@ -979,43 +979,25 @@ function getTradeSide(d){
   const verdict = d.aiVerdict;
   const bias    = d.bias || "";
 
-  /* 🧨 TRAP — highest danger, act early */
-  if (
-    verdict === AI_VERDICTS.TRAP_RISK &&
-    hasValidTrapVolume(d, tradeSide)
-  ) {
+  /* 🧨 TRAP */
+  if (verdict === AI_VERDICTS.TRAP_RISK) {
     zone = "PULLBACK ZONE";
   }
 
-  /* 🛡 DEFENSE — BEST ENTRY ONLY */
+  /* 🛡 DEFENSE */
   else if (
-    (
-      (bias === "Bullish Defense" && tradeSide === "LONG") ||
-      (bias === "Bearish Defense" && tradeSide === "SHORT")
-    ) &&
-    hasValidDefenseVolume(d, tradeSide) &&
-    isBest24hDefenseForEntry(d.volume24hAI, tradeSide)
+    (bias === "Bullish Defense" && tradeSide === "LONG") ||
+    (bias === "Bearish Defense" && tradeSide === "SHORT")
   ) {
     zone = "ENTRY ZONE";
   }
 
-  /* ▶ CONTINUATION — late by nature */
+  /* ▶ CONTINUATION */
   else if (
-    (
-      verdict === AI_VERDICTS.STRONG_CONTINUATION ||
-      verdict === AI_VERDICTS.CONTROLLED_CONTINUATION
-    ) &&
-    hasValidContinuationVolume(d, tradeSide)
+    verdict === AI_VERDICTS.STRONG_CONTINUATION ||
+    verdict === AI_VERDICTS.CONTROLLED_CONTINUATION
   ) {
     zone = "LATE ZONE";
-  }
-
-  /* 🚫 WEAK DEFENSE */
-  else if (
-    bias === "Bullish Defense" ||
-    bias === "Bearish Defense"
-  ) {
-    zone = "PULLBACK ZONE";
   }
 
   /* ================= EXECUTION MODIFIERS ================= */
@@ -1592,114 +1574,6 @@ async function getDailyRSIContext(sym){
     high: top.high,
     low: top.low
   };
-}
-
-
-  function isBest24hDefenseForEntry(volume24hAI, tradeSide) {
-  if (!volume24hAI) return true; // do not block if missing
-
-  const { meaning, bias, futureOutcome } = volume24hAI;
-
-  // 🟢 BEST LONG DEFENSE
-  if (tradeSide === "LONG") {
-    return (
-      meaning === "Distribution" &&
-      futureOutcome === "Bullish Pullback"
-    );
-  }
-
-  // 🔴 BEST SHORT DEFENSE
-  if (tradeSide === "SHORT") {
-    return (
-      meaning === "Short covering" ||
-      meaning === "Accumulation attempt"
-    );
-  }
-
-  return false;
-}
-  
-
-  function hasValidDefenseVolume(d, tradeSide) {
-  if (!d.volumeContext) return false;
-
-  const v = d.volumeContext;
-
-  if (tradeSide === "LONG") {
-    return (
-      v.dominantSide === "SELL" &&        // sellers active
-      v.isAbsorption === true &&          // absorption present
-      v.isClimax !== "BUY_CLIMAX" &&      // no buyer exhaustion
-      v.initiative !== "SELL"             // no aggressive selling
-    );
-  }
-
-  if (tradeSide === "SHORT") {
-    return (
-      v.dominantSide === "BUY" &&         // buyers active
-      v.isAbsorption === true &&          // absorption present
-      v.isClimax !== "SELL_CLIMAX" &&     // no seller exhaustion
-      v.initiative !== "BUY"              // no aggressive buying
-    );
-  }
-
-  return false;
-  }
-
-
-  function hasValidTrapVolume(d, tradeSide) {
-  if (!d.volumeContext) return false;
-  const v = d.volumeContext;
-
-  // 🧨 Bull Trap (buyers trapped → SHORT bias)
-  if (tradeSide === "SHORT") {
-    return (
-      v.dominantSide === "BUY" &&
-      v.initiative === "BUY" &&
-      v.isAbsorption === true &&      // breakout fails
-      v.isClimax !== "SELL_CLIMAX"    // not seller exhaustion
-    );
-  }
-
-  // 🧨 Bear Trap (sellers trapped → LONG bias)
-  if (tradeSide === "LONG") {
-    return (
-      v.dominantSide === "SELL" &&
-      v.initiative === "SELL" &&
-      v.isAbsorption === true &&      // breakdown fails
-      v.isClimax !== "BUY_CLIMAX"     // not buyer exhaustion
-    );
-  }
-
-  return false;
-  }
-
-
-  function hasValidContinuationVolume(d, tradeSide) {
-  if (!d.volumeContext) return false;
-  const v = d.volumeContext;
-
-  // ▶ Bullish continuation
-  if (tradeSide === "LONG") {
-    return (
-      v.dominantSide === "BUY" &&
-      v.initiative === "BUY" &&
-      v.isAbsorption === false &&
-      v.isClimax !== "BUY_CLIMAX"
-    );
-  }
-
-  // ▶ Bearish continuation
-  if (tradeSide === "SHORT") {
-    return (
-      v.dominantSide === "SELL" &&
-      v.initiative === "SELL" &&
-      v.isAbsorption === false &&
-      v.isClimax !== "SELL_CLIMAX"
-    );
-  }
-
-  return false;
 }
 
   
@@ -2908,12 +2782,6 @@ ${d.volumeBreakout ? `
 <div class="muted ${d.bull ? "bull" : "bear"}">
     Dominant Volume: <b>${d.bull ? "BUYERS" : "SELLERS"}</b>
   </div>
-
-  ${d.volAI?.futureOutcome ? `
-  <div class="muted neutral">
-    ⚠ Volume Expectation: <b>${d.volAI.futureOutcome}</b>
-  </div>
-` : ""}
 
   ${d.volAI ? `
     <div class="muted ${
