@@ -2923,37 +2923,38 @@ const volumeStructClass =
     : "muted";
 
 
- /* ================= EXECUTION ALERT ================= */
-  const now = Date.now();
-  const alertKey = `${d.sym}-${aiVerdict.tradeSide}`;
+/* ================= TOP 30 DIRECTIONAL ALERT ================= */
 
-  const isManual = card.dataset.manual === "true";
-  const isFavGrid = el.id === "favGrid";
+const now = Date.now();
+const alertKey = `${d.sym}-${aiVerdict.tradeSide}`;
 
-  const isLongExecution =
-    aiVerdict.tradeSide === "LONG" &&
-    aiVerdict.executionZone === "ENTRY ZONE" &&
-    el.id === "redGrid";     // 🔴 Top 30 Red
+const isManual = card.dataset.manual === "true";
+const isFavGrid = el.id === "favGrid";
 
-  const isShortExecution =
-    aiVerdict.tradeSide === "SHORT" &&
-    aiVerdict.executionZone === "ENTRY ZONE" &&
-    el.id === "greenGrid";   // 🟢 Top 30 Green
+// 🔔 Only care about directional bias, not execution
+const isDirectional =
+  aiVerdict.tradeSide === "LONG" ||
+  aiVerdict.tradeSide === "SHORT";
 
+// 🔔 Only notify in Top 30 lists
+const isTop30 =
+  el.id === "greenGrid" || el.id === "redGrid";
+
+if (
+  isNewCard &&
+  isTop30 &&
+  isDirectional &&
+  !isManual &&
+  !isFavGrid
+) {
   if (
-    isNewCard &&
-    !isManual &&
-    !isFavGrid &&
-    (isLongExecution || isShortExecution)
+    !execAlertCooldown[alertKey] ||
+    now - execAlertCooldown[alertKey] > EXEC_ALERT_COOLDOWN
   ) {
-    if (
-      !execAlertCooldown[alertKey] ||
-      now - execAlertCooldown[alertKey] > EXEC_ALERT_COOLDOWN
-    ) {
-      executionAlert.play().catch(()=>{});
-      execAlertCooldown[alertKey] = now;
-    }
+    executionAlert.play().catch(() => {});
+    execAlertCooldown[alertKey] = now;
   }
+}
     
 
 card.innerHTML = `
