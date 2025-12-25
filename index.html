@@ -2688,12 +2688,11 @@ moveStrength,
     volumeContext
 });
 
-  const adjustedProb = applyHTFProbabilityAdjustment({
+  // after getAIFinalVerdict()
+prob = applyHTFProbabilityAdjustment({
   ...d,
   probability: prob
 });
-
-prob = adjustedProb;
 
   const setupScore = calculateSetupScore({
   structure,
