@@ -1777,23 +1777,22 @@ async function getDailyRSIContext(sym){
 
 
   function isBest24hDefenseForEntry(volume24hAI, tradeSide) {
-  if (!volume24hAI) return true; // do not block if missing
+  if (!volume24hAI) return true;
 
-  const { meaning, bias, futureOutcome } = volume24hAI;
+  const { meaning } = volume24hAI;
 
-  // 🟢 BEST LONG DEFENSE
   if (tradeSide === "LONG") {
     return (
-      meaning === "Distribution" &&
-      futureOutcome === "Bullish Pullback"
+      meaning === "Distribution" ||
+      meaning === "Sell climax"
     );
   }
 
-  // 🔴 BEST SHORT DEFENSE
   if (tradeSide === "SHORT") {
     return (
       meaning === "Short covering" ||
-      meaning === "Accumulation attempt"
+      meaning === "Accumulation attempt" ||
+      meaning === "Buy climax"
     );
   }
 
@@ -1801,31 +1800,26 @@ async function getDailyRSIContext(sym){
 }
   
 
-  function hasValidDefenseVolume(d, tradeSide) {
-  if (!d.volumeContext) return false;
-
+function hasValidDefenseVolume(d, tradeSide) {
   const v = d.volumeContext;
+  if (!v) return false;
 
   if (tradeSide === "LONG") {
     return (
-      v.dominantSide === "SELL" &&        // sellers active
-      v.isAbsorption === true &&          // absorption present
-      v.isClimax !== "BUY_CLIMAX" &&      // no buyer exhaustion
-      v.initiative !== "SELL"             // no aggressive selling
+      v.dominantSide === "SELL" &&
+      v.isClimax !== "BUY_CLIMAX"
     );
   }
 
   if (tradeSide === "SHORT") {
     return (
-      v.dominantSide === "BUY" &&         // buyers active
-      v.isAbsorption === true &&          // absorption present
-      v.isClimax !== "SELL_CLIMAX" &&     // no seller exhaustion
-      v.initiative !== "BUY"              // no aggressive buying
+      v.dominantSide === "BUY" &&
+      v.isClimax !== "SELL_CLIMAX"
     );
   }
 
   return false;
-  }
+}
 
 
   function hasValidTrapVolume(d, tradeSide) {
@@ -2139,6 +2133,45 @@ function getSetupGradeClass(score) {
   if (score >= 7.5) return "grade-good";
   if (score >= 6.5) return "grade-average";
   return "grade-low";
+  }
+
+
+  function applyHTFProbabilityAdjustment(d) {
+  let prob = d.probability;
+  const state = d.aiVerdict; // DEFENSE / TRAP / CONTINUATION
+  const side = d.tradeSide;
+
+  if (!d.htfTrend) return prob;
+
+  // Trend alignment
+  if (state !== "TRAP") {
+    if (side === "LONG" && d.htfTrend === "bullish") prob += 5;
+    if (side === "SHORT" && d.htfTrend === "bearish") prob += 5;
+
+    if (side === "LONG" && d.htfTrend === "bearish") prob -= 5;
+    if (side === "SHORT" && d.htfTrend === "bullish") prob -= 5;
+  }
+
+  // Structure agreement
+  if (state === "DEFENSE") {
+    if (side === "LONG" && d.htfStructure?.support === "holding") prob += 5;
+    if (side === "SHORT" && d.htfStructure?.resistance === "holding") prob += 5;
+
+    if (side === "LONG" && d.htfStructure?.support === "broken") prob -= 7;
+    if (side === "SHORT" && d.htfStructure?.resistance === "broken") prob -= 7;
+  }
+
+  // RSI exhaustion
+  if (d.htfRSIState === "overbought" && side === "LONG") prob -= 5;
+  if (d.htfRSIState === "oversold" && side === "SHORT") prob -= 5;
+
+  // Trap logic
+  if (state === "TRAP") {
+    if (side === "LONG" && d.htfTrend === "bearish") prob += 5;
+    if (side === "SHORT" && d.htfTrend === "bullish") prob += 5;
+  }
+
+  return Math.max(20, Math.min(95, prob));
   }
   
 
@@ -2580,46 +2613,7 @@ if (defenseFailure === "CRITICAL FAILURE") {
 }
 
 prob = Math.max(40, Math.min(prob, 95));
-
-
-  function applyHTFProbabilityAdjustment(d) {
-  let prob = d.probability;
-  const state = d.aiVerdict; // DEFENSE / TRAP / CONTINUATION
-  const side = d.tradeSide;
-
-  if (!d.htfTrend) return prob;
-
-  // Trend alignment
-  if (state !== "TRAP") {
-    if (side === "LONG" && d.htfTrend === "bullish") prob += 5;
-    if (side === "SHORT" && d.htfTrend === "bearish") prob += 5;
-
-    if (side === "LONG" && d.htfTrend === "bearish") prob -= 5;
-    if (side === "SHORT" && d.htfTrend === "bullish") prob -= 5;
-  }
-
-  // Structure agreement
-  if (state === "DEFENSE") {
-    if (side === "LONG" && d.htfStructure?.support === "holding") prob += 5;
-    if (side === "SHORT" && d.htfStructure?.resistance === "holding") prob += 5;
-
-    if (side === "LONG" && d.htfStructure?.support === "broken") prob -= 7;
-    if (side === "SHORT" && d.htfStructure?.resistance === "broken") prob -= 7;
-  }
-
-  // RSI exhaustion
-  if (d.htfRSIState === "overbought" && side === "LONG") prob -= 5;
-  if (d.htfRSIState === "oversold" && side === "SHORT") prob -= 5;
-
-  // Trap logic
-  if (state === "TRAP") {
-    if (side === "LONG" && d.htfTrend === "bearish") prob += 5;
-    if (side === "SHORT" && d.htfTrend === "bullish") prob += 5;
-  }
-
-  return Math.max(20, Math.min(95, prob));
-  }
-  
+ 
 
 /* ================= STRUCTURE QUALITY ================= */
 let structureQuality = "normal";
