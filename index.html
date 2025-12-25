@@ -1093,7 +1093,10 @@ function getTradeSide(d){
   /* 🧨 TRAP — highest danger, act early */
   if (
     verdict === AI_VERDICTS.TRAP_RISK &&
-    hasValidTrapVolume(d, tradeSide)
+    hasValidTrapVolume(
+  d,
+  tradeSide === "LONG" ? "SHORT" : "LONG"
+)
   ) {
     zone = "PULLBACK ZONE";
   }
@@ -2257,6 +2260,21 @@ const postVolBreakRSIConfirm =
   
   const bull = domVBull;
 
+  const volumeContext = {
+  dominantSide: bull ? "BUY" : "SELL",
+  initiative:
+    volumeBreakout
+      ? (bull ? "BUY" : "SELL")
+      : "NONE",
+  isAbsorption:
+    volumeAlign === "confirmed" &&
+    !volumeBreakout,
+  isClimax:
+    volAI?.meaning?.includes("climax")
+      ? (bull ? "BUY_CLIMAX" : "SELL_CLIMAX")
+      : "NONE"
+};
+
   const swings = findSwings(h,l,c,v);
 const sw = {
   S: swings.supports || [],
@@ -2598,7 +2616,8 @@ const postVolBreakRSIConfirmSafe =
 moveStrength,
   htfTrend: htf.htfTrend,
   htfRSIState: htf.htfRSIState,
-  htfStructure: htf.htfStructure
+  htfStructure: htf.htfStructure,
+    volumeContext
 });
 
   const setupScore = calculateSetupScore({
@@ -2634,7 +2653,7 @@ moveStrength,
   ema21: ema21Last,
   emaShortBias,
   emaShortCross,aiVerdict,marketDom: GLOBAL_MARKET_DOM,changeState,moveType,
-moveStrength,directionalBias,setupScore,htf};
+moveStrength,directionalBias,setupScore,htf,volumeContext};
 }
 
 /* ================= FILTERS ================= */
