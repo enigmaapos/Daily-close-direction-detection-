@@ -2580,6 +2580,45 @@ if (defenseFailure === "CRITICAL FAILURE") {
 }
 
 prob = Math.max(40, Math.min(prob, 95));
+
+
+  function applyHTFProbabilityAdjustment(d) {
+  let prob = d.probability;
+  const state = d.aiVerdict; // DEFENSE / TRAP / CONTINUATION
+  const side = d.tradeSide;
+
+  if (!d.htfTrend) return prob;
+
+  // Trend alignment
+  if (state !== "TRAP") {
+    if (side === "LONG" && d.htfTrend === "bullish") prob += 5;
+    if (side === "SHORT" && d.htfTrend === "bearish") prob += 5;
+
+    if (side === "LONG" && d.htfTrend === "bearish") prob -= 5;
+    if (side === "SHORT" && d.htfTrend === "bullish") prob -= 5;
+  }
+
+  // Structure agreement
+  if (state === "DEFENSE") {
+    if (side === "LONG" && d.htfStructure?.support === "holding") prob += 5;
+    if (side === "SHORT" && d.htfStructure?.resistance === "holding") prob += 5;
+
+    if (side === "LONG" && d.htfStructure?.support === "broken") prob -= 7;
+    if (side === "SHORT" && d.htfStructure?.resistance === "broken") prob -= 7;
+  }
+
+  // RSI exhaustion
+  if (d.htfRSIState === "overbought" && side === "LONG") prob -= 5;
+  if (d.htfRSIState === "oversold" && side === "SHORT") prob -= 5;
+
+  // Trap logic
+  if (state === "TRAP") {
+    if (side === "LONG" && d.htfTrend === "bearish") prob += 5;
+    if (side === "SHORT" && d.htfTrend === "bullish") prob += 5;
+  }
+
+  return Math.max(20, Math.min(95, prob));
+  }
   
 
 /* ================= STRUCTURE QUALITY ================= */
@@ -2649,6 +2688,13 @@ moveStrength,
     volumeContext
 });
 
+  const adjustedProb = applyHTFProbabilityAdjustment({
+  ...d,
+  probability: prob
+});
+
+prob = adjustedProb;
+
   const setupScore = calculateSetupScore({
   structure,
   volumeAlign,
@@ -2682,7 +2728,7 @@ moveStrength,
   ema21: ema21Last,
   emaShortBias,
   emaShortCross,aiVerdict,marketDom: GLOBAL_MARKET_DOM,changeState,moveType,
-moveStrength,directionalBias,setupScore,htf,volumeContext};
+moveStrength,directionalBias,setupScore,htf,volumeContext,probability: prob};
 }
 
 /* ================= FILTERS ================= */
