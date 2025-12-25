@@ -574,40 +574,57 @@ const HTF_TTL = 15 * 60 * 1000; // 15 minutes
   }
 
   function computeHTFTrend(closes) {
-  const ema50 = ema(closes, 50);
+  const ema50  = ema(closes, 50);
   const ema200 = ema(closes, 200);
 
-  const last50 = ema50.at(-1);
+  const last50  = ema50.at(-1);
   const last200 = ema200.at(-1);
+
+  if (last50 == null || last200 == null) {
+    return "neutral"; // insufficient data
+  }
 
   if (last50 > last200) return "bullish";
   if (last50 < last200) return "bearish";
   return "neutral";
-  }
+}
 
   function computeHTFRSIState(closes) {
+  if (!closes || closes.length < 20) {
+    return "normal"; // default safe state
+  }
+
   const rsiArr = calculateRSI(closes, 14);
   if (!rsiArr.length) return "normal";
 
   const rsi = rsiArr.at(-1);
+  if (typeof rsi !== "number") return "normal";
 
   if (rsi >= 70) return "overbought";
   if (rsi <= 30) return "oversold";
   return "normal";
-  }
+}
 
   function computeHTFStructure(h, l, c) {
+  if (!h?.length || !l?.length || !c?.length) {
+    return { support: "holding", resistance: "holding" };
+  }
+
   const lookback = 20;
 
   const recentHigh = Math.max(...h.slice(-lookback));
   const recentLow  = Math.min(...l.slice(-lookback));
   const lastClose  = c.at(-1);
 
+  if (!isFinite(recentHigh) || !isFinite(recentLow) || !isFinite(lastClose)) {
+    return { support: "holding", resistance: "holding" };
+  }
+
   return {
     support: lastClose < recentLow ? "broken" : "holding",
     resistance: lastClose > recentHigh ? "broken" : "holding"
   };
-  }
+}
 
   function computeHTFState(k4h) {
   const mapped = map4hKlines(k4h);
