@@ -539,6 +539,90 @@ const execAlertCooldown = {};
   await runScan();
 });
 
+
+    /* ================= 4H HTF CACHE ================= */
+const HTF_CACHE = {};
+const HTF_TTL = 15 * 60 * 1000; // 15 minutes
+
+  async function getHTFContext(sym) {
+  const cached = HTF_CACHE[sym];
+  if (cached && Date.now() - cached.ts < HTF_TTL) {
+    return cached.data;
+  }
+
+  const k4h = await fetchJSON(
+    `${API}/fapi/v1/klines?symbol=${sym}&interval=4h&limit=200`
+  );
+
+  const data = computeHTFState(k4h);
+
+  HTF_CACHE[sym] = {
+    data,
+    ts: Date.now()
+  };
+
+  return data;
+  }
+
+  function map4hKlines(k) {
+  return k.map(x => ({
+    open: +x[1],
+    high: +x[2],
+    low:  +x[3],
+    close:+x[4]
+  }));
+  }
+
+  function computeHTFTrend(closes) {
+  const ema50 = ema(closes, 50);
+  const ema200 = ema(closes, 200);
+
+  const last50 = ema50.at(-1);
+  const last200 = ema200.at(-1);
+
+  if (last50 > last200) return "bullish";
+  if (last50 < last200) return "bearish";
+  return "neutral";
+  }
+
+  function computeHTFRSIState(closes) {
+  const rsiArr = calculateRSI(closes, 14);
+  if (!rsiArr.length) return "normal";
+
+  const rsi = rsiArr.at(-1);
+
+  if (rsi >= 70) return "overbought";
+  if (rsi <= 30) return "oversold";
+  return "normal";
+  }
+
+  function computeHTFStructure(h, l, c) {
+  const lookback = 20;
+
+  const recentHigh = Math.max(...h.slice(-lookback));
+  const recentLow  = Math.min(...l.slice(-lookback));
+  const lastClose  = c.at(-1);
+
+  return {
+    support: lastClose < recentLow ? "broken" : "holding",
+    resistance: lastClose > recentHigh ? "broken" : "holding"
+  };
+  }
+
+  function computeHTFState(k4h) {
+  const mapped = map4hKlines(k4h);
+
+  const closes = mapped.map(x => x.close);
+  const highs  = mapped.map(x => x.high);
+  const lows   = mapped.map(x => x.low);
+
+  return {
+    htfTrend: computeHTFTrend(closes),
+    htfRSIState: computeHTFRSIState(closes),
+    htfStructure: computeHTFStructure(highs, lows, closes)
+  };
+  }
+
   
 /* ================= COUNTDOWN ================= */
 function startCountdown(){
@@ -942,6 +1026,12 @@ function withTier(verdict, reason, d){
 
   const tradeSide = getTradeSide(dWithVerdict);
   const executionZone = getExecutionZone(dWithVerdict, tradeSide);
+  const finalExecutionZone =
+  applyHTFGuards(
+    { ...dWithVerdict },
+    executionZone,
+    tradeSide
+  );
 
   return {
     verdict,
@@ -951,6 +1041,7 @@ function withTier(verdict, reason, d){
 
     tradeSide,
     executionZone,
+    executionZone: finalExecutionZone,
 
     mainTrend: d.mainTrend || "neutral",
     microTrend: d.emaShortBias || "neutral",
@@ -1107,6 +1198,42 @@ if (
   if (zone === "NO TRADE ZONE") return "exec-no-trade";
 
   return "exec-no-trade";
+  }
+
+
+  function applyHTFGuards(d, zone, tradeSide) {
+  // 1️⃣ Trend permission
+  if (
+    (tradeSide === "LONG" && d.htfTrend === "bearish") ||
+    (tradeSide === "SHORT" && d.htfTrend === "bullish")
+  ) {
+    return "PULLBACK ZONE";
+  }
+
+  // 2️⃣ Structure authority
+  if (
+    tradeSide === "LONG" &&
+    d.htfStructure?.support === "broken"
+  ) {
+    return "PULLBACK ZONE";
+  }
+
+  if (
+    tradeSide === "SHORT" &&
+    d.htfStructure?.resistance === "broken"
+  ) {
+    return "PULLBACK ZONE";
+  }
+
+  // 3️⃣ Exhaustion timing (soft)
+  if (
+    zone === "ENTRY ZONE" &&
+    d.htfRSIState !== "normal"
+  ) {
+    return "PULLBACK ZONE";
+  }
+
+  return zone;
   }
 
 
@@ -1987,6 +2114,8 @@ async function analyze(sym,change){
   const k=await fetchJSON(`${API}/fapi/v1/klines?symbol=${sym}&interval=15m&limit=240`);
   await sleep(DELAY);
 
+  const htf = await getHTFContext(sym);
+
   const mappedK = mapKlines(k);
 
   const changeState = getChange24hState(change);
@@ -2494,7 +2623,7 @@ moveStrength
   ema21: ema21Last,
   emaShortBias,
   emaShortCross,aiVerdict,marketDom: GLOBAL_MARKET_DOM,changeState,moveType,
-moveStrength,directionalBias,setupScore};
+moveStrength,directionalBias,setupScore,htf};
 }
 
 /* ================= FILTERS ================= */
@@ -2921,6 +3050,13 @@ ${d.structure === "none" && d.volumeStructure?.name !== "none" ? `
       d.emaShortCross === "bearish-cross" ? " ⬇ Cross" : ""
     }
   </div>
+
+    <div class="muted neutral">
+  ⏱ 4H Context:
+  <b>${d.htfTrend.toUpperCase()}</b>,
+  RSI ${d.htfRSIState},
+  Support ${d.htfStructure.support}
+</div>
 
   ${d.dailyRSI ? `
     <div class="muted ${
