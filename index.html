@@ -2987,26 +2987,32 @@ const volumeStructClass =
 
 
 /* ================= TOP 30 DIRECTIONAL ALERT ================= */
-
 const now = Date.now();
 const alertKey = `${d.sym}-${aiVerdict.tradeSide}`;
 
 const isManual = card.dataset.manual === "true";
 const isFavGrid = el.id === "favGrid";
 
-// 🔔 Only care about directional bias, not execution
-const isDirectional =
-  aiVerdict.tradeSide === "LONG" ||
-  aiVerdict.tradeSide === "SHORT";
+// Only defense regimes
+const isBullishDefense = d.bias === "Bullish Defense";
+const isBearishDefense = d.bias === "Bearish Defense";
 
-// 🔔 Only notify in Top 30 lists
-const isTop30 =
-  el.id === "greenGrid" || el.id === "redGrid";
+// Location logic
+const inTopGreen = el.id === "greenGrid"; // gainers
+const inTopRed   = el.id === "redGrid";   // losers
+
+// 🔔 SOUND CONDITIONS
+const shouldAlert =
+  (
+    isBearishDefense && inTopGreen   // sell-side defense on strength
+  ) ||
+  (
+    isBullishDefense && inTopRed     // buy-side defense on weakness
+  );
 
 if (
   isNewCard &&
-  isTop30 &&
-  isDirectional &&
+  shouldAlert &&
   !isManual &&
   !isFavGrid
 ) {
