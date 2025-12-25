@@ -2855,21 +2855,6 @@ ${d.structure === "none" && d.volumeStructure?.name !== "none" ? `
 (Net ${d.marketDom?.net ?? "—"}%)
 </div>
 
-<div class="muted ${
-  d.changeState === "EXTREME" ? "bear" :
-  d.changeState === "VERY_HIGH" ? "neutral" : "muted"
-}">
-  ⏱ 24h Expansion: <b>${d.change.toFixed(2)}%</b> (${d.changeState})
-</div>
-
-<div class="muted ${
-  d.moveType === "RECOVERY" ? "bull" :
-  d.moveType === "DROP" ? "bear" :
-  "muted"
-}">
-  ⏱ 24h Move: <b>${d.moveType}</b> (${d.moveStrength})
-</div>
-
   <div class="muted ${
     d.mainTrend === "bullish" ? "bull" :
     d.mainTrend === "bearish" ? "bear" : "neutral"
@@ -2966,6 +2951,21 @@ ${d.volumeBreakout ? `
   <div class="muted">
     ${aiVerdict.reason}
   </div>
+
+  <div class="muted ${
+  d.changeState === "EXTREME" ? "bear" :
+  d.changeState === "VERY_HIGH" ? "neutral" : "muted"
+}">
+  ⏱ 24h Expansion: <b>${d.change.toFixed(2)}%</b> (${d.changeState})
+</div>
+
+<div class="muted ${
+  d.moveType === "RECOVERY" ? "bull" :
+  d.moveType === "DROP" ? "bear" :
+  "muted"
+}">
+  ⏱ 24h Move: <b>${d.moveType}</b> (${d.moveStrength})
+</div>
 
 
   <div class="muted">
