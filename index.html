@@ -990,7 +990,8 @@ else if (
     (bias === "Bullish Defense" && tradeSide === "LONG") ||
     (bias === "Bearish Defense" && tradeSide === "SHORT")
   ) &&
-  hasValidDefenseVolume(d, tradeSide)
+  hasValidDefenseVolume(d, tradeSide) &&
+  is24hDefenseFriendly(d, tradeSide)
 ) {
   zone = "ENTRY ZONE";
 }
@@ -1586,6 +1587,28 @@ async function getDailyRSIContext(sym){
     low: top.low
   };
 }
+
+  function is24hDefenseFriendly(d, tradeSide) {
+  if (!d.volume24hAI) return true; // no data = don't block
+
+  const m = d.volume24hAI.meaning;
+
+  if (tradeSide === "LONG") {
+    return (
+      m === "Distribution" ||
+      m === "Accumulation attempt"
+    );
+  }
+
+  if (tradeSide === "SHORT") {
+    return (
+      m === "Accumulation attempt" ||
+      m === "Short covering"
+    );
+  }
+
+  return false;
+  }
 
   function hasValidDefenseVolume(d, tradeSide) {
   if (!d.volumeContext) return false;
