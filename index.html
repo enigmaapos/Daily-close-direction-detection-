@@ -984,14 +984,25 @@ function getTradeSide(d){
     zone = "PULLBACK ZONE";
   }
 
-  /* 🛡 DEFENSE */
-  else if (
+  /* 🛡 DEFENSE — STRUCTURE + CORRECT VOLUME */
+else if (
+  (
     (bias === "Bullish Defense" && tradeSide === "LONG") ||
     (bias === "Bearish Defense" && tradeSide === "SHORT")
-  ) {
-    zone = "ENTRY ZONE";
-  }
+  ) &&
+  hasValidDefenseVolume(d, tradeSide)
+) {
+  zone = "ENTRY ZONE";
+}
 
+  /* 🚫 WEAK DEFENSE — VOLUME NOT CONFIRMED */
+else if (
+  bias === "Bullish Defense" ||
+  bias === "Bearish Defense"
+) {
+  zone = "PULLBACK ZONE";
+}
+  
   /* ▶ CONTINUATION */
   else if (
     verdict === AI_VERDICTS.STRONG_CONTINUATION ||
@@ -1575,6 +1586,32 @@ async function getDailyRSIContext(sym){
     low: top.low
   };
 }
+
+  function hasValidDefenseVolume(d, tradeSide) {
+  if (!d.volumeContext) return false;
+
+  const v = d.volumeContext;
+
+  if (tradeSide === "LONG") {
+    return (
+      v.dominantSide === "SELL" &&        // sellers active
+      v.isAbsorption === true &&          // absorption present
+      v.isClimax !== "BUY_CLIMAX" &&      // no buyer exhaustion
+      v.initiative !== "SELL"             // no aggressive selling
+    );
+  }
+
+  if (tradeSide === "SHORT") {
+    return (
+      v.dominantSide === "BUY" &&         // buyers active
+      v.isAbsorption === true &&          // absorption present
+      v.isClimax !== "SELL_CLIMAX" &&     // no seller exhaustion
+      v.initiative !== "BUY"              // no aggressive buying
+    );
+  }
+
+  return false;
+  }
 
   
   function getVolumeStateLabel(d) {
