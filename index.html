@@ -2801,7 +2801,8 @@ const id = `card-${scope}-${d.sym}`;
   const fundingInfo = getFundingInfo(d.fundingRate);
 
   const aiVerdict = d.aiVerdict;
-    const executionZone = d.executionZone;
+    const executionZone = aiVerdict.executionZone;
+
 
   function getExecutionClass(zone, side){
   if (zone === "ENTRY ZONE") {
