@@ -2783,6 +2783,12 @@ ${d.volumeBreakout ? `
     Dominant Volume: <b>${d.bull ? "BUYERS" : "SELLERS"}</b>
   </div>
 
+  ${d.volAI?.futureOutcome ? `
+  <div class="muted neutral">
+    ⚠ Volume Expectation: <b>${d.volAI.futureOutcome}</b>
+  </div>
+` : ""}
+
   ${d.volAI ? `
     <div class="muted ${
       d.volAI.bias === "Bullish" ? "bull" :
@@ -2799,12 +2805,6 @@ ${d.volumeBreakout ? `
       </span>
     </div>
   ` : ""}
-
-  ${d.volAI?.futureOutcome ? `
-  <div class="muted neutral">
-    ⚠ Volume Expectation: <b>${d.volAI.futureOutcome}</b>
-  </div>
-` : ""}
 
   <div class="muted ${aiVerdict.verdictClass}">
     🧠 AI Verdict: <b>${aiVerdict.verdict}</b>
