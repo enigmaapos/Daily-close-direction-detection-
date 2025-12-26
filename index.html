@@ -1546,20 +1546,14 @@ function findSwings(h, l, c, v){
   }
 
 
-  function detect24hRSIMomentumShift({
-  closes15m,
-  rsi15m,
-  ema14,
-  ema21,
-  mainTrend
-}) {
+  function detect24hRSIMomentumShift(closes15m, rsi15m) {
   if (!rsi15m || rsi15m.length < 96) return null;
 
   const recentRSI = rsi15m.slice(-96).filter(v => v !== null);
   if (recentRSI.length < 20) return null;
 
-  const rsiHigh  = Math.max(...recentRSI);
-  const rsiLow   = Math.min(...recentRSI);
+  const rsiHigh = Math.max(...recentRSI);
+  const rsiLow  = Math.min(...recentRSI);
   const rsiRange = rsiHigh - rsiLow;
 
   const recentCloses = closes15m.slice(-96);
@@ -1569,32 +1563,27 @@ function findSwings(h, l, c, v){
 
   const priceRange = priceHigh - priceLow;
 
-  const aboveFastEMA = lastPrice > ema14 && lastPrice > ema21;
-  const belowFastEMA = lastPrice < ema14 && lastPrice < ema21;
-
-  /* ================= 🔴 BEARISH MOMENTUM COLLAPSE ================= */
+  /* ================= BEARISH MOMENTUM COLLAPSE ================= */
+  // Price elevated, RSI deteriorates
   const bearishPriceHolding =
     lastPrice > priceLow + priceRange * 0.5;
 
   const bearish =
-    mainTrend === "bullish" &&       // ✅ bullish environment
-    aboveFastEMA &&                  // ✅ move already happened
-    rsiHigh >= 45 &&                 // RSI had strength
-    rsiLow <= 35 &&                  // RSI collapsed
-    rsiRange >= 10 &&                // meaningful decay
-    bearishPriceHolding;             // price not following RSI down
+    rsiHigh >= 45 &&        // RSI had strength
+    rsiLow <= 35 &&         // RSI collapsed
+    rsiRange >= 10 &&       // meaningful decay
+    bearishPriceHolding;    // price didn't follow RSI down
 
-  /* ================= 🟢 BULLISH MOMENTUM RECOVERY ================= */
+  /* ================= BULLISH MOMENTUM RECOVERY ================= */
+  // Price depressed, RSI recovers
   const bullishPriceHolding =
     lastPrice < priceLow + priceRange * 0.5;
 
   const bullish =
-    mainTrend === "bearish" &&       // ✅ bearish environment
-    belowFastEMA &&                  // ✅ sell-off already happened
-    rsiLow <= 40 &&                  // RSI was weak
-    rsiHigh >= 50 &&                 // RSI recovered
-    rsiRange >= 10 &&                // meaningful recovery
-    bullishPriceHolding;             // price not following RSI up
+    rsiLow <= 40 &&         // RSI was weak
+    rsiHigh >= 50 &&        // RSI recovered
+    rsiRange >= 10 &&       // meaningful recovery
+    bullishPriceHolding;    // price didn't follow RSI up yet
 
   if (!bearish && !bullish) return null;
 
@@ -1604,12 +1593,10 @@ function findSwings(h, l, c, v){
     type: bearish
       ? "momentum-collapse"
       : "momentum-recovery",
-    confirmed: true,
     tf: "15m",
     window: "24h"
   };
-}
-
+  }
   
 
     /* ================= DAILY RSI CONTEXT ================= */
