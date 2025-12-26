@@ -249,27 +249,6 @@ button.secondary{
   .behavior-SMOOTH { color: #22c55e; }
 .behavior-CONSOLIDATION { color: #facc15; }
 .behavior-CHOPPY { color: #fb7185; }
-
-  .muted.bull {
-  color: #22c55e; /* soft green */
-}
-
-.muted.bear {
-  color: #fb7185; /* soft red */
-}
-
-.muted.neutral {
-  color: #facc15; /* yellow */
-}
-
-.muted.muted {
-  color: #9fb3cc; /* default muted */
-}
-
-  .muted.bull,
-.muted.bear {
-  opacity: 0.85;
-                    }
 </style>
 </head>
 
@@ -3474,6 +3453,7 @@ ${d.defenseFailure !== "NONE" ? `
   ⚠ Market Phase: <b>${d.volAI.futureOutcome}</b>
 </div>
 
+
     <div class="muted neutral">
   ⏱ 4H Context:
 <b>${(d.htfTrend || "neutral").toUpperCase()}</b>
@@ -3487,6 +3467,21 @@ ${d.defenseFailure !== "NONE" ? `
       ? "HTF disabled"
       : "N/A"
 }
+</div>
+
+<div class="muted ${rsiDivClass}">
+  🧭 24h Intraday RSI Divergence (15m):
+  <b>
+    ${
+      d.intradayRSIDiv
+        ? d.intradayRSIDiv.bearish && !d.intradayRSIDiv.bullish
+          ? "Bearish (Momentum fading)"
+          : d.intradayRSIDiv.bullish && !d.intradayRSIDiv.bearish
+          ? "Bullish (Selling pressure fading)"
+          : "Mixed (Momentum unstable)"
+        : "None"
+    }
+  </b>
 </div>
 
 
@@ -3544,21 +3539,6 @@ ${d.rsi15 !== null ? `
     ⏱ 15m RSI14: ${d.rsi15}
   </div>
 ` : ""}
-
-<div class="muted ${rsiDivClass}">
-  🧭 24h Intraday RSI Divergence (15m):
-  <b>
-    ${
-      d.intradayRSIDiv
-        ? d.intradayRSIDiv.bearish && !d.intradayRSIDiv.bullish
-          ? "Bearish (Momentum fading)"
-          : d.intradayRSIDiv.bullish && !d.intradayRSIDiv.bearish
-          ? "Bullish (Selling pressure fading)"
-          : "Mixed (Momentum unstable)"
-        : "None"
-    }
-  </b>
-</div>
 
 ${d.volumeBreakout ? `
   <div class="muted ${
