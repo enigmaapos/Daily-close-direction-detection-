@@ -1389,14 +1389,19 @@ function getTrendStructureBias(structureType){
     return "SMOOTH";
   }
 
-  // ⚖️ CONSOLIDATION / STALLING
-  // Volume is dominant but market is resisting
-  if (
-    marketSide !== "neutral" &&
-    volumeSide !== marketSide
-  ) {
-    return "CONSOLIDATION";
-  }
+    // ⚖️ CONSOLIDATION / CONTROLLED PRESSURE
+if (
+  trendSide === marketSide &&
+  marketSide === volumeSide &&
+  (
+    d.defenseFailure === "EARLY WARNING" ||
+    d.volumeAlign === "conflict" ||
+    d.volAI?.meaning?.includes("Distribution") ||
+    d.volAI?.meaning?.includes("climax")
+  )
+) {
+  return "CONSOLIDATION";
+}
 
   // 🌀 Everything else
   return "CHOPPY";
