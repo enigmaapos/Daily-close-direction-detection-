@@ -1037,13 +1037,6 @@ if (
   reason += " Weak drop likely represents a pullback, not breakdown.";
 }
 
-  if (
-  aiVerdict.aiVerdict === AI_VERDICTS.STRONG_CONTINUATION &&
-  d.intradayRSIDiv
-) {
-  aiVerdict.aiVerdict = AI_VERDICTS.CONTROLLED_CONTINUATION;
-  }
-
   return withTier(verdict, reason, d);
 } 
     
@@ -2827,7 +2820,8 @@ prob = Math.max(40, Math.min(prob, 95));
   marketDom,
   volAI,
   volumeAlign,
-    change
+    change,
+    intradayRSIDiv: volAI?.intradayRSIDiv
 });
 
 // clamp
@@ -2915,20 +2909,22 @@ moveStrength,
 });
 
   /* 🧭 INTRADAY RSI DIVERGENCE — TRAP CONFIRMATION */
-if (
-  aiVerdict.aiVerdict === AI_VERDICTS.TRAP_RISK &&
+  if (
+  aiVerdict.verdict === AI_VERDICTS.TRAP_RISK &&
   volAI?.intradayRSIDiv
 ) {
   prob -= 3;
+  }
   prob = Math.max(40, Math.min(prob, 95));
   }
 
-  if (
+
+if (
   bias.includes("Continuation") &&
-  d.intradayRSIDiv
+  volAI?.intradayRSIDiv
 ) {
-  prob -= 2; // very small
-  }
+  prob -= 2;
+}
 
 prob = applyHTFProbabilityAdjustment({
   probability: prob,
