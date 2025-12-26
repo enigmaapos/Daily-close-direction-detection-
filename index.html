@@ -3666,13 +3666,15 @@ async function runScan() {
       progressFill.style.width = "0%";
 
       await runDailyRSIScan(dailyRSIFilter);
-      return; // safe exit — UI already handled
+      return;
     }
 
-    /* ===== RESET UI EVERY SCAN ===== */
-    greenGrid.innerHTML = "";
-    redGrid.innerHTML = "";
-    progressFill.style.width = "0%";
+    /* ===== RESET UI ONLY FOR MANUAL SCAN ===== */
+    if (!isAutoScan) {
+      greenGrid.innerHTML = "";
+      redGrid.innerHTML = "";
+      progressFill.style.width = "0%";
+    }
 
     const t = await fetchJSON(`${API}/fapi/v1/ticker/24hr`);
     const usdtAll = t.filter(
@@ -3712,13 +3714,14 @@ async function runScan() {
       );
 
       done++;
-      progressFill.style.width =
-        Math.round(done / all.length * 100) + "%";
+      if (!isAutoScan) {
+        progressFill.style.width =
+          Math.round(done / all.length * 100) + "%";
+      }
 
       await sleep(120);
     }
 
-    /* ===== SYNC SIDE PANELS AFTER MAIN RENDER ===== */
     await refreshFavorites();
     await refreshManualSymbol();
 
@@ -3738,7 +3741,7 @@ async function runScan() {
     setScanStatus("🧭 Scanner Status: Idle");
   }
 
-  /* ===== AUTO 24H VOLUME BREAK (OUTSIDE UI LOOP) ===== */
+  /* ===== AUTO 24H VOLUME BREAK ===== */
   const now = Date.now();
   if (
     auto24hVolumeEnabled &&
@@ -3762,7 +3765,7 @@ async function runScan() {
   }
 }
 
-
+    
 
 /* ================= SEARCH ================= */
 async function runSearch(){
