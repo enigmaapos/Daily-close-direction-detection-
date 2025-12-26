@@ -2491,6 +2491,20 @@ const mainTrend = getMainTrendOnly(
   l
 );
 
+      const momentumShift = detect24hRSIMomentumShift({
+  closes15m: c,
+  rsi15m: rsi15Arr,
+  ema14: ema14Last,
+  ema21: ema21Last,
+  mainTrend
+});
+
+  // 🧠 Unified intraday momentum signal
+const intradayRSIDiv =
+  momentumShift ||
+  volAI?.intradayRSIDiv ||
+  null;
+
 
   // 🧠 Market dominance side (logic-safe)
 const marketDomSide =
@@ -2585,6 +2599,7 @@ const bearishBreakAccepted =
 let bias = "Neutral";
 let prob = 50;
 let structure = "none";
+  let timingRisk = "NORMAL";
 
 /* ================= BULLISH ENVIRONMENT ================= */
 if (mainTrend === "bullish") {
@@ -2831,7 +2846,7 @@ if (
 
 prob = Math.max(40, Math.min(prob, 95));
 
-  const defenseFailure = detectDefenseFailure({
+  let defenseFailure = detectDefenseFailure({
   structure,
   bias,
   mainTrend,
@@ -2839,9 +2854,17 @@ prob = Math.max(40, Math.min(prob, 95));
   marketDom,
   volAI,
   volumeAlign,
-    change,
-    intradayRSIDiv: volAI?.intradayRSIDiv
+  change,
+  intradayRSIDiv
 });
+
+if (
+  defenseFailure === "NONE" &&
+  bias.includes("Defense") &&
+  intradayRSIDiv
+) {
+  defenseFailure = "EARLY WARNING";
+}
 
 // clamp
 prob = Math.max(40, Math.min(prob, 95));
@@ -2993,6 +3016,28 @@ if (bias === "Neutral" && momentumShift) {
   if (mainTrend === "bearish" && hasMomentumRecovery) {
     prob -= 10;
     timingRisk = "LATE";
+  }
+  }
+
+  prob = Math.max(40, Math.min(prob, 95));
+
+  if (intradayRSIDiv) {
+
+  // 🛡 Defense stress (price holding, momentum dying)
+  if (bias.includes("Defense")) {
+    timingRisk = "DELAYED";
+    prob -= 4;
+  }
+
+  // ⚠ Continuation is late / tiring
+  if (bias.includes("Continuation")) {
+    timingRisk = "LATE";
+    prob -= 5;
+  }
+
+  // 🧨 Trap confirmation
+  if (bias.includes("Trap")) {
+    prob -= 3;
   }
   }
 
