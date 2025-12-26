@@ -1805,6 +1805,14 @@ function detect24hVolumeLocationAI(
   }));
 
 
+  // ================= 24h INTRADAY RSI (15m) =================
+const closes15m = last24h.map(c => c.close);
+const rsi15m = calculateRSI(closes15m);
+
+const intradayRSIDiv =
+  detect24hRSIMomentumShift(closes15m, rsi15m);
+
+
   let dayHigh = -Infinity;
   let dayLow  = Infinity;
 
@@ -1930,7 +1938,8 @@ function detect24hVolumeLocationAI(
     volume: top.baseVol,
     time: top.openTime,
     high: top.high,
-    low: top.low
+    low: top.low,
+    intradayRSIDiv
   };
 }
 
@@ -2435,15 +2444,7 @@ const mainTrend = getMainTrendOnly(
   h,
   l
 );
-
-    // ================= 24h INTRADAY RSI (15m) =================
-const closes15m = last24h.map(c => c.close);
-const rsi15m = calculateRSI(closes15m);
-
-const intradayRSIDiv =
-  detect24hRSIMomentumShift(closes15m, rsi15m);
   
-
 
   // 🧠 Market dominance side (logic-safe)
 const marketDomSide =
@@ -2940,7 +2941,7 @@ prob = applyHTFProbabilityAdjustment({
   ema21: ema21Last,
   emaShortBias,
   emaShortCross,aiVerdict,marketDom: GLOBAL_MARKET_DOM,changeState,moveType,
-moveStrength,directionalBias,setupScore,htf,volumeContext,probability: prob,intradayRSIDiv};
+moveStrength,directionalBias,setupScore,htf,volumeContext,probability: prob};
 }
 
 /* ================= FILTERS ================= */
