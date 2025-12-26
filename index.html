@@ -3046,12 +3046,6 @@ if (d.volumeBreakout) {
 }
 
 
-      const marketDomIcon =
-  d.marketDom?.bias === "Bull Dominant"
-    ? "🟢"
-    : d.marketDom?.bias === "Bear Dominant"
-    ? "🔴"
-    : "🟡";
     
 
   const structureBias = getTrendStructureBias(d.structureType);
@@ -3111,6 +3105,22 @@ if (
     execAlertCooldown[alertKey] = now;
   }
 }
+
+    const marketDomBias = d.marketDom?.bias || "Neutral";
+
+const marketDomClass =
+  marketDomBias === "Bull Dominant"
+    ? "bull"
+    : marketDomBias === "Bear Dominant"
+    ? "bear"
+    : "neutral";
+
+const marketDomIcon =
+  marketDomBias === "Bull Dominant"
+    ? "🟢"
+    : marketDomBias === "Bear Dominant"
+    ? "🔴"
+    : "🟡";
     
 
 card.innerHTML = `
