@@ -1223,6 +1223,14 @@ function getTradeSide(d){
     zone = "PULLBACK ZONE";
   }
 
+    /* 🧭 INTRADAY RSI DIVERGENCE — LATE MOVE BLOCK */
+if (
+  zone === "ENTRY ZONE" &&
+  d.volume24hAI?.intradayRSIDiv
+) {
+  return "PULLBACK ZONE";
+}
+
   // Safety fallback
   if (
     zone === "NO TRADE ZONE" &&
@@ -1537,6 +1545,97 @@ function findSwings(h, l, c, v){
   return result;
   }
 
+
+  function findIntradayRSISwings(closes, rsiArr) {
+  const swings = [];
+
+  for (let i = 2; i < closes.length - 2; i++) {
+    // swing high
+    if (
+      closes[i] > closes[i - 1] &&
+      closes[i] > closes[i + 1] &&
+      rsiArr[i] !== null
+    ) {
+      swings.push({
+        type: "high",
+        price: closes[i],
+        rsi: rsiArr[i],
+        index: i
+      });
+    }
+
+    // swing low
+    if (
+      closes[i] < closes[i - 1] &&
+      closes[i] < closes[i + 1] &&
+      rsiArr[i] !== null
+    ) {
+      swings.push({
+        type: "low",
+        price: closes[i],
+        rsi: rsiArr[i],
+        index: i
+      });
+    }
+  }
+
+  // only keep the most recent swings
+  return swings.slice(-6);
+  }
+
+
+                 function detect24hRSIDivergence15m(closes15m, rsi15m) {
+  if (!rsi15m || rsi15m.length < 30) return null;
+
+  const swings = findIntradayRSISwings(closes15m, rsi15m);
+
+  const highs = swings.filter(s => s.type === "high");
+  const lows  = swings.filter(s => s.type === "low");
+
+  let bearish = false;
+  let bullish = false;
+
+  // 🔴 Bearish divergence (price HH, RSI LH)
+  if (highs.length >= 2) {
+    const a = highs.at(-2);
+    const b = highs.at(-1);
+
+    if (
+      b.price > a.price &&
+      b.rsi < a.rsi &&
+      a.rsi > 60 &&          // strong momentum context
+      b.rsi > 50             // avoid weak noise
+    ) {
+      bearish = true;
+    }
+  }
+
+  // 🟢 Bullish divergence (price LL, RSI HL)
+  if (lows.length >= 2) {
+    const a = lows.at(-2);
+    const b = lows.at(-1);
+
+    if (
+      b.price < a.price &&
+      b.rsi > a.rsi &&
+      a.rsi < 40 &&
+      b.rsi < 50
+    ) {
+      bullish = true;
+    }
+  }
+
+  if (!bearish && !bullish) return null;
+
+  return {
+    bearish,
+    bullish,
+    tf: "15m",
+    window: "24h"
+  };
+                 }
+  
+
     /* ================= DAILY RSI CONTEXT ================= */
 const DAILY_RSI_CACHE = {};
 const DAILY_RSI_TTL = 6 * 60 * 60 * 1000; // 6 hours
@@ -1735,6 +1834,14 @@ function detect24hVolumeLocationAI(
     openTime: c.openTime
   }));
 
+  // ================= 24h INTRADAY RSI (15m) =================
+const closes15m = last24h.map(c => c.close);
+const rsi15m = calculateRSI(closes15m);
+
+const intradayRSIDiv =
+  detect24hRSIDivergence15m(closes15m, rsi15m);
+  
+
   let dayHigh = -Infinity;
   let dayLow  = Infinity;
 
@@ -1860,7 +1967,8 @@ function detect24hVolumeLocationAI(
     volume: top.baseVol,
     time: top.openTime,
     high: top.high,
-    low: top.low
+    low: top.low,
+    intradayRSIDiv
   };
 }
 
@@ -2719,7 +2827,17 @@ if (defenseFailure === "CRITICAL FAILURE") {
   prob -= 15;
 }
 
+  /* 🧭 INTRADAY RSI DIVERGENCE — TRAP CONFIRMATION */
+if (
+  aiVerdict === AI_VERDICTS.TRAP_RISK &&
+  volume24hAI?.intradayRSIDiv
+) {
+  prob -= 3;
+}
+
 prob = Math.max(40, Math.min(prob, 95));
+
+  
  
 
 /* ================= STRUCTURE QUALITY ================= */
@@ -3395,6 +3513,15 @@ ${d.rsi15 !== null ? `
     ⏱ 15m RSI14: ${d.rsi15}
   </div>
 ` : ""}
+
+<div class="muted neutral">
+  🧭 24h Intraday RSI Divergence (15m):
+  <b>
+    ${d.intradayRSIDiv?.bearish ? "Bearish (Momentum fading)" :
+      d.intradayRSIDiv?.bullish ? "Bullish (Selling pressure fading)" :
+      "None"}
+  </b>
+</div>
 
 ${d.volumeBreakout ? `
   <div class="muted ${
