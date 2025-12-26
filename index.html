@@ -3262,6 +3262,24 @@ ${d.defenseFailure !== "NONE" ? `
     Dominant Volume: <b>${d.bull ? "BUYERS" : "SELLERS"}</b>
   </div>
 
+  <div class="muted ${
+    d.mainTrend === "bullish" ? "bull" :
+    d.mainTrend === "bearish" ? "bear" : "neutral"
+  }">
+    Main Trend: ${d.mainTrend.toUpperCase()}
+  </div>
+
+  <div class="muted ${
+    d.emaShortBias === "bullish" ? "bull" :
+    d.emaShortBias === "bearish" ? "bear" : "neutral"
+  }">
+    Micro Trend: ${d.emaShortBias.toUpperCase()}
+    ${
+      d.emaShortCross === "bullish-cross" ? " ⬆ Cross" :
+      d.emaShortCross === "bearish-cross" ? " ⬇ Cross" : ""
+    }
+  </div>
+
   <div class="muted neutral" title="Context only. Describes the likely market phase, not a trade signal.">
   ⚠ Market Phase: <b>${d.volAI.futureOutcome}</b>
 </div>
@@ -3314,25 +3332,6 @@ ${d.defenseFailure !== "NONE" ? `
 }">
   ⏱ 24h Move: <b>${d.moveType}</b> (${d.moveStrength})
 </div>
-
-  <div class="muted ${
-    d.mainTrend === "bullish" ? "bull" :
-    d.mainTrend === "bearish" ? "bear" : "neutral"
-  }">
-    Main Trend: ${d.mainTrend.toUpperCase()}
-  </div>
-
-  <div class="muted ${
-    d.emaShortBias === "bullish" ? "bull" :
-    d.emaShortBias === "bearish" ? "bear" : "neutral"
-  }">
-    Micro Trend: ${d.emaShortBias.toUpperCase()}
-    ${
-      d.emaShortCross === "bullish-cross" ? " ⬆ Cross" :
-      d.emaShortCross === "bearish-cross" ? " ⬇ Cross" : ""
-    }
-  </div>
-
 
   ${d.dailyRSI ? `
     <div class="muted ${
