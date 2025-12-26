@@ -3518,9 +3518,15 @@ ${d.rsi15 !== null ? `
 <div class="muted neutral">
   🧭 24h Intraday RSI Divergence (15m):
   <b>
-    ${d.intradayRSIDiv?.bearish ? "Bearish (Momentum fading)" :
-      d.intradayRSIDiv?.bullish ? "Bullish (Selling pressure fading)" :
-      "None"}
+    ${
+      d.intradayRSIDiv
+        ? d.intradayRSIDiv.bearish && !d.intradayRSIDiv.bullish
+          ? "Bearish (Momentum fading)"
+          : d.intradayRSIDiv.bullish && !d.intradayRSIDiv.bearish
+          ? "Bullish (Selling pressure fading)"
+          : "Mixed (Momentum unstable)"
+        : "None"
+    }
   </b>
 </div>
 
