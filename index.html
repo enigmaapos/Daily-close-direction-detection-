@@ -1226,7 +1226,7 @@ function getTradeSide(d){
     /* 🧭 INTRADAY RSI DIVERGENCE — LATE MOVE BLOCK */
 if (
   zone === "ENTRY ZONE" &&
-  d.volume24hAI?.intradayRSIDiv
+  d.intradayRSIDiv
 ) {
   return "PULLBACK ZONE";
 }
@@ -2827,10 +2827,11 @@ if (defenseFailure === "CRITICAL FAILURE") {
   prob -= 15;
 }
 
-  /* 🧭 INTRADAY RSI DIVERGENCE — TRAP CONFIRMATION */
+
+/* 🧭 INTRADAY RSI DIVERGENCE — TRAP CONFIRMATION */
 if (
   aiVerdict === AI_VERDICTS.TRAP_RISK &&
-  volume24hAI?.intradayRSIDiv
+  volAI?.intradayRSIDiv
 ) {
   prob -= 3;
 }
@@ -2945,7 +2946,7 @@ prob = applyHTFProbabilityAdjustment({
   return {sym,price,change,bull,prob,bias,structure,structureType,volumeStructure,structureQuality,volumeAlign,defenseFailure,S:sw.S,R:sw.R,dailyRSI,rsi15,rsi15Momentum,volumeBreakout,
   breakoutAge,volumeBreakoutType,fakeVolumeBreak,postVolBreakRSIConfirm: postVolBreakRSIConfirmSafe,
   domV,
-  lastVol,mainTrend,volAI,fundingRate,ema14: ema14Last,
+  lastVol,mainTrend,volAI,intradayRSIDiv: volAI?.intradayRSIDiv || null,fundingRate,ema14: ema14Last,
   ema21: ema21Last,
   emaShortBias,
   emaShortCross,aiVerdict,marketDom: GLOBAL_MARKET_DOM,changeState,moveType,
