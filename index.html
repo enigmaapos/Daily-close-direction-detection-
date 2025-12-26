@@ -3561,12 +3561,11 @@ function removeFav(sym){
   favSet.forEach(addFav);
 }
 
-/* ================= SCAN ================= */
+
+  /* ================= SCAN ================= */
 async function runScan() {
-  // ⛔ prevent overlap
   if (scanLock) return;
 
-  // 🔒 lock AFTER check
   scanLock = true;
   scanBtn.disabled = true;
   scanVolBreakBtn.disabled = true;
@@ -3580,17 +3579,20 @@ async function runScan() {
   try {
     const dailyRSIFilter = filterDailyRSI.value;
 
+    /* ===== DAILY RSI SCAN (ISOLATED MODE) ===== */
     if (dailyRSIFilter !== "all") {
-      await runDailyRSIScan(dailyRSIFilter);
-      return;
-    }
-
-    // ❗ reset ONLY on manual scan
-    if (!isAutoScan) {
       greenGrid.innerHTML = "";
       redGrid.innerHTML = "";
       progressFill.style.width = "0%";
+
+      await runDailyRSIScan(dailyRSIFilter);
+      return; // safe exit — UI already handled
     }
+
+    /* ===== RESET UI EVERY SCAN ===== */
+    greenGrid.innerHTML = "";
+    redGrid.innerHTML = "";
+    progressFill.style.width = "0%";
 
     const t = await fetchJSON(`${API}/fapi/v1/ticker/24hr`);
     const usdtAll = t.filter(
@@ -3598,7 +3600,7 @@ async function runScan() {
     );
 
     const dom = computeMarketDominance(usdtAll);
-GLOBAL_MARKET_DOM = dom;
+    GLOBAL_MARKET_DOM = dom;
 
     marketGreen.textContent = `🟢 Green: ${dom.green.toLocaleString()}%`;
     marketRed.textContent   = `🔴 Red: ${dom.red.toLocaleString()}%`;
@@ -3609,58 +3611,65 @@ GLOBAL_MARKET_DOM = dom;
       dom.net < 0 ? "bear" :
       "neutral";
 
-    const usdt = usdtAll;
-    const g = [...usdt].sort((a,b)=>b.priceChangePercent-a.priceChangePercent).slice(0,30);
-    const r = [...usdt].sort((a,b)=>a.priceChangePercent-b.priceChangePercent).slice(0,30);
+    const g = [...usdtAll]
+      .sort((a,b)=>b.priceChangePercent-a.priceChangePercent)
+      .slice(0,30);
+
+    const r = [...usdtAll]
+      .sort((a,b)=>a.priceChangePercent-b.priceChangePercent)
+      .slice(0,30);
+
     const all = [...g, ...r];
 
     let done = 0;
     for (const x of all) {
       const d = await analyze(x.symbol, +x.priceChangePercent);
       d.marketDom = dom;
-      renderCard(d, x.priceChangePercent >= 0 ? greenGrid : redGrid);
+
+      renderCard(
+        d,
+        x.priceChangePercent >= 0 ? greenGrid : redGrid
+      );
+
       done++;
-      progressFill.style.width = Math.round(done / all.length * 100) + "%";
+      progressFill.style.width =
+        Math.round(done / all.length * 100) + "%";
+
       await sleep(120);
     }
 
-    // 🔄 auto-update manual & favorites
-// 🔄 keep all sections aligned with scan
-await refreshFavorites();
-await refreshManualSymbol();
+    /* ===== SYNC SIDE PANELS AFTER MAIN RENDER ===== */
+    await refreshFavorites();
+    await refreshManualSymbol();
 
-    
+    applySort();
+    applyFilters();
+
   } finally {
-    // 🕒 timing
     timestamp.innerText = new Date().toLocaleString();
     nextScanAt = Date.now() + AUTO_INTERVAL;
     startCountdown();
 
     scanLock = false;
     scanBtn.disabled = false;
-    isAutoScan = false;
     scanVolBreakBtn.disabled = false;
+    isAutoScan = false;
 
     setScanStatus("🧭 Scanner Status: Idle");
   }
 
-
-
-  // 🔥 AUTO 24h VOLUME BREAK
+  /* ===== AUTO 24H VOLUME BREAK (OUTSIDE UI LOOP) ===== */
   const now = Date.now();
   if (
-  auto24hVolumeEnabled &&
-  now - last24hVolumeBreakAt >= AUTO_VOLUME_BREAK_INTERVAL
-) {
+    auto24hVolumeEnabled &&
+    now - last24hVolumeBreakAt >= AUTO_VOLUME_BREAK_INTERVAL
+  ) {
     last24hVolumeBreakAt = now;
     pending24hVolumeScan = true;
 
-// ✅ show message FIRST
-statusLocked = false;
-setScanStatus("⏳ 24h Volume Break scheduled (auto)");
-
-// 🔒 lock AFTER message is visible
-statusLocked = true;
+    statusLocked = false;
+    setScanStatus("⏳ 24h Volume Break scheduled (auto)");
+    statusLocked = true;
 
     setTimeout(async () => {
       try {
@@ -3671,13 +3680,9 @@ statusLocked = true;
       }
     }, 800);
   }
+}
 
-  applySort();
-  applyFilters();
-  }
-                          
-  
-  
+
 
 /* ================= SEARCH ================= */
 async function runSearch(){
