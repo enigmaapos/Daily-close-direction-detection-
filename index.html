@@ -2827,15 +2827,6 @@ if (defenseFailure === "CRITICAL FAILURE") {
   prob -= 15;
 }
 
-
-/* 🧭 INTRADAY RSI DIVERGENCE — TRAP CONFIRMATION */
-if (
-  aiVerdict === AI_VERDICTS.TRAP_RISK &&
-  volAI?.intradayRSIDiv
-) {
-  prob -= 3;
-}
-
 prob = Math.max(40, Math.min(prob, 95));
 
   
@@ -2907,6 +2898,15 @@ moveStrength,
   htfStructure: htf.htfStructure,
     volumeContext
 });
+
+  /* 🧭 INTRADAY RSI DIVERGENCE — TRAP CONFIRMATION */
+if (
+  aiVerdict.aiVerdict === AI_VERDICTS.TRAP_RISK &&
+  volAI?.intradayRSIDiv
+) {
+  prob -= 3;
+  prob = Math.max(40, Math.min(prob, 95));
+  }
 
 prob = applyHTFProbabilityAdjustment({
   probability: prob,
