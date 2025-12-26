@@ -1668,7 +1668,7 @@ async function getDailyRSIContext(sym){
   
     
 
-  function detect24hVolumeLocationAI(
+function detect24hVolumeLocationAI(
   klines,
   mainTrend = "neutral",
   marketDominance = "neutral" // "bull" | "bear" | "neutral"
@@ -1692,7 +1692,7 @@ async function getDailyRSIContext(sym){
     if (c.low  < dayLow)  dayLow  = c.low;
   }
 
-  // Highest volume candle in last 24h
+  // 🔎 highest-volume candle of the day
   let top = last24h[0];
   for (const c of last24h) {
     if (c.baseVol > top.baseVol) top = c;
@@ -1711,70 +1711,90 @@ async function getDailyRSIContext(sym){
   let meaning = "Neutral";
   let intent = "Neutral";
   let bias = "Neutral";
-  let futureOutcome = "NEUTRAL";
+  let futureOutcome = "NEUTRAL (NO EDGE)";
 
-  /* ================= TRUE REVERSAL (DOMINANCE FLIP) ================= */
-  if (mainTrend === "bullish" && marketDominance === "bear") {
-    futureOutcome = "REVERSAL RISK (DOMINANCE FLIP)";
-    bias = "Caution";
-  }
-  else if (mainTrend === "bearish" && marketDominance === "bull") {
-    futureOutcome = "REVERSAL RISK (DOMINANCE FLIP)";
-    bias = "Caution";
-  }
+  const isClimax = top.baseVol >= Math.max(
+    ...last24h.map(c => c.baseVol)
+  );
 
-  /* ================= BULL TREND + BULL DOMINANCE ================= */
-  else if (mainTrend === "bullish" && marketDominance === "bull") {
+  /* ======================================================
+     🟢 BULLISH TREND + BULL DOMINANCE
+     ====================================================== */
+  if (mainTrend === "bullish" && marketDominance === "bull") {
 
+    // 🛡 Defense at lows
     if (location === "LOW" && isRed) {
-      meaning = "Sell-side absorption";
+      meaning = "Initiative selling";
       intent = "Bearish";
-      bias = "Bullish";
+      bias = "Bearish";
       futureOutcome = "CONTINUATION (DEFENSE)";
     }
 
-    else if (location === "HIGH" && isGreen) {
-      meaning = "Buy-side expansion";
+    // 🔥 Expansion / repricing
+    else if (location === "HIGH" && isGreen && isClimax) {
+      meaning = "Buy climax";
       intent = "Bullish";
       bias = "Caution";
       futureOutcome = "EXPANSION / REPRICING";
     }
 
+    // ↩ Pullback, not reversal
     else if (location === "HIGH" && isRed) {
       meaning = "Distribution";
       intent = "Bearish";
-      bias = "Caution";
+      bias = "Bearish";
       futureOutcome = "BULLISH PULLBACK";
-    }
-
-    else {
-      futureOutcome = "NEUTRAL / REPRICING";
     }
   }
 
-  /* ================= BEAR TREND + BEAR DOMINANCE ================= */
+  /* ======================================================
+     🔴 BEARISH TREND + BEAR DOMINANCE
+     ====================================================== */
   else if (mainTrend === "bearish" && marketDominance === "bear") {
 
+    // 🛡 Supply defense at highs
     if (location === "HIGH" && isGreen) {
-      meaning = "Failed buying / short covering";
+      meaning = "Short covering";
       intent = "Bullish";
       bias = "Bearish";
       futureOutcome = "CONTINUATION DOWN";
     }
 
-    else if (location === "LOW" && isRed) {
+    // ↩ Bounce / pullback
+    else if (location === "LOW" && isRed && isClimax) {
       meaning = "Sell climax";
       intent = "Bearish";
       bias = "Caution";
       futureOutcome = "BOUNCE / PULLBACK";
     }
+  }
 
-    else {
-      futureOutcome = "NEUTRAL / REPRICING";
+  /* ======================================================
+     ⚠ REVERSAL RISK (DOMINANCE CONFLICT)
+     ====================================================== */
+  else if (mainTrend === "bullish" && marketDominance !== "bull") {
+
+    if (location === "HIGH" && isGreen && isClimax) {
+      meaning = "Buy climax";
+      intent = "Bullish";
+      bias = "Caution";
+      futureOutcome = "REVERSAL RISK (EXHAUSTION)";
     }
   }
 
-  /* ================= EVERYTHING ELSE ================= */
+  else if (mainTrend === "bearish" && marketDominance !== "bear") {
+
+    if (location === "LOW" && isRed && isClimax) {
+      meaning = "Sell climax";
+      intent = "Bearish";
+      bias = "Caution";
+      futureOutcome = "REVERSAL RISK (EXHAUSTION)";
+    }
+  }
+
+  /* ======================================================
+     ⚖ EVERYTHING ELSE
+     ====================================================== */
   else {
     futureOutcome = "NEUTRAL (NO EDGE)";
   }
@@ -1791,7 +1811,9 @@ async function getDailyRSIContext(sym){
     high: top.high,
     low: top.low
   };
-  }
+}
+
+    
 
   
 
@@ -2285,10 +2307,20 @@ const mainTrend = getMainTrendOnly(
   l
 );
 
-  // 🧠 24h Volume Location AI
-  const volAI = detect24hVolumeLocationAI(
+
+  // 🧠 Market dominance side (logic-safe)
+const marketDomSide =
+  GLOBAL_MARKET_DOM?.bias === "Bull Dominant"
+    ? "bull"
+    : GLOBAL_MARKET_DOM?.bias === "Bear Dominant"
+    ? "bear"
+    : "neutral";
+
+// 🧠 24h Volume Location AI (trend + dominance aware)
+const volAI = detect24hVolumeLocationAI(
   mappedK,
-  mainTrend || "neutral"
+  mainTrend || "neutral",
+  marketDomSide
 );
 
 
