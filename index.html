@@ -2938,6 +2938,14 @@ if (rsiMomentumShift) {
   }
 }
 
+  /* 🧭 INTRADAY RSI DIVERGENCE — CONTINUATION SOFT DOWNGRADE */
+if (
+  bias.includes("Continuation") &&
+  volAI?.intradayRSIDiv
+) {
+  prob -= 2;
+}
+
 prob = Math.max(40, Math.min(prob, 95));
 
 prob = applyHTFProbabilityAdjustment({
