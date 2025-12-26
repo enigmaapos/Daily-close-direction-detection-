@@ -1546,14 +1546,14 @@ function findSwings(h, l, c, v){
   }
 
 
-  function detect24hRSIMomentumShift(closes15m, rsi15m) {
+  function detect24hRSIMomentumShift(closes15m, rsi15m, mainTrend) {
   if (!rsi15m || rsi15m.length < 96) return null;
 
   const recentRSI = rsi15m.slice(-96).filter(v => v !== null);
   if (recentRSI.length < 20) return null;
 
-  const rsiHigh = Math.max(...recentRSI);
-  const rsiLow  = Math.min(...recentRSI);
+  const rsiHigh  = Math.max(...recentRSI);
+  const rsiLow   = Math.min(...recentRSI);
   const rsiRange = rsiHigh - rsiLow;
 
   const recentCloses = closes15m.slice(-96);
@@ -1563,27 +1563,34 @@ function findSwings(h, l, c, v){
 
   const priceRange = priceHigh - priceLow;
 
-  /* ================= BEARISH MOMENTUM COLLAPSE ================= */
-  // Price elevated, RSI deteriorates
-  const bearishPriceHolding =
-    lastPrice > priceLow + priceRange * 0.5;
+  let bearish = false;
+  let bullish = false;
 
-  const bearish =
-    rsiHigh >= 45 &&        // RSI had strength
-    rsiLow <= 35 &&         // RSI collapsed
-    rsiRange >= 10 &&       // meaningful decay
-    bearishPriceHolding;    // price didn't follow RSI down
+  /* ================= 🔴 BEARISH MOMENTUM COLLAPSE ================= */
+  // Only valid in BULLISH trend
+  if (mainTrend === "bullish") {
+    const priceHolding =
+      lastPrice > priceLow + priceRange * 0.5;
 
-  /* ================= BULLISH MOMENTUM RECOVERY ================= */
-  // Price depressed, RSI recovers
-  const bullishPriceHolding =
-    lastPrice < priceLow + priceRange * 0.5;
+    bearish =
+      rsiHigh >= 45 &&        // RSI had strength
+      rsiLow <= 35 &&         // RSI collapsed
+      rsiRange >= 10 &&       // meaningful decay
+      priceHolding;           // price did NOT follow RSI down
+  }
 
-  const bullish =
-    rsiLow <= 40 &&         // RSI was weak
-    rsiHigh >= 50 &&        // RSI recovered
-    rsiRange >= 10 &&       // meaningful recovery
-    bullishPriceHolding;    // price didn't follow RSI up yet
+  /* ================= 🟢 BULLISH MOMENTUM RECOVERY ================= */
+  // Only valid in BEARISH trend
+  if (mainTrend === "bearish") {
+    const priceHolding =
+      lastPrice < priceLow + priceRange * 0.5;
+
+    bullish =
+      rsiLow <= 40 &&         // RSI was weak
+      rsiHigh >= 50 &&        // RSI recovered
+      rsiRange >= 10 &&       // meaningful recovery
+      priceHolding;           // price did NOT follow RSI up
+  }
 
   if (!bearish && !bullish) return null;
 
@@ -1596,7 +1603,7 @@ function findSwings(h, l, c, v){
     tf: "15m",
     window: "24h"
   };
-  }
+}
   
 
     /* ================= DAILY RSI CONTEXT ================= */
@@ -1797,13 +1804,6 @@ function detect24hVolumeLocationAI(
     openTime: c.openTime
   }));
 
-  // ================= 24h INTRADAY RSI (15m) =================
-const closes15m = last24h.map(c => c.close);
-const rsi15m = calculateRSI(closes15m);
-
-const intradayRSIDiv =
-  detect24hRSIMomentumShift(closes15m, rsi15m);
-  
 
   let dayHigh = -Infinity;
   let dayLow  = Infinity;
@@ -1930,8 +1930,7 @@ const intradayRSIDiv =
     volume: top.baseVol,
     time: top.openTime,
     high: top.high,
-    low: top.low,
-    intradayRSIDiv
+    low: top.low
   };
 }
 
@@ -2437,6 +2436,14 @@ const mainTrend = getMainTrendOnly(
   l
 );
 
+    // ================= 24h INTRADAY RSI (15m) =================
+const closes15m = last24h.map(c => c.close);
+const rsi15m = calculateRSI(closes15m);
+
+const intradayRSIDiv =
+  detect24hRSIMomentumShift(closes15m, rsi15m);
+  
+
 
   // 🧠 Market dominance side (logic-safe)
 const marketDomSide =
@@ -2933,7 +2940,7 @@ prob = applyHTFProbabilityAdjustment({
   ema21: ema21Last,
   emaShortBias,
   emaShortCross,aiVerdict,marketDom: GLOBAL_MARKET_DOM,changeState,moveType,
-moveStrength,directionalBias,setupScore,htf,volumeContext,probability: prob};
+moveStrength,directionalBias,setupScore,htf,volumeContext,probability: prob,intradayRSIDiv};
 }
 
 /* ================= FILTERS ================= */
