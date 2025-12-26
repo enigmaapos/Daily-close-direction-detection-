@@ -2903,23 +2903,42 @@ moveStrength,
     volumeContext
 });
 
-  /* 🧭 INTRADAY RSI DIVERGENCE — CONTINUATION SOFT DOWNGRADE */
-if (
-  bias.includes("Continuation") &&
-  volAI?.intradayRSIDiv
-) {
-  prob -= 2;
+  const rsiMomentumShift = volAI?.intradayRSIDiv;
+
+  /* ================= RSI MOMENTUM SHIFT PROBABILITY ADJUSTMENT ================= */
+
+if (rsiMomentumShift) {
+
+  // 🔴 Bullish trend losing momentum
+  if (
+    mainTrend === "bullish" &&
+    rsiMomentumShift.bearish
+  ) {
+    if (bias.includes("Continuation")) {
+      prob -= 4;   // continuation loses reliability
+    }
+
+    if (bias.includes("Defense")) {
+      prob -= 2;   // defense weakens slightly
+    }
+  }
+
+  // 🟢 Bearish trend regaining momentum
+  if (
+    mainTrend === "bearish" &&
+    rsiMomentumShift.bullish
+  ) {
+    if (bias.includes("Continuation")) {
+      prob -= 4;
+    }
+
+    if (bias.includes("Defense")) {
+      prob -= 2;
+    }
+  }
 }
 
 prob = Math.max(40, Math.min(prob, 95));
-
-
-if (
-  bias.includes("Continuation") &&
-  volAI?.intradayRSIDiv
-) {
-  prob -= 2;
-}
 
 prob = applyHTFProbabilityAdjustment({
   probability: prob,
