@@ -2694,24 +2694,6 @@ if (bull) {
   /* ================= VOLUME CONFIRMATION ================= */
 let volumeAlign = "neutral";
 
-  const volumeContext = {
-  dominantSide: bull ? "BUY" : "SELL",
-
-  initiative:
-    volumeBreakout
-      ? (bull ? "BUY" : "SELL")
-      : "NONE",
-
-  isAbsorption:
-    volumeAlign === "confirmed" &&
-    !volumeBreakout,
-
-  isClimax:
-    volAI?.meaning?.includes("climax")
-      ? (bull ? "BUY_CLIMAX" : "SELL_CLIMAX")
-      : "NONE"
-};
-
 if (
   volumeStructure.name === "support holding (confirmed)" &&
   bias === "Bullish Defense"
@@ -2740,6 +2722,7 @@ if (
   volumeAlign = "conflict";
 }
 
+  
 /* ================= PROBABILITY MODIFIER ================= */
 if (volumeAlign === "confirmed") {
   prob += 5;
@@ -2750,6 +2733,25 @@ if (volumeAlign === "conflict") {
 }
 
 prob = Math.max(40, Math.min(prob, 95));
+
+  const volumeContext = {
+  dominantSide: bull ? "BUY" : "SELL",
+
+  initiative:
+    volumeBreakout
+      ? (bull ? "BUY" : "SELL")
+      : "NONE",
+
+  isAbsorption:
+    volumeAlign === "confirmed" &&
+    !volumeBreakout,
+
+  isClimax:
+    volAI?.meaning?.includes("climax")
+      ? (bull ? "BUY_CLIMAX" : "SELL_CLIMAX")
+      : "NONE"
+};
+  
 
   /* ================= MARKET DOMINANCE PROBABILITY MODIFIER ================= */
 if (marketDom && bias.includes("Continuation")) {
@@ -2908,15 +2910,15 @@ moveStrength,
     volumeContext
 });
 
-  /* 🧭 INTRADAY RSI DIVERGENCE — TRAP CONFIRMATION */
-  if (
-  aiVerdict.verdict === AI_VERDICTS.TRAP_RISK &&
+  /* 🧭 INTRADAY RSI DIVERGENCE — CONTINUATION SOFT DOWNGRADE */
+if (
+  bias.includes("Continuation") &&
   volAI?.intradayRSIDiv
 ) {
-  prob -= 3;
-  }
-  prob = Math.max(40, Math.min(prob, 95));
-  }
+  prob -= 2;
+}
+
+prob = Math.max(40, Math.min(prob, 95));
 
 
 if (
