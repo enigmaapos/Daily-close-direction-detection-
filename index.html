@@ -249,6 +249,27 @@ button.secondary{
   .behavior-SMOOTH { color: #22c55e; }
 .behavior-CONSOLIDATION { color: #facc15; }
 .behavior-CHOPPY { color: #fb7185; }
+
+  .muted.bull {
+  color: #22c55e; /* soft green */
+}
+
+.muted.bear {
+  color: #fb7185; /* soft red */
+}
+
+.muted.neutral {
+  color: #facc15; /* yellow */
+}
+
+.muted.muted {
+  color: #9fb3cc; /* default muted */
+}
+
+  .muted.bull,
+.muted.bear {
+  opacity: 0.85;
+                    }
 </style>
 </head>
 
@@ -3281,6 +3302,15 @@ const marketDomIcon =
     : marketDomBias === "Bear Dominant"
     ? "🔴"
     : "🟡";
+
+  const rsiDivClass =
+  d.intradayRSIDiv
+    ? d.intradayRSIDiv.bearish && !d.intradayRSIDiv.bullish
+      ? "bear"
+      : d.intradayRSIDiv.bullish && !d.intradayRSIDiv.bearish
+      ? "bull"
+      : "neutral"
+    : "muted";
     
 
 card.innerHTML = `
@@ -3515,7 +3545,7 @@ ${d.rsi15 !== null ? `
   </div>
 ` : ""}
 
-<div class="muted neutral">
+<div class="muted ${rsiDivClass}">
   🧭 24h Intraday RSI Divergence (15m):
   <b>
     ${
