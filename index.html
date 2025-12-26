@@ -1546,94 +1546,58 @@ function findSwings(h, l, c, v){
   }
 
 
-  function findIntradayRSISwings(closes, rsiArr) {
-  const swings = [];
+  function detect24hRSIMomentumShift(closes15m, rsi15m) {
+  if (!rsi15m || rsi15m.length < 96) return null;
 
-  for (let i = 2; i < closes.length - 2; i++) {
-    // swing high
-    if (
-      closes[i] > closes[i - 1] &&
-      closes[i] > closes[i + 1] &&
-      rsiArr[i] !== null
-    ) {
-      swings.push({
-        type: "high",
-        price: closes[i],
-        rsi: rsiArr[i],
-        index: i
-      });
-    }
+  const recentRSI = rsi15m.slice(-96).filter(v => v !== null);
+  if (recentRSI.length < 20) return null;
 
-    // swing low
-    if (
-      closes[i] < closes[i - 1] &&
-      closes[i] < closes[i + 1] &&
-      rsiArr[i] !== null
-    ) {
-      swings.push({
-        type: "low",
-        price: closes[i],
-        rsi: rsiArr[i],
-        index: i
-      });
-    }
-  }
+  const rsiHigh = Math.max(...recentRSI);
+  const rsiLow  = Math.min(...recentRSI);
+  const rsiRange = rsiHigh - rsiLow;
 
-  // only keep the most recent swings
-  return swings.slice(-6);
-  }
+  const recentCloses = closes15m.slice(-96);
+  const priceHigh = Math.max(...recentCloses);
+  const priceLow  = Math.min(...recentCloses);
+  const lastPrice = recentCloses.at(-1);
 
+  const priceRange = priceHigh - priceLow;
 
-                 function detect24hRSIDivergence15m(closes15m, rsi15m) {
-  if (!rsi15m || rsi15m.length < 30) return null;
+  /* ================= BEARISH MOMENTUM COLLAPSE ================= */
+  // Price elevated, RSI deteriorates
+  const bearishPriceHolding =
+    lastPrice > priceLow + priceRange * 0.5;
 
-  const swings = findIntradayRSISwings(closes15m, rsi15m);
+  const bearish =
+    rsiHigh >= 45 &&        // RSI had strength
+    rsiLow <= 35 &&         // RSI collapsed
+    rsiRange >= 10 &&       // meaningful decay
+    bearishPriceHolding;    // price didn't follow RSI down
 
-  const highs = swings.filter(s => s.type === "high");
-  const lows  = swings.filter(s => s.type === "low");
+  /* ================= BULLISH MOMENTUM RECOVERY ================= */
+  // Price depressed, RSI recovers
+  const bullishPriceHolding =
+    lastPrice < priceLow + priceRange * 0.5;
 
-  let bearish = false;
-  let bullish = false;
-
-  // 🔴 Bearish divergence (price HH, RSI LH)
-  if (highs.length >= 2) {
-    const a = highs.at(-2);
-    const b = highs.at(-1);
-
-    if (
-      b.price > a.price &&
-      b.rsi < a.rsi &&
-      a.rsi > 60 &&          // strong momentum context
-      b.rsi > 50             // avoid weak noise
-    ) {
-      bearish = true;
-    }
-  }
-
-  // 🟢 Bullish divergence (price LL, RSI HL)
-  if (lows.length >= 2) {
-    const a = lows.at(-2);
-    const b = lows.at(-1);
-
-    if (
-      b.price < a.price &&
-      b.rsi > a.rsi &&
-      a.rsi < 40 &&
-      b.rsi < 50
-    ) {
-      bullish = true;
-    }
-  }
+  const bullish =
+    rsiLow <= 40 &&         // RSI was weak
+    rsiHigh >= 50 &&        // RSI recovered
+    rsiRange >= 10 &&       // meaningful recovery
+    bullishPriceHolding;    // price didn't follow RSI up yet
 
   if (!bearish && !bullish) return null;
 
   return {
     bearish,
     bullish,
+    type: bearish
+      ? "momentum-collapse"
+      : "momentum-recovery",
     tf: "15m",
     window: "24h"
   };
-                 }
+  }
+
   
 
     /* ================= DAILY RSI CONTEXT ================= */
@@ -1839,7 +1803,7 @@ const closes15m = last24h.map(c => c.close);
 const rsi15m = calculateRSI(closes15m);
 
 const intradayRSIDiv =
-  detect24hRSIDivergence15m(closes15m, rsi15m);
+  detect24hRSIMomentumShift(closes15m, rsi15m);
   
 
   let dayHigh = -Infinity;
@@ -3302,15 +3266,16 @@ const marketDomIcon =
     ? "🔴"
     : "🟡";
 
-  const rsiDivClass =
-  d.intradayRSIDiv
-    ? d.intradayRSIDiv.bearish && !d.intradayRSIDiv.bullish
-      ? "bear"
-      : d.intradayRSIDiv.bullish && !d.intradayRSIDiv.bearish
-      ? "bull"
-      : "neutral"
-    : "muted";
-    
+  
+
+    const rsiShiftClass =
+  !d.intradayRSIDiv
+    ? "neutral"
+    : d.intradayRSIDiv.bearish
+    ? "bear"
+    : d.intradayRSIDiv.bullish
+    ? "bull"
+    : "neutral";
 
 card.innerHTML = `
   ${card.dataset.manual === "true"
@@ -3489,16 +3454,16 @@ ${d.defenseFailure !== "NONE" ? `
 }
 </div>
 
-<div class="muted ${rsiDivClass}">
-  🧭 24h Intraday RSI Divergence (15m):
+<div class="muted ${rsiShiftClass}">
+  🧭 24h RSI Momentum Shift (15m):
   <b>
     ${
       d.intradayRSIDiv
-        ? d.intradayRSIDiv.bearish && !d.intradayRSIDiv.bullish
-          ? "Bearish (Momentum fading)"
-          : d.intradayRSIDiv.bullish && !d.intradayRSIDiv.bearish
-          ? "Bullish (Selling pressure fading)"
-          : "Mixed (Momentum unstable)"
+        ? d.intradayRSIDiv.bearish
+          ? "Bearish Momentum Collapse"
+          : d.intradayRSIDiv.bullish
+          ? "Bullish Momentum Recovery"
+          : "Momentum Unstable"
         : "None"
     }
   </b>
