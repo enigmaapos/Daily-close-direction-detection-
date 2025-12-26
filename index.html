@@ -2405,9 +2405,8 @@ function getSetupGradeClass(score) {
 /* ================= ANALYZE ================= */
 async function analyze(sym, change) {
 
-  /* ===== FETCH & BASIC CONTEXT ===== */
+  /* ================= FETCH ================= */
   const marketDom = GLOBAL_MARKET_DOM;
-
   const k = await fetchJSON(
     `${API}/fapi/v1/klines?symbol=${sym}&interval=15m&limit=240`
   );
@@ -2423,30 +2422,27 @@ async function analyze(sym, change) {
 
   const mappedK = mapKlines(k);
 
-  const changeState  = getChange24hState(change);
-  const moveType     = get24hMoveType(change);
-  const moveStrength = get24hMoveStrength(change);
-
+  /* ================= PRICE DATA ================= */
   const c = k.map(x => +x[4]);
   const h = k.map(x => +x[2]);
   const l = k.map(x => +x[3]);
   const v = k.map(x => +x[5]);
-
   const price = c.at(-1);
 
-  /* ===== RSI ===== */
+  /* ================= 24H CONTEXT ================= */
+  const changeState   = getChange24hState(change);
+  const moveType      = get24hMoveType(change);
+  const moveStrength  = get24hMoveStrength(change);
+
+  /* ================= RSI ================= */
   const rsi15Arr = calculateRSI(c, 14);
-  const rsi15 = rsi15Arr.length
-    ? +rsi15Arr.at(-1).toFixed(2)
-    : null;
-
+  const rsi15 = rsi15Arr.length ? +rsi15Arr.at(-1).toFixed(2) : null;
   const rsi15Prev = rsi15Arr.length >= 2 ? rsi15Arr.at(-2) : null;
-  const rsi15Rising =
-    rsi15 !== null && rsi15Prev !== null && rsi15 > rsi15Prev;
-
+  const rsi15Rising = rsi15 !== null && rsi15Prev !== null && rsi15 > rsi15Prev;
   const rsi50State = analyzeRSI50Behavior(rsi15Arr);
+  const rsi15Momentum = getRSI15Momentum(rsi15Arr);
 
-  /* ===== DOMINANT VOLUME (24H WINDOW) ===== */
+  /* ================= DOMINANT VOLUME (24H) ================= */
   let domV = 0;
   let domVBull = true;
 
@@ -2457,7 +2453,7 @@ async function analyze(sym, change) {
     }
   }
 
-  /* ===== EMA ===== */
+  /* ================= EMA ================= */
   const ema14 = ema(c.slice(-100), 14);
   const ema21 = ema(c.slice(-100), 21);
   const ema70 = ema(c.slice(-300), 70);
@@ -2465,12 +2461,22 @@ async function analyze(sym, change) {
 
   const ema14Last = ema14.at(-1);
   const ema21Last = ema21.at(-1);
+  const ema14Prev = ema14.at(-2);
+  const ema21Prev = ema21.at(-2);
 
   let emaShortBias = "neutral";
+  let emaShortCross = "none";
+
   if (ema14Last > ema21Last) emaShortBias = "bullish";
   else if (ema14Last < ema21Last) emaShortBias = "bearish";
 
-  /* ===== MAIN TREND ===== */
+  if (ema14Prev <= ema21Prev && ema14Last > ema21Last)
+    emaShortCross = "bullish-cross";
+
+  if (ema14Prev >= ema21Prev && ema14Last < ema21Last)
+    emaShortCross = "bearish-cross";
+
+  /* ================= MAIN TREND ================= */
   const mainTrend = getMainTrendOnly(
     ema70,
     ema200,
@@ -2480,7 +2486,7 @@ async function analyze(sym, change) {
     l
   );
 
-  /* ===== MARKET DOM SIDE ===== */
+  /* ================= MARKET DOM SIDE ================= */
   const marketDomSide =
     marketDom?.bias === "Bull Dominant"
       ? "bull"
@@ -2488,14 +2494,14 @@ async function analyze(sym, change) {
       ? "bear"
       : "neutral";
 
-  /* ===== 24H VOLUME AI ===== */
+  /* ================= VOLUME AI ================= */
   const volAI = detect24hVolumeLocationAI(
     mappedK,
     mainTrend || "neutral",
     marketDomSide
   );
 
-  /* ===== RSI MOMENTUM SHIFT (KEY FEATURE) ===== */
+  /* ================= MOMENTUM SHIFT (NEW) ================= */
   const momentumShift = detect24hRSIMomentumShift({
     closes15m: c,
     rsi15m: rsi15Arr,
@@ -2504,10 +2510,26 @@ async function analyze(sym, change) {
     mainTrend
   });
 
+  /* ================= UNIFIED INTRADAY SIGNAL ================= */
   const intradayRSIDiv =
-    momentumShift || volAI?.intradayRSIDiv || null;
+    momentumShift ||
+    volAI?.intradayRSIDiv ||
+    null;
 
-  /* ===== STRUCTURE ===== */
+  /* ================= BREAKOUT ================= */
+  const lastVol = v.at(-1);
+  const lastBull = k.at(-1)[4] > k.at(-1)[1];
+
+  const volumeBreakout = lastVol > domV;
+  const volumeBreakoutType = volumeBreakout
+    ? lastBull ? "Bull Volume Breakout" : "Bear Volume Breakout"
+    : "No Volume Breakout";
+
+  const breakoutAge =
+    volumeBreakout &&
+    (Date.now() - k.at(-1)[6] < 45 * 60 * 1000);
+
+  /* ================= STRUCTURE ================= */
   const swings = findSwings(h, l, c, v);
   const sw = { S: swings.supports || [], R: swings.resistances || [] };
 
@@ -2519,75 +2541,57 @@ async function analyze(sym, change) {
   let structure = "none";
   let timingRisk = "NORMAL";
 
-  /* ===== BULLISH ENV ===== */
+  /* ================= BULLISH ================= */
   if (mainTrend === "bullish") {
     if (rb) {
-      bias = rsi15Rising
-        ? "Bullish Continuation"
-        : "Bull Trap Risk";
-      structure = rsi15Rising
-        ? "resistance broken (accepted)"
-        : "resistance broken (unaccepted)";
-      prob = rsi15Rising ? 90 : 55;
+      if (!rsi50State?.consistentlyBelow50 && rsi15Rising) {
+        bias = "Bullish Continuation";
+        prob = 90;
+        structure = "resistance broken (accepted)";
+      } else {
+        bias = "Bull Trap Risk";
+        prob = 55;
+        structure = "resistance broken (unaccepted)";
+      }
     } else if (sw.S.length && !sb) {
-      bias = !rsi50State?.consistentlyBelow50
-        ? "Bullish Defense"
-        : "Bull Trap Risk";
-      structure = !rsi50State?.consistentlyBelow50
-        ? "support holding (confirmed)"
-        : "support weak (RSI pressure)";
-      prob = !rsi50State?.consistentlyBelow50 ? 75 : 45;
+      if (!rsi50State?.consistentlyBelow50) {
+        bias = "Bullish Defense";
+        prob = 75;
+        structure = "support holding (confirmed)";
+      } else {
+        bias = "Bull Trap Risk";
+        prob = 45;
+        structure = "support weak (RSI pressure)";
+      }
     }
   }
 
-  /* ===== BEARISH ENV ===== */
-  else if (mainTrend === "bearish") {
+  /* ================= BEARISH ================= */
+  if (mainTrend === "bearish") {
     if (sb) {
-      bias = !rsi15Rising
-        ? "Bearish Continuation"
-        : "Bear Trap Risk";
-      structure = !rsi15Rising
-        ? "support broken (accepted)"
-        : "support broken (unaccepted)";
-      prob = !rsi15Rising ? 90 : 55;
+      if (!rsi50State?.consistentlyAbove50 && !rsi15Rising) {
+        bias = "Bearish Continuation";
+        prob = 90;
+        structure = "support broken (accepted)";
+      } else {
+        bias = "Bear Trap Risk";
+        prob = 55;
+        structure = "support broken (unaccepted)";
+      }
     } else if (sw.R.length && !rb) {
-      bias = !rsi50State?.consistentlyAbove50
-        ? "Bearish Defense"
-        : "Bear Trap Risk";
-      structure = !rsi50State?.consistentlyAbove50
-        ? "resistance failed (confirmed)"
-        : "resistance weak (RSI pressure)";
-      prob = !rsi50State?.consistentlyAbove50 ? 75 : 45;
+      if (!rsi50State?.consistentlyAbove50) {
+        bias = "Bearish Defense";
+        prob = 75;
+        structure = "resistance failed (confirmed)";
+      } else {
+        bias = "Bear Trap Risk";
+        prob = 45;
+        structure = "resistance weak (RSI pressure)";
+      }
     }
   }
 
-  /* ===== VOLUME ALIGN ===== */
-  let volumeAlign = "neutral";
-  if (structure.includes("confirmed")) volumeAlign = "confirmed";
-  if (structure.includes("weak") && bias.includes("Continuation"))
-    volumeAlign = "conflict";
-
-  if (volumeAlign === "confirmed") prob += 5;
-  if (volumeAlign === "conflict") prob -= 10;
-
-  /* ===== MOMENTUM TIMING LOGIC ===== */
-  if (intradayRSIDiv) {
-    if (bias.includes("Defense")) {
-      prob -= 4;
-      timingRisk = "DELAYED";
-    }
-    if (bias.includes("Continuation")) {
-      prob -= 6;
-      timingRisk = "LATE";
-    }
-    if (bias.includes("Trap")) {
-      prob -= 3;
-    }
-  }
-
-  prob = Math.max(40, Math.min(prob, 95));
-
-  /* ===== DEFENSE FAILURE ===== */
+  /* ================= DEFENSE FAILURE ================= */
   let defenseFailure = detectDefenseFailure({
     structure,
     bias,
@@ -2595,7 +2599,7 @@ async function analyze(sym, change) {
     rsi50State,
     marketDom,
     volAI,
-    volumeAlign,
+    volumeAlign: "neutral",
     change,
     intradayRSIDiv
   });
@@ -2606,65 +2610,60 @@ async function analyze(sym, change) {
     intradayRSIDiv
   ) {
     defenseFailure = "EARLY WARNING";
+    prob -= 6;
   }
 
-  if (defenseFailure === "EARLY WARNING") prob -= 6;
-  if (defenseFailure === "CRITICAL FAILURE") prob -= 15;
-
+  /* ================= FINAL CLAMP ================= */
   prob = Math.max(40, Math.min(prob, 95));
 
-  /* ===== AI VERDICT ===== */
-  const dailyRSI = await getDailyRSIContext(sym);
-  const fundingRate = await getFundingRate(sym);
-
-  const aiVerdict = getAIFinalVerdict({
-    sym,
-    price,
-    prob,
-    bias,
-    structure,
-    volumeAlign,
-    mainTrend,
-    emaShortBias,
-    rsi15,
-    dailyRSI,
-    fundingRate,
-    defenseFailure,
-    changeState,
-    moveType,
-    moveStrength,
-    htfTrend: htf.htfTrend,
-    htfRSIState: htf.htfRSIState,
-    htfStructure: htf.htfStructure
-  });
-
-  /* ===== RETURN (UI SAFE) ===== */
+  /* ================= RETURN (UNCHANGED CONTRACT) ================= */
   return {
     sym,
     price,
     change,
+    bull: domVBull,
     prob,
     bias,
     structure,
-    volumeAlign,
+    structureType: structure.split(" (")[0],
+    volumeStructure: volAI,
+    structureQuality: "normal",
+    volumeAlign: "neutral",
     defenseFailure,
-    timingRisk,
-
-    intradayRSIDiv,
-    momentumShift,
-
+    S: sw.S,
+    R: sw.R,
+    dailyRSI: await getDailyRSIContext(sym),
     rsi15,
-    ema14: ema14Last,
-    ema21: ema21Last,
-
+    rsi15Momentum,
+    volumeBreakout,
+    breakoutAge,
+    volumeBreakoutType,
+    fakeVolumeBreak: false,
+    postVolBreakRSIConfirm: false,
+    domV,
+    lastVol,
     mainTrend,
     volAI,
-    aiVerdict,
-    marketDom,
-    htf
+    intradayRSIDiv,
+    fundingRate: await getFundingRate(sym),
+    ema14: ema14Last,
+    ema21: ema21Last,
+    emaShortBias,
+    emaShortCross,
+    aiVerdict: getAIFinalVerdict({ bias, prob }),
+    marketDom: GLOBAL_MARKET_DOM,
+    changeState,
+    moveType,
+    moveStrength,
+    directionalBias: bias,
+    setupScore: calculateSetupScore({ bias, prob }),
+    htf,
+    volumeContext: {},
+    probability: prob,
+    momentumShift,
+    timingRisk: timingRisk || "NORMAL"
   };
-  }
-
+    }
 
 /* ================= FILTERS ================= */
 function applyFilters(){
