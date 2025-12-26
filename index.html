@@ -258,50 +258,12 @@ button.secondary{
    <button class="secondary" id="resetFiltersBtn" onclick="resetFilters()">
     Reset Filters
    </button>
-  
-  <select id="filterBias">
-  <option value="all">All Bias</option>
-
-  <optgroup label="Bullish">
-    <option>Bullish Continuation</option>
-    <option>Bullish Defense</option>
-    <option>Bull Trap Risk</option>
-  </optgroup>
-
-  <optgroup label="Bearish">
-    <option>Bearish Continuation</option>
-    <option>Bearish Defense</option>
-    <option>Bear Trap Risk</option>
-  </optgroup>
-
-  <optgroup label="Neutral">
-    <option>Neutral</option>
-  </optgroup>
-</select>
 
   <select id="filterVol">
     <option value="all">All Volume</option>
     <option value="bull">Bull Volume</option>
     <option value="bear">Bear Volume</option>
   </select>
-
-  <div class="row filter-box">
-  <select id="filterVolAI">
-  <option value="all">All 24h Volume AI</option>
-
-  <option>Initiative buying</option>
-  <option>Initiative selling</option>
-
-  <option>Distribution</option>
-  <option>Buy climax</option>
-  <option>Sell climax</option>
-
-  <option>Accumulation attempt</option>
-  <option>Short covering</option>
-
-  <option>Neutral</option>
-</select>
-  </div>
 
   <select id="filterVolBreak">
   <option value="all">All Volume Breaks</option>
@@ -404,6 +366,53 @@ button.secondary{
     <option value="asc">Ascending</option>
   </select>
 </div>
+
+    <select id="filterBias">
+  <option value="all">All Bias</option>
+
+  <optgroup label="Bullish">
+    <option>Bullish Continuation</option>
+    <option>Bullish Defense</option>
+    <option>Bull Trap Risk</option>
+  </optgroup>
+
+  <optgroup label="Bearish">
+    <option>Bearish Continuation</option>
+    <option>Bearish Defense</option>
+    <option>Bear Trap Risk</option>
+  </optgroup>
+
+  <optgroup label="Neutral">
+    <option>Neutral</option>
+  </optgroup>
+    </select>
+
+
+   <div class="row filter-box">
+  <select id="filterVolAI">
+  <option value="all">All 24h Volume AI</option>
+
+  <option>Initiative buying</option>
+  <option>Initiative selling</option>
+
+  <option>Distribution</option>
+  <option>Buy climax</option>
+  <option>Sell climax</option>
+
+  <option>Accumulation attempt</option>
+  <option>Short covering</option>
+
+  <option>Neutral</option>
+</select>
+   </div>
+
+
+  <select id="filterDefense">
+  <option value="all">All Defense States</option>
+  <option value="ACTIVE">Defense Active</option>
+  <option value="EARLY WARNING">Early Warning</option>
+  <option value="CRITICAL FAILURE">Critical Failure</option>
+  </select>
 
   <div class="muted">
   Last update: <span id="timestamp">—</span><br>
@@ -2797,6 +2806,7 @@ function applyFilters(){
   const ez = document.getElementById("filterExecution")?.value || "all";
   const vai = document.getElementById("filterVolAI")?.value || "all";
   const rrFilter = document.getElementById("filterRR")?.value || "all";
+  const df = document.getElementById("filterDefense")?.value || "all";
   
 
   document.querySelectorAll(".card").forEach(c => {
@@ -2826,6 +2836,18 @@ if (rrFilter === "present") {
   if (!c.dataset.rr) ok = false;
 }
 
+    // ================= DEFENSE STATUS FILTER =================
+if (df !== "all") {
+  const defense = c.dataset.defense || "NONE";
+
+  if (df === "ACTIVE") {
+    if (defense !== "NONE") ok = false;
+  } 
+  else if (defense !== df) {
+    ok = false;
+  }
+}
+
   c.style.display = ok ? "" : "none";
 });
 }
@@ -2844,6 +2866,7 @@ if (rrFilter === "present") {
            document.getElementById("filterExecution").value = "all";
            document.getElementById("filterVolAI").value = "all";
            document.getElementById("filterRR").value = "all";
+           document.getElementById("filterDefense").value = "all";
            
            
 
@@ -2968,6 +2991,8 @@ card.dataset.aiverdict = aiVerdict.verdict;
   card.dataset.execution = executionZone;
     card.dataset.volai = d.volAI?.meaning || "Neutral";
     card.dataset.volstructure = volumeStruct.name;
+    card.dataset.defense = d.defenseFailure || "NONE";
+    
 
 card.dataset.structureQuality =
   d.structure.includes("accepted") ? "accepted" :
@@ -3754,7 +3779,8 @@ async function runSearch(){
   "filterAIVerdict",
   "filterTradeSide",
   "filterExecution",
-  "filterRR"
+  "filterRR",
+    "filterDefense"
 ].forEach(id=>{
   document.getElementById(id)?.addEventListener("change", applyFilters);
 });
