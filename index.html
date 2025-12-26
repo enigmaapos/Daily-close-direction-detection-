@@ -1037,6 +1037,13 @@ if (
   reason += " Weak drop likely represents a pullback, not breakdown.";
 }
 
+  if (
+  aiVerdict.aiVerdict === AI_VERDICTS.STRONG_CONTINUATION &&
+  d.intradayRSIDiv
+) {
+  aiVerdict.aiVerdict = AI_VERDICTS.CONTROLLED_CONTINUATION;
+  }
+
   return withTier(verdict, reason, d);
 } 
     
@@ -2192,6 +2199,14 @@ if (typeof d.change === "number" && Math.abs(d.change) >= 25) {
   score += 1;
 }
 
+      // 6️⃣ Intraday RSI divergence (EARLY stress only)
+  if (
+    d.bias.includes("Defense") &&
+    d.intradayRSIDiv
+  ) {
+    score += 1;
+  }
+
   if (score >= 3) return "CRITICAL FAILURE";
   if (score === 2) return "EARLY WARNING";
   return "NONE";
@@ -2906,6 +2921,13 @@ if (
 ) {
   prob -= 3;
   prob = Math.max(40, Math.min(prob, 95));
+  }
+
+  if (
+  bias.includes("Continuation") &&
+  d.intradayRSIDiv
+) {
+  prob -= 2; // very small
   }
 
 prob = applyHTFProbabilityAdjustment({
