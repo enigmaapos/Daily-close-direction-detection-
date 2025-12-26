@@ -1290,6 +1290,14 @@ if (
     return "PULLBACK ZONE";
   }
 
+    // 🚫 Late-cycle momentum risk
+if (
+  zone === "ENTRY ZONE" &&
+  d.timingRisk === "LATE"
+) {
+  return "PULLBACK ZONE";
+}
+
   return zone;
   }
 
@@ -1628,6 +1636,20 @@ function findSwings(h, l, c, v){
 
   return null;
 }
+
+  const momentumShift = detect24hRSIMomentumShift({
+  closes15m: c,
+  rsi15m: rsi15Arr,
+  ema14: ema14Last,
+  ema21: ema21Last,
+  mainTrend
+});
+
+const hasMomentumDecay =
+  momentumShift?.bearish === true;
+
+const hasMomentumRecovery =
+  momentumShift?.bullish === true;
 
   
 
@@ -2923,6 +2945,59 @@ if (
   prob -= 2;
 }
 
+  /* ================= MOMENTUM CONFIDENCE & TIMING ================= */
+
+// 🟡 NEUTRAL — informational only
+if (bias === "Neutral" && momentumShift) {
+  prob -= 2;
+}
+
+  if (bias.includes("Defense")) {
+
+  // Bullish defense losing momentum
+  if (mainTrend === "bullish" && hasMomentumDecay) {
+    prob -= 6;
+    defenseFailure = defenseFailure === "NONE"
+      ? "EARLY WARNING"
+      : defenseFailure;
+  }
+
+  // Bearish defense losing momentum
+  if (mainTrend === "bearish" && hasMomentumRecovery) {
+    prob -= 6;
+    defenseFailure = defenseFailure === "NONE"
+      ? "EARLY WARNING"
+      : defenseFailure;
+  }
+  }
+
+  if (bias.includes("Trap")) {
+
+  if (
+    (mainTrend === "bullish" && hasMomentumDecay) ||
+    (mainTrend === "bearish" && hasMomentumRecovery)
+  ) {
+    prob -= 4; // trap confidence ↑
+  }
+  }
+
+  if (bias.includes("Continuation")) {
+
+  // Bullish continuation, momentum dying
+  if (mainTrend === "bullish" && hasMomentumDecay) {
+    prob -= 10;
+    timingRisk = "LATE";
+  }
+
+  // Bearish continuation, momentum recovering
+  if (mainTrend === "bearish" && hasMomentumRecovery) {
+    prob -= 10;
+    timingRisk = "LATE";
+  }
+  }
+
+  prob = Math.max(40, Math.min(prob, 95));
+
 prob = applyHTFProbabilityAdjustment({
   probability: prob,
   aiVerdict,
@@ -2965,7 +3040,8 @@ prob = applyHTFProbabilityAdjustment({
   ema21: ema21Last,
   emaShortBias,
   emaShortCross,aiVerdict,marketDom: GLOBAL_MARKET_DOM,changeState,moveType,
-moveStrength,directionalBias,setupScore,htf,volumeContext,probability: prob};
+moveStrength,directionalBias,setupScore,htf,volumeContext,probability: prob,momentumShift,
+  timingRisk: timingRisk || "NORMAL",};
 }
 
 /* ================= FILTERS ================= */
