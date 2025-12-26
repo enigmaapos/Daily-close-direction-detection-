@@ -1290,14 +1290,6 @@ if (
     return "PULLBACK ZONE";
   }
 
-    // 🚫 Late-cycle momentum risk
-if (
-  zone === "ENTRY ZONE" &&
-  d.timingRisk === "LATE"
-) {
-  return "PULLBACK ZONE";
-}
-
   return zone;
   }
 
@@ -1557,8 +1549,8 @@ function findSwings(h, l, c, v){
   function detect24hRSIMomentumShift({
   closes15m,
   rsi15m,
-  ema14Last,
-  ema21Last,
+  ema14,
+  ema21,
   mainTrend
 }) {
   if (!rsi15m || rsi15m.length < 96) return null;
@@ -1570,86 +1562,53 @@ function findSwings(h, l, c, v){
   const rsiLow   = Math.min(...recentRSI);
   const rsiRange = rsiHigh - rsiLow;
 
-  // --- STEP 1: detect momentum behavior ---
-  const momentumDecay =
-    rsiHigh >= 45 &&
-    rsiLow <= 35 &&
-    rsiRange >= 10;
-
-  const momentumRecovery =
-    rsiLow <= 40 &&
-    rsiHigh >= 50 &&
-    rsiRange >= 10;
-
-  if (!momentumDecay && !momentumRecovery) return null;
-
-  // --- STEP 2: price structure confirmation ---
   const recentCloses = closes15m.slice(-96);
   const priceHigh = Math.max(...recentCloses);
   const priceLow  = Math.min(...recentCloses);
   const lastPrice = recentCloses.at(-1);
+
   const priceRange = priceHigh - priceLow;
 
-  if (priceRange === 0) return null;
+  const aboveFastEMA = lastPrice > ema14 && lastPrice > ema21;
+  const belowFastEMA = lastPrice < ema14 && lastPrice < ema21;
 
-  const aboveFastEMA =
-    lastPrice > ema14Last && lastPrice > ema21Last;
+  /* ================= 🔴 BEARISH MOMENTUM COLLAPSE ================= */
+  const bearishPriceHolding =
+    lastPrice > priceLow + priceRange * 0.5;
 
-  const belowFastEMA =
-    lastPrice < ema14Last && lastPrice < ema21Last;
+  const bearish =
+    mainTrend === "bullish" &&       // ✅ bullish environment
+    aboveFastEMA &&                  // ✅ move already happened
+    rsiHigh >= 45 &&                 // RSI had strength
+    rsiLow <= 35 &&                  // RSI collapsed
+    rsiRange >= 10 &&                // meaningful decay
+    bearishPriceHolding;             // price not following RSI down
 
-  /* ================= FINAL CLASSIFICATION ================= */
+  /* ================= 🟢 BULLISH MOMENTUM RECOVERY ================= */
+  const bullishPriceHolding =
+    lastPrice < priceLow + priceRange * 0.5;
 
-  // 🔴 Bullish environment → momentum decay under defense
-  if (
-    mainTrend === "bullish" &&
-    momentumDecay &&
-    aboveFastEMA &&
-    lastPrice > priceLow + priceRange * 0.5
-  ) {
-    return {
-      bearish: true,
-      bullish: false,
-      type: "momentum-decay",
-      confirmed: true,
-      tf: "15m",
-      window: "24h"
-    };
-  }
+  const bullish =
+    mainTrend === "bearish" &&       // ✅ bearish environment
+    belowFastEMA &&                  // ✅ sell-off already happened
+    rsiLow <= 40 &&                  // RSI was weak
+    rsiHigh >= 50 &&                 // RSI recovered
+    rsiRange >= 10 &&                // meaningful recovery
+    bullishPriceHolding;             // price not following RSI up
 
-  // 🟢 Bearish environment → momentum recovery under pressure
-  if (
-    mainTrend === "bearish" &&
-    momentumRecovery &&
-    belowFastEMA &&
-    lastPrice < priceLow + priceRange * 0.5
-  ) {
-    return {
-      bearish: false,
-      bullish: true,
-      type: "momentum-recovery",
-      confirmed: true,
-      tf: "15m",
-      window: "24h"
-    };
-  }
+  if (!bearish && !bullish) return null;
 
-  return null;
+  return {
+    bearish,
+    bullish,
+    type: bearish
+      ? "momentum-collapse"
+      : "momentum-recovery",
+    confirmed: true,
+    tf: "15m",
+    window: "24h"
+  };
 }
-
-  const momentumShift = detect24hRSIMomentumShift({
-  closes15m: c,
-  rsi15m: rsi15Arr,
-  ema14: ema14Last,
-  ema21: ema21Last,
-  mainTrend
-});
-
-const hasMomentumDecay =
-  momentumShift?.bearish === true;
-
-const hasMomentumRecovery =
-  momentumShift?.bullish === true;
 
   
 
@@ -2401,269 +2360,594 @@ function getSetupGradeClass(score) {
   }
   
 
-
 /* ================= ANALYZE ================= */
-async function analyze(sym, change) {
-
-  /* ================= FETCH ================= */
+async function analyze(sym,change){
   const marketDom = GLOBAL_MARKET_DOM;
-  const k = await fetchJSON(
-    `${API}/fapi/v1/klines?symbol=${sym}&interval=15m&limit=240`
-  );
+  const k=await fetchJSON(`${API}/fapi/v1/klines?symbol=${sym}&interval=15m&limit=240`);
   await sleep(DELAY);
 
+
   const htf = isDailyRSIActive()
-    ? {
-        htfTrend: "neutral",
-        htfRSIState: "normal",
-        htfStructure: { support: "holding", resistance: "holding" }
-      }
-    : await getHTFContext(sym);
+  ? {
+      htfTrend: "neutral",
+      htfRSIState: "normal",
+      htfStructure: { support: "holding", resistance: "holding" }
+    }
+  : await getHTFContext(sym);
 
   const mappedK = mapKlines(k);
 
-  /* ================= PRICE DATA ================= */
-  const c = k.map(x => +x[4]);
-  const h = k.map(x => +x[2]);
-  const l = k.map(x => +x[3]);
-  const v = k.map(x => +x[5]);
-  const price = c.at(-1);
+  const changeState = getChange24hState(change);
+const moveType = get24hMoveType(change);
+const moveStrength = get24hMoveStrength(change);
+  
 
-  /* ================= 24H CONTEXT ================= */
-  const changeState   = getChange24hState(change);
-  const moveType      = get24hMoveType(change);
-  const moveStrength  = get24hMoveStrength(change);
 
-  /* ================= RSI ================= */
-  const rsi15Arr = calculateRSI(c, 14);
-  const rsi15 = rsi15Arr.length ? +rsi15Arr.at(-1).toFixed(2) : null;
-  const rsi15Prev = rsi15Arr.length >= 2 ? rsi15Arr.at(-2) : null;
-  const rsi15Rising = rsi15 !== null && rsi15Prev !== null && rsi15 > rsi15Prev;
+  const c=k.map(x=>+x[4]),h=k.map(x=>+x[2]),l=k.map(x=>+x[3]),v=k.map(x=>+x[5]);
+  const price=c.at(-1);
+
+    // 📊 15m RSI(14)
+const rsi15Arr = calculateRSI(c, 14);
+const rsi15 = rsi15Arr.length
+  ? +rsi15Arr.at(-1).toFixed(2)
+  : null;
+
+  // 📈 RSI slope (15m)
+const rsi15Prev = rsi15Arr.length >= 2
+  ? rsi15Arr.at(-2)
+  : null;
+
+const rsi15Rising =
+  rsi15 !== null &&
+  rsi15Prev !== null &&
+  rsi15 > rsi15Prev;
+
   const rsi50State = analyzeRSI50Behavior(rsi15Arr);
-  const rsi15Momentum = getRSI15Momentum(rsi15Arr);
 
-  /* ================= DOMINANT VOLUME (24H) ================= */
+
   let domV = 0;
-  let domVBull = true;
+let domVBull = true;
+let domVIndex = -1;
 
-  for (let i = k.length - 96; i < k.length - 1; i++) {
-    if (v[i] > domV) {
-      domV = v[i];
-      domVBull = k[i][4] > k[i][1];
-    }
+
+for(let i = k.length - 96; i < k.length - 1; i++){
+  if(v[i] > domV){
+    domV = v[i];
+    domVBull = k[i][4] > k[i][1];
+    domVIndex = i;
   }
+}
 
-  /* ================= EMA ================= */
   const ema14 = ema(c.slice(-100), 14);
-  const ema21 = ema(c.slice(-100), 21);
+const ema21 = ema(c.slice(-100), 21);
   const ema70 = ema(c.slice(-300), 70);
-  const ema200 = ema(c.slice(-300), 200);
+const ema200 = ema(c.slice(-300), 200);
 
-  const ema14Last = ema14.at(-1);
-  const ema21Last = ema21.at(-1);
-  const ema14Prev = ema14.at(-2);
-  const ema21Prev = ema21.at(-2);
+const ema14Last = ema14.at(-1);
+const ema21Last = ema21.at(-1);
+const ema14Prev = ema14.at(-2);
+const ema21Prev = ema21.at(-2);
+  
 
   let emaShortBias = "neutral";
-  let emaShortCross = "none";
+let emaShortCross = "none";
 
-  if (ema14Last > ema21Last) emaShortBias = "bullish";
-  else if (ema14Last < ema21Last) emaShortBias = "bearish";
+if (ema14Last > ema21Last) emaShortBias = "bullish";
+else if (ema14Last < ema21Last) emaShortBias = "bearish";
 
-  if (ema14Prev <= ema21Prev && ema14Last > ema21Last)
-    emaShortCross = "bullish-cross";
+if (ema14Prev <= ema21Prev && ema14Last > ema21Last)
+  emaShortCross = "bullish-cross";
 
-  if (ema14Prev >= ema21Prev && ema14Last < ema21Last)
-    emaShortCross = "bearish-cross";
+if (ema14Prev >= ema21Prev && ema14Last < ema21Last)
+  emaShortCross = "bearish-cross";
 
-  /* ================= MAIN TREND ================= */
-  const mainTrend = getMainTrendOnly(
-    ema70,
-    ema200,
-    c,
-    k.map(x => +x[1]),
-    h,
-    l
-  );
+const mainTrend = getMainTrendOnly(
+  ema70,
+  ema200,
+  c,
+  k.map(x=>+x[1]), // opens
+  h,
+  l
+);
 
-  /* ================= MARKET DOM SIDE ================= */
-  const marketDomSide =
-    marketDom?.bias === "Bull Dominant"
-      ? "bull"
-      : marketDom?.bias === "Bear Dominant"
-      ? "bear"
-      : "neutral";
 
-  /* ================= VOLUME AI ================= */
-  const volAI = detect24hVolumeLocationAI(
-    mappedK,
-    mainTrend || "neutral",
-    marketDomSide
-  );
+  // 🧠 Market dominance side (logic-safe)
+const marketDomSide =
+  GLOBAL_MARKET_DOM?.bias === "Bull Dominant"
+    ? "bull"
+    : GLOBAL_MARKET_DOM?.bias === "Bear Dominant"
+    ? "bear"
+    : "neutral";
 
-  /* ================= MOMENTUM SHIFT (NEW) ================= */
-  const momentumShift = detect24hRSIMomentumShift({
-    closes15m: c,
-    rsi15m: rsi15Arr,
-    ema14: ema14Last,
-    ema21: ema21Last,
-    mainTrend
-  });
+// 🧠 24h Volume Location AI (trend + dominance aware)
+const volAI = detect24hVolumeLocationAI(
+  mappedK,
+  mainTrend || "neutral",
+  marketDomSide
+);
 
-  /* ================= UNIFIED INTRADAY SIGNAL ================= */
-  const intradayRSIDiv =
-    momentumShift ||
-    volAI?.intradayRSIDiv ||
-    null;
 
-  /* ================= BREAKOUT ================= */
-  const lastVol = v.at(-1);
-  const lastBull = k.at(-1)[4] > k.at(-1)[1];
+const lastVol = v.at(-1);
+const lastBull = k.at(-1)[4] > k.at(-1)[1];
 
-  const volumeBreakout = lastVol > domV;
-  const volumeBreakoutType = volumeBreakout
-    ? lastBull ? "Bull Volume Breakout" : "Bear Volume Breakout"
+const volumeBreakout = lastVol > domV;
+const volumeBreakoutType =
+  volumeBreakout
+    ? (lastBull ? "Bull Volume Breakout" : "Bear Volume Breakout")
     : "No Volume Breakout";
 
-  const breakoutAge =
-    volumeBreakout &&
-    (Date.now() - k.at(-1)[6] < 45 * 60 * 1000);
+  // ⏱ breakout validity window (45 minutes = 3 x 15m candles)
+const breakoutAge =
+  volumeBreakout &&
+  (Date.now() - k.at(-1)[6] < 45 * 60 * 1000);
 
-  /* ================= STRUCTURE ================= */
-  const swings = findSwings(h, l, c, v);
-  const sw = { S: swings.supports || [], R: swings.resistances || [] };
+  // direction conflict with main trend
+const directionConflict =
+  (mainTrend === "bullish" && lastBull === false) ||
+  (mainTrend === "bearish" && lastBull === true);
 
-  const sb = sw.S.some(x => price < x);
-  const rb = sw.R.some(x => price > x);
+// follow-through failure (current breakout candle closes against direction)
+const followThroughFail =
+  volumeBreakout &&
+  (
+    (lastBull && k.at(-1)[4] < k.at(-1)[1]) ||  // bull breakout but red close
+    (!lastBull && k.at(-1)[4] > k.at(-1)[1])   // bear breakout but green close
+  );
 
-  let bias = "Neutral";
-  let prob = 50;
-  let structure = "none";
-  let timingRisk = "NORMAL";
+// climactic / distribution behavior
+const climax =
+  volAI &&
+  (
+    volAI.meaning.includes("climax") ||
+    volAI.meaning.includes("Distribution")
+  );
 
-  /* ================= BULLISH ================= */
-  if (mainTrend === "bullish") {
-    if (rb) {
-      if (!rsi50State?.consistentlyBelow50 && rsi15Rising) {
-        bias = "Bullish Continuation";
-        prob = 90;
-        structure = "resistance broken (accepted)";
-      } else {
-        bias = "Bull Trap Risk";
-        prob = 55;
-        structure = "resistance broken (unaccepted)";
-      }
-    } else if (sw.S.length && !sb) {
-      if (!rsi50State?.consistentlyBelow50) {
-        bias = "Bullish Defense";
-        prob = 75;
-        structure = "support holding (confirmed)";
-      } else {
-        bias = "Bull Trap Risk";
-        prob = 45;
-        structure = "support weak (RSI pressure)";
-      }
+// FINAL fake volume breakout flag
+const fakeVolumeBreak =
+  volumeBreakout &&
+  (directionConflict || climax) &&
+  followThroughFail;
+
+    // ✅ Post-24h Volume Break RSI confirmation
+const postVolBreakRSIConfirm =
+  volumeBreakout &&          // 24h volume break happened
+  rsi15 !== null &&
+  rsi15 < 50 &&              // RSI reset
+  rsi15Rising;            // RSI turning up 
+  
+  
+  const bull = domVBull;
+
+  const swings = findSwings(h,l,c,v);
+const sw = {
+  S: swings.supports || [],
+  R: swings.resistances || []
+};
+  const sb=sw.S.some(x=>price<x);
+  const rb=sw.R.some(x=>price>x);
+
+  const rsi15Momentum = getRSI15Momentum(rsi15Arr);
+
+  
+   const bullishBreakAccepted =
+  rb &&
+  rsi15 !== null &&
+  !rsi50State?.consistentlyBelow50 &&
+  rsi15Rising;
+
+const bearishBreakAccepted =
+  sb &&
+  rsi15 !== null &&
+  !rsi50State?.consistentlyAbove50 &&
+  !rsi15Rising;
+
+let bias = "Neutral";
+let prob = 50;
+let structure = "none";
+
+/* ================= BULLISH ENVIRONMENT ================= */
+if (mainTrend === "bullish") {
+
+  if (rb) {
+    if (bullishBreakAccepted) {
+      bias = "Bullish Continuation";
+      prob = 90;
+      structure = "resistance broken (accepted)";
+    } else {
+      bias = "Bull Trap Risk";
+      prob = 55;
+      structure = "resistance broken (unaccepted)";
     }
   }
 
-  /* ================= BEARISH ================= */
-  if (mainTrend === "bearish") {
-    if (sb) {
-      if (!rsi50State?.consistentlyAbove50 && !rsi15Rising) {
-        bias = "Bearish Continuation";
-        prob = 90;
-        structure = "support broken (accepted)";
-      } else {
-        bias = "Bear Trap Risk";
-        prob = 55;
-        structure = "support broken (unaccepted)";
-      }
-    } else if (sw.R.length && !rb) {
-      if (!rsi50State?.consistentlyAbove50) {
-        bias = "Bearish Defense";
-        prob = 75;
-        structure = "resistance failed (confirmed)";
-      } else {
-        bias = "Bear Trap Risk";
-        prob = 45;
-        structure = "resistance weak (RSI pressure)";
-      }
+  else if (sw.S.length && !sb) {
+    if (!rsi50State?.consistentlyBelow50) {
+      bias = "Bullish Defense";
+      prob = 75;
+      structure = "support holding (confirmed)";
+    } else {
+      bias = "Bull Trap Risk";
+      prob = 45;
+      structure = "support weak (RSI pressure)";
+    }
+  }
+  }
+
+/* ================= BEARISH ENVIRONMENT ================= */
+else if (mainTrend === "bearish") {
+
+  if (sb) {
+    if (bearishBreakAccepted) {
+      bias = "Bearish Continuation";
+      prob = 90;
+      structure = "support broken (accepted)";
+    } else {
+      bias = "Bear Trap Risk";
+      prob = 55;
+      structure = "support broken (unaccepted)";
     }
   }
 
-  /* ================= DEFENSE FAILURE ================= */
-  let defenseFailure = detectDefenseFailure({
-    structure,
-    bias,
-    mainTrend,
-    rsi50State,
-    marketDom,
-    volAI,
-    volumeAlign: "neutral",
-    change,
-    intradayRSIDiv
-  });
+  else if (sw.R.length && !rb) {
+    if (!rsi50State?.consistentlyAbove50) {
+      bias = "Bearish Defense";
+      prob = 75;
+      structure = "resistance failed (confirmed)";
+    } else {
+      bias = "Bear Trap Risk";
+      prob = 45;
+      structure = "resistance weak (RSI pressure)";
+    }
+  }
+}
 
+/* ================= NO STRUCTURE ================= */
+else {
+  bias = "Neutral";
+  prob = 40;
+  structure = "none";
+}
+
+  const volumeStructure = {
+  name: "none",
+  label: "No Active Volume Structure"
+};
+
+      
+/* ================= VOLUME STRUCTURE (NON-BINDING | OLD NAMING) ================= */
+
+if (bull) {
+  // 🟢 BUYERS dominant (green pressure failed / absorbed)
+
+  // Price pushed above resistance on buy volume
+  if (rb) {
+    if (bullishBreakAccepted) {
+      volumeStructure.name  = "resistance broken (accepted)";
+      volumeStructure.label = "🟢 Buy-Side Acceptance (Resistance Broken)";
+    } else {
+      volumeStructure.name  = "resistance weak (RSI pressure)";
+      volumeStructure.label = "🟡 Buy-Side Rejection Risk (Resistance Weak)";
+    }
+  }
+
+  // Buyers defending support
+  else if (sw.S.length) {
+    if (!rsi50State?.consistentlyBelow50) {
+      volumeStructure.name  = "support holding (confirmed)";
+      volumeStructure.label = "🟢 Buy-Side Defense (Support Holding)";
+    } else {
+      volumeStructure.name  = "support weak (RSI pressure)";
+      volumeStructure.label = "🟡 Buy-Side Weakening (Support Weak)";
+    }
+  }
+
+} else {
+  // 🔴 SELLERS dominant (red pressure failed / absorbed)
+
+  // Price pushed below support on sell volume
+  if (sb) {
+    if (bearishBreakAccepted) {
+      volumeStructure.name  = "support broken (accepted)";
+      volumeStructure.label = "🔴 Sell-Side Acceptance (Support Broken)";
+    } else {
+      volumeStructure.name  = "support weak (RSI pressure)";
+      volumeStructure.label = "🟡 Sell-Side Rejection Risk (Support Weak)";
+    }
+  }
+
+  // Sellers defending resistance  ⭐ THIS IS YOUR KEY CASE
+  else if (sw.R.length) {
+    if (!rsi50State?.consistentlyAbove50) {
+      volumeStructure.name  = "resistance failed (confirmed)";
+      volumeStructure.label = "🔴 Sell-Side Defense (Resistance Holding)";
+    } else {
+      volumeStructure.name  = "resistance weak (RSI pressure)";
+      volumeStructure.label = "🟡 Sell-Side Weakening (Resistance Weak)";
+    }
+  }
+}
+
+  /* ================= VOLUME CONFIRMATION ================= */
+let volumeAlign = "neutral";
+
+if (
+  volumeStructure.name === "support holding (confirmed)" &&
+  bias === "Bullish Defense"
+) {
+  volumeAlign = "confirmed";
+}
+
+if (
+  volumeStructure.name === "resistance failed (confirmed)" &&
+  bias === "Bearish Defense"
+) {
+  volumeAlign = "confirmed";
+}
+
+if (
+  volumeStructure.name.includes("accepted") &&
+  bias.includes("Continuation")
+) {
+  volumeAlign = "confirmed";
+}
+
+if (
+  volumeStructure.name.includes("weak") &&
+  bias.includes("Continuation")
+) {
+  volumeAlign = "conflict";
+}
+
+  
+/* ================= PROBABILITY MODIFIER ================= */
+if (volumeAlign === "confirmed") {
+  prob += 5;
+}
+
+if (volumeAlign === "conflict") {
+  prob -= 10;
+}
+
+prob = Math.max(40, Math.min(prob, 95));
+
+  const volumeContext = {
+  dominantSide: bull ? "BUY" : "SELL",
+
+  initiative:
+    volumeBreakout
+      ? (bull ? "BUY" : "SELL")
+      : "NONE",
+
+  isAbsorption:
+    volumeAlign === "confirmed" &&
+    !volumeBreakout,
+
+  isClimax:
+    volAI?.meaning?.includes("climax")
+      ? (bull ? "BUY_CLIMAX" : "SELL_CLIMAX")
+      : "NONE"
+};
+  
+
+  /* ================= MARKET DOMINANCE PROBABILITY MODIFIER ================= */
+if (marketDom && bias.includes("Continuation")) {
+
+  // aligned participation → smoother follow-through
   if (
-    defenseFailure === "NONE" &&
-    bias.includes("Defense") &&
-    intradayRSIDiv
+    (bias.includes("Bullish") && marketDom.net > 15) ||
+    (bias.includes("Bearish") && marketDom.net < -15)
   ) {
-    defenseFailure = "EARLY WARNING";
-    prob -= 6;
+    prob += 3;
   }
 
-  /* ================= FINAL CLAMP ================= */
-  prob = Math.max(40, Math.min(prob, 95));
+  // dead / choppy market
+  if (Math.abs(marketDom.net) < 5) {
+    prob -= 5;
+  }
 
-  /* ================= RETURN (UNCHANGED CONTRACT) ================= */
-  return {
-    sym,
-    price,
+  // continuation against participation → hidden risk
+  if (
+    (bias.includes("Bullish") && marketDom.net < -15) ||
+    (bias.includes("Bearish") && marketDom.net > 15)
+  ) {
+    prob -= 7;
+  }
+}
+
+  /* ================= 24H CHANGE RISK MODIFIER ================= */
+if (
+  (changeState === "HIGH" || changeState === "VERY_HIGH") &&
+  prob >= 70
+) {
+  prob -= 5;
+}
+
+if (changeState === "EXTREME") {
+  prob -= 8;
+}
+
+prob = Math.max(40, Math.min(prob, 95));
+
+  /* ================= RECOVERY / DROP QUALITY MODIFIER ================= */
+
+// Weak recovery against bearish trend → suspicious bounce
+if (
+  moveType === "RECOVERY" &&
+  moveStrength === "WEAK" &&
+  mainTrend === "bearish"
+) {
+  prob -= 5; // distrust fake recovery
+}
+
+// Weak drop against bullish trend → likely pullback
+if (
+  moveType === "DROP" &&
+  moveStrength === "WEAK" &&
+  mainTrend === "bullish"
+) {
+  prob -= 3; // mild distrust, not breakdown
+}
+
+prob = Math.max(40, Math.min(prob, 95));
+
+  const defenseFailure = detectDefenseFailure({
+  structure,
+  bias,
+  mainTrend,
+  rsi50State,
+  marketDom,
+  volAI,
+  volumeAlign,
     change,
-    bull: domVBull,
-    prob,
-    bias,
-    structure,
-    structureType: structure.split(" (")[0],
-    volumeStructure: volAI,
-    structureQuality: "normal",
-    volumeAlign: "neutral",
+    intradayRSIDiv: volAI?.intradayRSIDiv
+});
+
+// clamp
+prob = Math.max(40, Math.min(prob, 95));
+
+// ================= DEFENSE FAILURE PROBABILITY MODIFIER =================
+if (defenseFailure === "EARLY WARNING") {
+  prob -= 6;
+}
+
+if (defenseFailure === "CRITICAL FAILURE") {
+  prob -= 15;
+}
+
+prob = Math.max(40, Math.min(prob, 95));
+
+  
+ 
+
+/* ================= STRUCTURE QUALITY ================= */
+let structureQuality = "normal";
+
+if (volumeStructure.name.includes("accepted"))
+  structureQuality = "accepted";
+else if (volumeStructure.name.includes("confirmed"))
+  structureQuality = "confirmed";
+else if (volumeStructure.name.includes("weak"))
+  structureQuality = "weak";
+  
+
+/* ================= STRUCTURE HOLDING ================= */
+const structureHolding =
+  (mainTrend === "bullish" &&
+    !structure.startsWith("support broken") &&
+    !structure.startsWith("resistance failed")) ||
+  (mainTrend === "bearish" &&
+    !structure.startsWith("resistance broken") &&
+    !structure.startsWith("support holding"));
+
+/* ================= STRUCTURE TYPE ================= */
+const structureType =
+  structure.startsWith("support holding")   ? "support holding" :
+  structure.startsWith("support broken")    ? "support broken" :
+  structure.startsWith("support weak")      ? "support weak" :
+  structure.startsWith("resistance failed") ? "resistance failed" :
+  structure.startsWith("resistance broken") ? "resistance broken" :
+  structure.startsWith("resistance weak")   ? "resistance weak" :
+  "none";
+
+const postVolBreakRSIConfirmSafe =
+  postVolBreakRSIConfirm && structureHolding;
+
+    const dailyRSI = await getDailyRSIContext(sym);
+
+  const fundingRate = await getFundingRate(sym);
+
+  
+  const aiVerdict = getAIFinalVerdict({
+  sym,
+  price,
+  prob,
+  bias,
+  structure,
+  structureType,
+  volumeStructure,
+  structureQuality,
+  volumeAlign,
+  mainTrend,
+  emaShortBias,
+  emaShortCross,
+  rsi15,
+  rsi15Momentum,
+  volumeBreakout,
+  fakeVolumeBreak,
+  dailyRSI,
+  fundingRate,
     defenseFailure,
-    S: sw.S,
-    R: sw.R,
-    dailyRSI: await getDailyRSIContext(sym),
-    rsi15,
-    rsi15Momentum,
-    volumeBreakout,
-    breakoutAge,
-    volumeBreakoutType,
-    fakeVolumeBreak: false,
-    postVolBreakRSIConfirm: false,
-    domV,
-    lastVol,
-    mainTrend,
-    volAI,
-    intradayRSIDiv,
-    fundingRate: await getFundingRate(sym),
-    ema14: ema14Last,
-    ema21: ema21Last,
-    emaShortBias,
-    emaShortCross,
-    aiVerdict: getAIFinalVerdict({ bias, prob }),
-    marketDom: GLOBAL_MARKET_DOM,
-    changeState,
+  changeState,
     moveType,
-    moveStrength,
-    directionalBias: bias,
-    setupScore: calculateSetupScore({ bias, prob }),
-    htf,
-    volumeContext: {},
-    probability: prob,
-    momentumShift,
-    timingRisk: timingRisk || "NORMAL"
-  };
-    }
+moveStrength,
+  htfTrend: htf.htfTrend,
+  htfRSIState: htf.htfRSIState,
+  htfStructure: htf.htfStructure,
+    volumeContext
+});
+
+  /* 🧭 INTRADAY RSI DIVERGENCE — CONTINUATION SOFT DOWNGRADE */
+if (
+  bias.includes("Continuation") &&
+  volAI?.intradayRSIDiv
+) {
+  prob -= 2;
+}
+
+prob = Math.max(40, Math.min(prob, 95));
+
+
+if (
+  bias.includes("Continuation") &&
+  volAI?.intradayRSIDiv
+) {
+  prob -= 2;
+}
+
+prob = applyHTFProbabilityAdjustment({
+  probability: prob,
+  aiVerdict,
+  tradeSide: aiVerdict.tradeSide,
+  htfTrend: htf.htfTrend,
+  htfRSIState: htf.htfRSIState,
+  htfStructure: htf.htfStructure
+});
+
+  const setupScore = calculateSetupScore({
+  structure,
+  volumeAlign,
+  dailyRSI,
+  rsi15,
+  bias,
+  marketDom: GLOBAL_MARKET_DOM,
+  changeState,
+  defenseFailure,
+  volAI
+});
+
+  const directionalBias = getDirectionalBias({
+  structure,
+  mainTrend,
+  emaShortBias,
+  bull,
+  volAI,
+  marketDom,
+  moveType,
+  moveStrength,
+  aiVerdict
+});
+
+  
+
+  return {sym,price,change,bull,prob,bias,structure,structureType,volumeStructure,structureQuality,volumeAlign,defenseFailure,S:sw.S,R:sw.R,dailyRSI,rsi15,rsi15Momentum,volumeBreakout,
+  breakoutAge,volumeBreakoutType,fakeVolumeBreak,postVolBreakRSIConfirm: postVolBreakRSIConfirmSafe,
+  domV,
+  lastVol,mainTrend,volAI,intradayRSIDiv: volAI?.intradayRSIDiv || null,fundingRate,ema14: ema14Last,
+  ema21: ema21Last,
+  emaShortBias,
+  emaShortCross,aiVerdict,marketDom: GLOBAL_MARKET_DOM,changeState,moveType,
+moveStrength,directionalBias,setupScore,htf,volumeContext,probability: prob};
+}
 
 /* ================= FILTERS ================= */
 function applyFilters(){
