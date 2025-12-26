@@ -245,6 +245,10 @@ button.secondary{
   transform: scale(0.98);
   transition: all .15s ease;
   }
+
+  .behavior-SMOOTH { color: #22c55e; }
+.behavior-CONSOLIDATION { color: #facc15; }
+.behavior-CHOPPY { color: #fb7185; }
 </style>
 </head>
 
@@ -1185,12 +1189,11 @@ function getTradeSide(d){
 
   // Smoothness (only downgrade LATE)
   if (
-    zone === "LATE ZONE" &&
-    d.marketDom &&
-    !isSmoothDirection(d)
-  ) {
-    zone = "PULLBACK ZONE";
-  }
+  zone === "LATE ZONE" &&
+  getSymbolBehavior(d) !== "SMOOTH"
+) {
+  return "PULLBACK ZONE";
+}
 
   // Defense failure
   if (
@@ -1360,14 +1363,45 @@ function getTrendStructureBias(structureType){
   };
   }
 
-  function isSmoothDirection(d){
-  if (!d.marketDom) return false;
-
-  return (
-    (d.mainTrend === "bullish" && d.marketDom.net > 0) ||
-    (d.mainTrend === "bearish" && d.marketDom.net < 0)
-  );
+  function getSymbolBehavior(d){
+  if (!d.marketDom || !d.mainTrend || d.domVBull === undefined) {
+    return "CHOPPY";
   }
+
+  // 1️⃣ Trend direction
+  const trendSide = d.mainTrend; // "bullish" | "bearish"
+
+  // 2️⃣ Market dominance direction
+  const marketSide =
+    d.marketDom.net > 0 ? "bullish" :
+    d.marketDom.net < 0 ? "bearish" :
+    "neutral";
+
+  // 3️⃣ 24h dominant volume direction (from your code)
+  const volumeSide = d.domVBull ? "bullish" : "bearish";
+
+  // ✅ SMOOTH — trend, market, and volume aligned
+  if (
+    trendSide === marketSide &&
+    trendSide === volumeSide &&
+    marketSide !== "neutral"
+  ) {
+    return "SMOOTH";
+  }
+
+  // ⚖️ CONSOLIDATION / STALLING
+  // Volume is dominant but market is resisting
+  if (
+    marketSide !== "neutral" &&
+    volumeSide !== marketSide
+  ) {
+    return "CONSOLIDATION";
+  }
+
+  // 🌀 Everything else
+  return "CHOPPY";
+}
+  
 
   function calculateRR(d, tradeSide) {
   if (!d.S?.length || !d.R?.length) return null;
@@ -2977,6 +3011,8 @@ const id = `card-${scope}-${d.sym}`;
   label: "No Active Volume Structure"
 };
 
+                      const behavior = getSymbolBehavior(d);
+
   
   card.dataset.bias = d.bias;
 card.dataset.vol  = d.bull ? "bull" : "bear";
@@ -3218,7 +3254,7 @@ ${d.structure === "none" && d.volumeStructure?.name !== "none" ? `
   }</b>
   <br>
   🌊 Symbol Behavior:
-  <b>${isSmoothDirection(d) ? "SMOOTH" : "CHOPPY"}</b>
+  <b class="behavior-${behavior}">${behavior}</b>
 </div>
 
 ${d.defenseFailure !== "NONE" ? `
