@@ -1814,9 +1814,8 @@ function detect24hVolumeLocationAI(
 const closes15m = last24h.map(c => c.close);
 const rsi15m = calculateRSI(closes15m);
 
-const intradayRSIDiv =
-  detect24hRSIMomentumShift(closes15m, rsi15m);
-
+  const intradayRSIDiv =
+  detect24hRSIMomentumShift(closes15m, rsi15m, mainTrend);
 
   let dayHigh = -Infinity;
   let dayLow  = Infinity;
@@ -2388,10 +2387,6 @@ const moveStrength = get24hMoveStrength(change);
 
     // 📊 15m RSI(14)
 const rsi15Arr = calculateRSI(c, 14);
-
-// reuse
-const intradayRSIDiv =
-  detect24hRSIMomentumShift(c, rsi15Arr, mainTrend);
   
 const rsi15 = rsi15Arr.length
   ? +rsi15Arr.at(-1).toFixed(2)
@@ -2454,16 +2449,6 @@ const mainTrend = getMainTrendOnly(
   h,
   l
 );
-
-  let intradayRSIDiv = null;
-
-if (
-  structure !== "none" &&
-  (bias.includes("Defense") || bias.includes("Continuation"))
-) {
-  intradayRSIDiv =
-    detect24hRSIMomentumShift(c, rsi15Arr, mainTrend);
-}
   
 
   // 🧠 Market dominance side (logic-safe)
@@ -2622,6 +2607,23 @@ else {
   prob = 40;
   structure = "none";
 }
+
+    /* ================= INTRADAY RSI MOMENTUM (GUARDED) ================= */
+let intradayRSIDiv = null;
+
+if (
+  typeof structure === "string" &&
+  typeof bias === "string" &&
+  structure !== "none" &&
+  (bias.includes("Defense") || bias.includes("Continuation"))
+) {
+  intradayRSIDiv = detect24hRSIMomentumShift(
+    c,
+    rsi15Arr,
+    mainTrend
+  );
+  }
+  
 
   const volumeStructure = {
   name: "none",
@@ -3113,21 +3115,6 @@ const id = `card-${scope}-${d.sym}`;
     const executionZone = aiVerdict.executionZone;
 
 
-  function getExecutionClass(zone, side){
-  if (zone === "ENTRY ZONE") {
-    return side === "LONG"
-      ? "exec-entry-long"
-      : side === "SHORT"
-      ? "exec-entry-short"
-      : "exec-no-trade";
-  }
-
-  if (zone === "PULLBACK ZONE") return "exec-pullback";
-  if (zone === "LATE ZONE")     return "exec-late";
-  if (zone === "NO TRADE ZONE") return "exec-no-trade";
-
-  return "exec-no-trade";
-}
 
   const execClass = getExecutionClass(
   executionZone,
