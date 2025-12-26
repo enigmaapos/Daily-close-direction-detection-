@@ -1547,6 +1547,11 @@ function findSwings(h, l, c, v){
 
 
   function detect24hRSIMomentumShift(closes15m, rsi15m, mainTrend) {
+    if (
+  mainTrend !== "bullish" &&
+  mainTrend !== "bearish"
+) return null;
+    
   if (!rsi15m || rsi15m.length < 96) return null;
 
   const recentRSI = rsi15m.slice(-96).filter(v => v !== null);
@@ -2383,6 +2388,11 @@ const moveStrength = get24hMoveStrength(change);
 
     // 📊 15m RSI(14)
 const rsi15Arr = calculateRSI(c, 14);
+
+// reuse
+const intradayRSIDiv =
+  detect24hRSIMomentumShift(c, rsi15Arr, mainTrend);
+  
 const rsi15 = rsi15Arr.length
   ? +rsi15Arr.at(-1).toFixed(2)
   : null;
@@ -2444,6 +2454,16 @@ const mainTrend = getMainTrendOnly(
   h,
   l
 );
+
+  let intradayRSIDiv = null;
+
+if (
+  structure !== "none" &&
+  (bias.includes("Defense") || bias.includes("Continuation"))
+) {
+  intradayRSIDiv =
+    detect24hRSIMomentumShift(c, rsi15Arr, mainTrend);
+}
   
 
   // 🧠 Market dominance side (logic-safe)
