@@ -3045,6 +3045,13 @@ if (d.volumeBreakout) {
   }
 }
 
+
+      const marketDomIcon =
+  d.marketDom?.bias === "Bull Dominant"
+    ? "🟢"
+    : d.marketDom?.bias === "Bear Dominant"
+    ? "🔴"
+    : "🟡";
     
 
   const structureBias = getTrendStructureBias(d.structureType);
@@ -3235,10 +3242,18 @@ ${d.defenseFailure !== "NONE" ? `
   </div>
 ` : ""}
 
-    <div class="muted neutral">
-  🌍 Market Dominance:
+    <div class="muted ${marketDomClass}">
+  ${marketDomIcon} Market Dominance:
   <b>${d.marketDom?.bias || "—"}</b>
-(Net ${d.marketDom?.net ?? "—"}%)
+  (Net ${d.marketDom?.net ?? "—"}%)
+</div>
+
+<div class="muted ${d.bull ? "bull" : "bear"}">
+    Dominant Volume: <b>${d.bull ? "BUYERS" : "SELLERS"}</b>
+  </div>
+
+  <div class="muted neutral" title="Context only. Describes the likely market phase, not a trade signal.">
+  ⚠ Market Phase: <b>${d.volAI.futureOutcome}</b>
 </div>
 
     <div class="muted neutral">
@@ -3256,13 +3271,6 @@ ${d.defenseFailure !== "NONE" ? `
 }
 </div>
 
- <div class="muted neutral" title="Context only. Describes the likely market phase, not a trade signal.">
-  ⚠ Market Phase: <b>${d.volAI.futureOutcome}</b>
-</div>
-
-<div class="muted ${d.bull ? "bull" : "bear"}">
-    Dominant Volume: <b>${d.bull ? "BUYERS" : "SELLERS"}</b>
-  </div>
 
   ${d.volAI ? `
     <div class="muted ${
