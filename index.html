@@ -844,6 +844,7 @@ const AI_VERDICT_TIERS = {
 
 
    /* ================= AI VERDICT LOGIC ================= */
+/* ================= AI VERDICT LOGIC (UPDATED) ================= */
 function getAIFinalVerdict(d) {
   const structure = d.structure || "none";
   const trend = d.mainTrend || "neutral";
@@ -857,6 +858,9 @@ function getAIFinalVerdict(d) {
   const fakeVol = d.fakeVolumeBreak === true;
   const rsiLabel = d.dailyRSI?.label || "Neutral";
 
+  const marketPhase = d.marketPhase || "NEUTRAL";
+  const behavior = getSymbolBehavior(d);
+
   const bullishBreak =
     structure.includes("resistance broken") && trend === "bullish";
   const bearishBreak =
@@ -866,7 +870,7 @@ function getAIFinalVerdict(d) {
   let verdict = AI_VERDICTS.AVOID;
   let reason = "Conditions are mixed and lack a statistical edge.";
 
-  /* ================= TRAP / FAKE BREAK ================= */
+  /* ================= HARD TRAP / FAKE BREAK ================= */
   if (d.bias?.includes("Trap") || fakeVol) {
     return withTier(
       AI_VERDICTS.TRAP_RISK,
@@ -875,11 +879,8 @@ function getAIFinalVerdict(d) {
     );
   }
 
-  /* ================= DEFENSE REGIME (WITH FAILURE STATE) ================= */
-  if (
-    d.bias === "Bullish Defense" ||
-    d.bias === "Bearish Defense"
-  ) {
+  /* ================= DEFENSE REGIME (PRIORITY) ================= */
+  if (d.bias === "Bullish Defense" || d.bias === "Bearish Defense") {
     if (d.defenseFailure === "CRITICAL FAILURE") {
       return withTier(
         AI_VERDICTS.TRAP_RISK,
@@ -903,7 +904,7 @@ function getAIFinalVerdict(d) {
     );
   }
 
-  /* ================= BREAKOUT / CONTINUATION ================= */
+  /* ================= PRIMARY STRUCTURE LOGIC ================= */
   if (
     (bullishBreak || bearishBreak) &&
     hasVolumeBreak &&
@@ -920,7 +921,12 @@ function getAIFinalVerdict(d) {
     verdict = AI_VERDICTS.CONTROLLED_CONTINUATION;
     reason = "Structure aligns with trend, but participation remains selective.";
   }
-  else if (anyBreak && rsiLabel.includes("MAX")) {
+  else if (
+    anyBreak &&
+    rsiLabel.includes("MAX") &&
+    marketPhase !== "BULLISH PULLBACK" &&
+    marketPhase !== "BEARISH PULLBACK"
+  ) {
     verdict = AI_VERDICTS.WAIT_FOR_PULLBACK;
     reason = "Momentum is stretched after a structure break.";
   }
@@ -939,6 +945,25 @@ function getAIFinalVerdict(d) {
     reason = "No confirmed structure or probability edge present.";
   }
 
+  /* ================= MARKET PHASE OVERRIDE ================= */
+  if (
+    verdict === AI_VERDICTS.WAIT_FOR_PULLBACK &&
+    marketPhase === "BULLISH PULLBACK" &&
+    trend === "bullish"
+  ) {
+    verdict = AI_VERDICTS.CONTROLLED_CONTINUATION;
+    reason = "Bullish trend intact; pullback phase detected after expansion.";
+  }
+
+  if (
+    verdict === AI_VERDICTS.WAIT_FOR_PULLBACK &&
+    marketPhase === "BEARISH PULLBACK" &&
+    trend === "bearish"
+  ) {
+    verdict = AI_VERDICTS.CONTROLLED_CONTINUATION;
+    reason = "Bearish trend intact; pullback phase detected after expansion.";
+  }
+
   /* ================= FUNDING RISK ================= */
   if (verdict === AI_VERDICTS.STRONG_CONTINUATION && extreme) {
     verdict = AI_VERDICTS.CONTROLLED_CONTINUATION;
@@ -954,30 +979,28 @@ function getAIFinalVerdict(d) {
     reason += " Elevated funding increases entry risk.";
   }
 
-  /* ================= 24H EXPANSION VERDICT SOFT DOWNGRADE ================= */
-    if (
-  (d.changeState === "VERY_HIGH" || d.changeState === "EXTREME") &&
-  verdict === AI_VERDICTS.STRONG_CONTINUATION
-) {
-  verdict = AI_VERDICTS.CONTROLLED_CONTINUATION;
-  reason += " Recent 24h expansion suggests late participation risk.";
-}
-
-if (
-  d.changeState === "EXTREME" &&
-  verdict === AI_VERDICTS.CONTROLLED_CONTINUATION
-) {
-  verdict = AI_VERDICTS.WAIT_FOR_PULLBACK;
-  reason += " Extreme 24h extension increases pullback probability.";
-}
-
-  /* ================= MARKET DOMINANCE DOWNGRADE ================= */
+  /* ================= 24H EXPANSION CONTROL ================= */
   if (
-    d.marketDom &&
-    verdict === AI_VERDICTS.CONTROLLED_CONTINUATION
+    (d.changeState === "VERY_HIGH" || d.changeState === "EXTREME") &&
+    verdict === AI_VERDICTS.STRONG_CONTINUATION
   ) {
-    const net = d.marketDom.net;
+    verdict = AI_VERDICTS.CONTROLLED_CONTINUATION;
+    reason += " Recent expansion suggests late participation risk.";
+  }
 
+  if (
+    d.changeState === "EXTREME" &&
+    verdict === AI_VERDICTS.CONTROLLED_CONTINUATION &&
+    marketPhase !== "BULLISH PULLBACK" &&
+    marketPhase !== "BEARISH PULLBACK"
+  ) {
+    verdict = AI_VERDICTS.WAIT_FOR_PULLBACK;
+    reason += " Extreme extension increases pullback probability.";
+  }
+
+  /* ================= MARKET DOMINANCE ================= */
+  if (d.marketDom && verdict === AI_VERDICTS.CONTROLLED_CONTINUATION) {
+    const net = d.marketDom.net;
     if (
       ((d.bias || "").includes("Bullish") && net < -15) ||
       ((d.bias || "").includes("Bearish") && net > 15)
@@ -987,18 +1010,21 @@ if (
     }
   }
 
-  /* ================= MARKET SMOOTHNESS ================= */
+  /* ================= SMOOTHNESS ================= */
   if (
-    d.marketDom &&
     verdict === AI_VERDICTS.STRONG_CONTINUATION &&
-    !isSmoothDirection(d)
+    behavior !== "SMOOTH"
   ) {
     verdict = AI_VERDICTS.CONTROLLED_CONTINUATION;
-    reason += " Symbol shows execution friction despite market participation.";
+    reason += " Execution friction detected.";
   }
 
-  /* ================= DEFENSE FAILURE (NON-DEFENSE REGIMES) ================= */
-  if (d.defenseFailure === "EARLY WARNING") {
+  /* ================= DEFENSE FAILURE (NON-PULLBACK) ================= */
+  if (
+    d.defenseFailure === "EARLY WARNING" &&
+    marketPhase !== "BULLISH PULLBACK" &&
+    marketPhase !== "BEARISH PULLBACK"
+  ) {
     if (verdict === AI_VERDICTS.STRONG_CONTINUATION) {
       verdict = AI_VERDICTS.CONTROLLED_CONTINUATION;
       reason += " · Defense weakening detected";
@@ -1014,32 +1040,30 @@ if (
     reason = "Defense failure detected · Structure reliability compromised";
   }
 
-  /* ================= FAKE RECOVERY/DROP AWARENESS ================= */
-// Weak recovery against bearish trend = suspicious
-if (
-  d.moveType === "RECOVERY" &&
-  d.moveStrength === "WEAK" &&
-  d.mainTrend === "bearish" &&
-  verdict === AI_VERDICTS.CONTROLLED_CONTINUATION
-) {
-  verdict = AI_VERDICTS.WAIT_FOR_PULLBACK;
-  reason += " Weak recovery lacks structural acceptance.";
-}
+  /* ================= FAKE MOVE FILTER ================= */
+  if (
+    d.moveType === "RECOVERY" &&
+    d.moveStrength === "WEAK" &&
+    trend === "bearish" &&
+    verdict === AI_VERDICTS.CONTROLLED_CONTINUATION
+  ) {
+    verdict = AI_VERDICTS.WAIT_FOR_PULLBACK;
+    reason += " Weak recovery lacks structural acceptance.";
+  }
 
-// Weak drop against bullish trend = likely pullback
-if (
-  d.moveType === "DROP" &&
-  d.moveStrength === "WEAK" &&
-  d.mainTrend === "bullish" &&
-  verdict === AI_VERDICTS.CONTROLLED_CONTINUATION
-) {
-  verdict = AI_VERDICTS.WAIT_FOR_PULLBACK;
-  reason += " Weak drop likely represents a pullback, not breakdown.";
-}
+  if (
+    d.moveType === "DROP" &&
+    d.moveStrength === "WEAK" &&
+    trend === "bullish" &&
+    verdict === AI_VERDICTS.CONTROLLED_CONTINUATION
+  ) {
+    verdict = AI_VERDICTS.WAIT_FOR_PULLBACK;
+    reason += " Weak drop likely represents a pullback.";
+  }
 
   return withTier(verdict, reason, d);
-} 
-    
+    }
+
 
 
 /* ================= TIER WRAPPER ================= */
