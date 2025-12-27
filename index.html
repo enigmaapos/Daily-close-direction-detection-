@@ -1191,128 +1191,44 @@ function getTradeSide(d){
   
 
   function getExecutionZone(d, tradeSide) {
-
-  // 1️⃣ Hard stop
-  if (tradeSide === "WAIT") {
-    return "NO TRADE ZONE";
-  }
-
-  let zone = "NO TRADE ZONE";
+let zone = "NO TRADE ZONE";
   const verdict = d.aiVerdict;
-  const bias = d.bias || "";
+  const bias    = d.bias || "";
 
   /* 🧨 TRAP */
-  if (
-    verdict === AI_VERDICTS.TRAP_RISK &&
-    hasValidTrapVolume(d, tradeSide === "LONG" ? "SHORT" : "LONG")
-  ) {
+  if (verdict === AI_VERDICTS.TRAP_RISK) {
     zone = "PULLBACK ZONE";
   }
 
-  /* 🛡 DEFENSE — BEST ENTRY ONLY */
+  /* 🛡 DEFENSE */
   else if (
-    (
-      (bias === "Bullish Defense" && tradeSide === "LONG") ||
-      (bias === "Bearish Defense" && tradeSide === "SHORT")
-    ) &&
-    hasValidDefenseVolume(d, tradeSide) &&
-    isBest24hDefenseForEntry(d.volume24hAI, tradeSide)
+    (bias === "Bullish Defense" && tradeSide === "LONG") ||
+    (bias === "Bearish Defense" && tradeSide === "SHORT")
   ) {
     zone = "ENTRY ZONE";
   }
 
   /* ▶ CONTINUATION */
   else if (
-    (
-      verdict === AI_VERDICTS.STRONG_CONTINUATION ||
-      verdict === AI_VERDICTS.CONTROLLED_CONTINUATION
-    ) &&
-    hasValidContinuationVolume(d, tradeSide)
+    verdict === AI_VERDICTS.STRONG_CONTINUATION ||
+    verdict === AI_VERDICTS.CONTROLLED_CONTINUATION
   ) {
     zone = "LATE ZONE";
   }
 
-  /* 🚫 WEAK DEFENSE */
-  else if (
-    bias === "Bullish Defense" ||
-    bias === "Bearish Defense"
-  ) {
-    zone = "PULLBACK ZONE";
-  }
-
   /* ================= EXECUTION MODIFIERS ================= */
 
-  // Market dominance
+  // 1️⃣ MARKET DOMINANCE — PRIMARY (market-wide participation)
   if (
     (zone === "ENTRY ZONE" || zone === "LATE ZONE") &&
     d.marketDom &&
     Math.abs(d.marketDom.net) < 5
   ) {
-    zone = "PULLBACK ZONE";
-  }
-
-  // 24H change exhaustion
-  if (
-    zone === "ENTRY ZONE" &&
-    (d.changeState === "VERY_HIGH" || d.changeState === "EXTREME")
-  ) {
-    zone = "PULLBACK ZONE";
-  }
-
-  // Smoothness (only downgrade LATE)
-  if (
-  zone === "LATE ZONE" &&
-  getSymbolBehavior(d) !== "SMOOTH"
-) {
-  return "PULLBACK ZONE";
-}
-
-  // Defense failure
-  if (
-    zone === "ENTRY ZONE" &&
-    d.defenseFailure === "CRITICAL FAILURE"
-  ) {
-    zone = "PULLBACK ZONE";
-  }
-
-  // Fake recovery
-  if (
-    zone === "ENTRY ZONE" &&
-    d.moveType === "RECOVERY" &&
-    d.moveStrength === "WEAK" &&
-    d.mainTrend === "bearish"
-  ) {
-    zone = "PULLBACK ZONE";
-  }
-
-  // Fake breakdown
-  if (
-    zone === "ENTRY ZONE" &&
-    d.moveType === "DROP" &&
-    d.moveStrength === "WEAK" &&
-    d.mainTrend === "bullish"
-  ) {
-    zone = "PULLBACK ZONE";
-  }
-
-    /* 🧭 INTRADAY RSI DIVERGENCE — LATE MOVE BLOCK */
-if (
-  zone === "ENTRY ZONE" &&
-  d.intradayRSIDiv
-) {
-  return "PULLBACK ZONE";
-}
-
-  // Safety fallback
-  if (
-    zone === "NO TRADE ZONE" &&
-    tradeSide !== "WAIT"
-  ) {
-    zone = "PULLBACK ZONE";
+    return "PULLBACK ZONE";
   }
 
   return zone;
-}
+  }
 
 
   
