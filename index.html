@@ -3406,6 +3406,29 @@ ${d.structure === "none" && d.volumeStructure?.name !== "none" ? `
   </div>
 ` : ""}
 
+<div class="muted ${aiVerdict.verdictClass}">
+    🧠 AI Verdict: <b>${aiVerdict.verdict}</b>
+  </div>
+
+  <div class="muted ${aiVerdict.verdictClass}">
+    ${aiVerdict.tierLabel}
+  </div>
+
+  <div class="muted">
+    ${aiVerdict.reason}
+  </div>
+
+  ${d.defenseFailure !== "NONE" ? `
+  <div class="muted ${
+    d.defenseFailure === "CRITICAL FAILURE"
+      ? "bear"
+      : "neutral"
+  }">
+    🛡 Defense Status: <b>${d.defenseFailure}</b>
+  </div>
+` : ""}
+
+
 
      ${rrDisplay ? `
   <div class="muted neutral">
@@ -3439,16 +3462,6 @@ ${d.structure === "none" && d.volumeStructure?.name !== "none" ? `
   🌊 Symbol Behavior:
   <b class="behavior-${behavior}">${behavior}</b>
 </div>
-
-${d.defenseFailure !== "NONE" ? `
-  <div class="muted ${
-    d.defenseFailure === "CRITICAL FAILURE"
-      ? "bear"
-      : "neutral"
-  }">
-    🛡 Defense Status: <b>${d.defenseFailure}</b>
-  </div>
-` : ""}
 
  <div class="muted ${tradeSideClass}">
     🎯 Trade Side: <b>${aiVerdict.tradeSide}</b>
@@ -3607,19 +3620,6 @@ ${d.volumeBreakout ? `
     📊 No 24h Volume Breakout
   </div>
 `}
-
-
-  <div class="muted ${aiVerdict.verdictClass}">
-    🧠 AI Verdict: <b>${aiVerdict.verdict}</b>
-  </div>
-
-  <div class="muted ${aiVerdict.verdictClass}">
-    ${aiVerdict.tierLabel}
-  </div>
-
-  <div class="muted">
-    ${aiVerdict.reason}
-  </div>
 `;
 
 
