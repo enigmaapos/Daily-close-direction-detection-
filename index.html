@@ -257,6 +257,9 @@ button.secondary{
 <div class="muted">Dominant volume + structure confirmation only</div>
 
   <div class="row filter-box">
+    <span class="muted">
+  ℹ Scans above 30 symbols are limited to one side for stability
+    </span>
   <label class="muted">
     <input type="checkbox" id="scanGreen" checked />
     🟢 Scan Top Gainers
@@ -4169,6 +4172,58 @@ scrollTopBtn.addEventListener("click", () => {
     setScanStatus("▶ Auto 24h Volume Break: ON");
   }
 });
+
+  function enforceScanLimitRules() {
+  const green = document.getElementById("scanGreen");
+  const red   = document.getElementById("scanRed");
+  const limit = parseInt(
+    document.getElementById("scanLimit")?.value || "30",
+    10
+  );
+
+  if (!green || !red) return;
+
+  // Heavy scan mode
+  if (limit > 30) {
+    if (green.checked && !red.checked) {
+      red.checked = false;
+      red.disabled = true;
+      green.disabled = false;
+    }
+    else if (red.checked && !green.checked) {
+      green.checked = false;
+      green.disabled = true;
+      red.disabled = false;
+    }
+    else if (green.checked && red.checked) {
+      // both checked → force only one
+      red.checked = false;
+      green.disabled = false;
+      red.disabled = true;
+    }
+    else {
+      // none checked → allow both
+      green.disabled = false;
+      red.disabled = false;
+    }
+  }
+  else {
+    // Normal mode (30/30)
+    green.disabled = false;
+    red.disabled = false;
+  }
+  }
+
+  document.getElementById("scanGreen")
+  ?.addEventListener("change", enforceScanLimitRules);
+
+document.getElementById("scanRed")
+  ?.addEventListener("change", enforceScanLimitRules);
+
+document.getElementById("scanLimit")
+  ?.addEventListener("change", enforceScanLimitRules);
+
+  window.addEventListener("load", enforceScanLimitRules);
 </script>
 </body>
 </html>
