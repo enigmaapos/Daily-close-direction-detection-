@@ -3488,9 +3488,11 @@ ${d.defenseFailure !== "NONE" ? `
   </b>
 </div>
 
-<div class="muted">
-  🧱 Break Intent: <b>${d.breakIntent}</b>
-</div>
+${d.breakIntent ? `
+  <div class="muted">
+    🧠 Break Intent: <b>${d.breakIntent}</b>
+  </div>
+` : ""}
 
 
   <div class="muted ${
