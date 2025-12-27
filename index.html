@@ -3404,6 +3404,9 @@ ${d.rsi15 !== null ? `
   </b>
 </div>
 
+<div class="muted neutral" title="Context only. Describes the likely market phase, not a trade signal.">
+  ⚠ Market Phase: <b>${d.volAI.futureOutcome}</b>
+</div>
 
   <div class="muted ${
     structureBias === "bullish" ? "bull" :
@@ -3535,10 +3538,6 @@ ${d.structure === "none" && d.volumeStructure?.name !== "none" ? `
       d.emaShortCross === "bearish-cross" ? " ⬇ Cross" : ""
     }
   </div>
-
-  <div class="muted neutral" title="Context only. Describes the likely market phase, not a trade signal.">
-  ⚠ Market Phase: <b>${d.volAI.futureOutcome}</b>
-</div>
 
 
     <div class="muted neutral">
