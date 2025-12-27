@@ -3428,33 +3428,16 @@ card.innerHTML = `
   </div>
 ` : ""}
 
-${d.rsi15 !== null ? `
+${d.defenseFailure !== "NONE" ? `
   <div class="muted ${
-    d.rsi15 >= 50 ? "bull" :
-    d.rsi15 < 50 ? "bear" : "neutral"
+    d.defenseFailure === "CRITICAL FAILURE"
+      ? "bear"
+      : "neutral"
   }">
-    ⏱ 15m RSI14: ${d.rsi15}
+    🛡 Defense Status: <b>${d.defenseFailure}</b>
   </div>
 ` : ""}
 
-<div class="muted ${rsiShiftClass}">
-  🧭 24h RSI Momentum Shift (15m):
-  <b>
-    ${
-      d.intradayRSIDiv
-        ? d.intradayRSIDiv.bearish
-          ? "Bearish Momentum Collapse"
-          : d.intradayRSIDiv.bullish
-          ? "Bullish Momentum Recovery"
-          : "Momentum Unstable"
-        : "None"
-    }
-  </b>
-</div>
-
-<div class="muted neutral" title="Context only. Describes the likely market phase, not a trade signal.">
-  ⚠ Market Phase: <b>${d.volAI.futureOutcome}</b>
-</div>
 
   <div class="muted ${
     structureBias === "bullish" ? "bull" :
@@ -3494,17 +3477,7 @@ ${d.structure === "none" && d.volumeStructure?.name !== "none" ? `
     ${aiVerdict.reason}
   </div>
 
-  ${d.defenseFailure !== "NONE" ? `
-  <div class="muted ${
-    d.defenseFailure === "CRITICAL FAILURE"
-      ? "bear"
-      : "neutral"
-  }">
-    🛡 Defense Status: <b>${d.defenseFailure}</b>
-  </div>
-` : ""}
-
-
+  
      ${rrDisplay ? `
   <div class="muted neutral">
     ⚖ Risk–Reward: <b>${rrDisplay}R</b>
@@ -3587,6 +3560,34 @@ ${d.structure === "none" && d.volumeStructure?.name !== "none" ? `
     }
   </div>
 
+  ${d.rsi15 !== null ? `
+  <div class="muted ${
+    d.rsi15 >= 50 ? "bull" :
+    d.rsi15 < 50 ? "bear" : "neutral"
+  }">
+    ⏱ 15m RSI14: ${d.rsi15}
+  </div>
+` : ""}
+
+<div class="muted ${rsiShiftClass}">
+  🧭 24h RSI Momentum Shift (15m):
+  <b>
+    ${
+      d.intradayRSIDiv
+        ? d.intradayRSIDiv.bearish
+          ? "Bearish Momentum Collapse"
+          : d.intradayRSIDiv.bullish
+          ? "Bullish Momentum Recovery"
+          : "Momentum Unstable"
+        : "None"
+    }
+  </b>
+</div>
+
+<div class="muted neutral" title="Context only. Describes the likely market phase, not a trade signal.">
+  ⚠ Market Phase: <b>${d.volAI.futureOutcome}</b>
+</div>
+
 
     <div class="muted neutral">
   ⏱ 4H Context:
@@ -3636,6 +3637,7 @@ ${d.structure === "none" && d.volumeStructure?.name !== "none" ? `
 }">
   ⏱ 24h Move: <b>${d.moveType}</b> (${d.moveStrength})
 </div>
+
 
   ${d.dailyRSI ? `
     <div class="muted ${
