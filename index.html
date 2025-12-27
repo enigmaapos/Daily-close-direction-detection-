@@ -263,7 +263,7 @@ button.secondary{
   </label>
 
   <label class="muted">
-    <input type="checkbox" id="scanRed" checked />
+    <input type="checkbox" id="scanRed" />
     🔴 Scan Top Losers
   </label>
 
@@ -575,6 +575,20 @@ const execAlertCooldown = {};
 
   isAutoScan = true;
   await runScan();
+});
+
+  // save on change
+scanGreen.addEventListener("change", () =>
+  localStorage.setItem("scanGreen", scanGreen.checked)
+);
+scanRed.addEventListener("change", () =>
+  localStorage.setItem("scanRed", scanRed.checked)
+);
+
+// restore on load
+window.addEventListener("load", () => {
+  scanGreen.checked = localStorage.getItem("scanGreen") !== "false";
+  scanRed.checked   = localStorage.getItem("scanRed") === "true";
 });
 
 
