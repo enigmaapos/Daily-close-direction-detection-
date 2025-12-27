@@ -3262,12 +3262,12 @@ card.dataset.structureQuality =
 
 // ================= RR CALCULATION =================
 const rr =
-  aiVerdict.executionZone === "ENTRY ZONE" &&
   (aiVerdict.tradeSide === "LONG" || aiVerdict.tradeSide === "SHORT")
     ? calculateRR(d, aiVerdict.tradeSide)
     : null;
 
-const rrDisplay = rr && rr >= 1.2 ? rr : null;
+const rrDisplay =
+  rr !== null && rr >= 1.2 ? rr : null;
 
     const tpProb =
   rrDisplay ? estimateTPProbability(d, rrDisplay) : null;
