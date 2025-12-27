@@ -3380,6 +3380,30 @@ card.innerHTML = `
   </div>
 ` : ""}
 
+${d.rsi15 !== null ? `
+  <div class="muted ${
+    d.rsi15 >= 50 ? "bull" :
+    d.rsi15 < 50 ? "bear" : "neutral"
+  }">
+    ⏱ 15m RSI14: ${d.rsi15}
+  </div>
+` : ""}
+
+<div class="muted ${rsiShiftClass}">
+  🧭 24h RSI Momentum Shift (15m):
+  <b>
+    ${
+      d.intradayRSIDiv
+        ? d.intradayRSIDiv.bearish
+          ? "Bearish Momentum Collapse"
+          : d.intradayRSIDiv.bullish
+          ? "Bullish Momentum Recovery"
+          : "Momentum Unstable"
+        : "None"
+    }
+  </b>
+</div>
+
 
   <div class="muted ${
     structureBias === "bullish" ? "bull" :
@@ -3532,21 +3556,6 @@ ${d.structure === "none" && d.volumeStructure?.name !== "none" ? `
 }
 </div>
 
-<div class="muted ${rsiShiftClass}">
-  🧭 24h RSI Momentum Shift (15m):
-  <b>
-    ${
-      d.intradayRSIDiv
-        ? d.intradayRSIDiv.bearish
-          ? "Bearish Momentum Collapse"
-          : d.intradayRSIDiv.bullish
-          ? "Bullish Momentum Recovery"
-          : "Momentum Unstable"
-        : "None"
-    }
-  </b>
-</div>
-
 
   ${d.volAI ? `
     <div class="muted ${
@@ -3593,15 +3602,6 @@ ${d.structure === "none" && d.volumeStructure?.name !== "none" ? `
       </span>
     </div>
   ` : ""}
-
-${d.rsi15 !== null ? `
-  <div class="muted ${
-    d.rsi15 >= 50 ? "bull" :
-    d.rsi15 < 50 ? "bear" : "neutral"
-  }">
-    ⏱ 15m RSI14: ${d.rsi15}
-  </div>
-` : ""}
 
 ${d.volumeBreakout ? `
   <div class="muted ${
