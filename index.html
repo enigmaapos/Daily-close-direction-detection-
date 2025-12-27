@@ -1651,7 +1651,7 @@ function findSwings(h, l, c, v){
     bearish =
       rsiHigh >= 50 &&        // RSI had strength
       rsiLow <= 50 &&         // RSI collapsed
-      rsiRange >= 40 &&       // meaningful decay
+      rsiRange >= 10 &&       // meaningful decay
       priceHolding;           // price did NOT follow RSI down
   }
 
@@ -1664,7 +1664,7 @@ function findSwings(h, l, c, v){
     bullish =
       rsiLow <= 50 &&         // RSI was weak
       rsiHigh >= 50 &&        // RSI recovered
-      rsiRange >= 40 &&       // meaningful recovery
+      rsiRange >= 10 &&       // meaningful recovery
       priceHolding;           // price did NOT follow RSI up
   }
 
