@@ -1683,15 +1683,15 @@ function findSwings(h, l, c, v){
 
 /* ================= BREAK INTENT CLASSIFIER ================= */
 function classifyBreakIntent(d) {
-  const trend = d.mainTrend;              // "bullish" | "bearish"
-  const structure = d.structure || "";
-  const volumeAlign = d.volumeAlign || "neutral";
-  const momentum = d.rsiMomentumShift;    // { bullish, bearish } | null
+  const trend = d.mainTrend;                 // "bullish" | "bearish"
+  const structure = d.structure || "";       // trend structure
+  const volStruct = d.volumeStructure?.name || ""; // volume structure
+  const momentum = d.rsiMomentumShift;       // { bullish, bearish } | null
 
   /* ================= BULLISH ENVIRONMENT ================= */
   if (trend === "bullish") {
 
-    // 🐻 Bears attacking bullish structure (support)
+    // 🐻 Bears attacking bullish structure (support) but failing
     if (
       momentum?.bearish &&
       structure.includes("support holding")
@@ -1699,16 +1699,15 @@ function classifyBreakIntent(d) {
       return "BEAR ATTACK → BULLISH STRUCTURE DEFENDED";
     }
 
-    // 🐂 Bulls attack & trap bears (confirmed failure)
+    // 🐂 Bulls attack & trap bears (no momentum, SELLERS failed at resistance)
     if (
       momentum == null &&
-      structure.includes("resistance failed") &&
-      volumeAlign === "confirmed"
+      volStruct.includes("resistance failed")
     ) {
       return "BULL ATTACK → BEARS TRAPPED ABOVE FAILED RESISTANCE";
     }
 
-    // 🐂 Bulls trying without permission
+    // 🐂 Bulls attempting without structural permission
     if (
       d.volumeBreakout &&
       structure.includes("resistance weak")
@@ -1720,7 +1719,7 @@ function classifyBreakIntent(d) {
   /* ================= BEARISH ENVIRONMENT ================= */
   if (trend === "bearish") {
 
-    // 🐂 Bulls attacking bearish structure (resistance)
+    // 🐂 Bulls attacking bearish structure (resistance) but failing
     if (
       momentum?.bullish &&
       structure.includes("resistance holding")
@@ -1728,16 +1727,15 @@ function classifyBreakIntent(d) {
       return "BULL ATTACK → BEARISH STRUCTURE DEFENDED";
     }
 
-    // 🐻 Bears attack & trap bulls (confirmed failure)
+    // 🐻 Bears attack & trap bulls (no momentum, BUYERS failed at support)
     if (
       momentum == null &&
-      structure.includes("support failed") &&
-      volumeAlign === "confirmed"
+      volStruct.includes("support failed")
     ) {
       return "BEAR ATTACK → BULLS TRAPPED BELOW FAILED SUPPORT";
     }
 
-    // 🐻 Bears trying without permission
+    // 🐻 Bears attempting without structural permission
     if (
       d.volumeBreakout &&
       structure.includes("support weak")
@@ -1747,7 +1745,7 @@ function classifyBreakIntent(d) {
   }
 
   return "NO CLEAR ATTACK";
-}
+  }
   
 
     /* ================= DAILY RSI CONTEXT ================= */
