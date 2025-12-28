@@ -1682,32 +1682,22 @@ function findSwings(h, l, c, v){
 }
 
   /* ================= BREAK INTENT CLASSIFIER ================= */
-function classifyBreakIntent(d) {
+function classifyBreakIntent(d = {}) {
   const structure = d.structure || "";
   const volumeAlign = d.volumeAlign || "neutral";
   const volumeBreakout = d.volumeBreakout === true;
 
-  if (
-    structure.includes("broken (accepted)") &&
-    volumeAlign === "confirmed"
-  ) {
+  if (structure.includes("broken (accepted)") && volumeAlign === "confirmed")
     return "TREND-LED BREAK";
-  }
 
   if (
     volumeBreakout &&
-    (structure.includes("weak") ||
-     structure.includes("unaccepted"))
-  ) {
+    (structure.includes("weak") || structure.includes("unaccepted"))
+  )
     return "VOLUME-LED ATTEMPT";
-  }
 
-  if (
-    volumeAlign === "conflict" &&
-    structure.includes("holding")
-  ) {
+  if (volumeAlign === "conflict" && structure.includes("holding"))
     return "STRUCTURE DEFENDED";
-  }
 
   return "NO BREAK ATTEMPT";
 }
@@ -2854,12 +2844,6 @@ const breakIntent = classifyBreakIntent({
   volumeBreakout
 });
 
-// ================= BREAK INTENT (SAFE ATTACHMENT) =================
-d.breakIntent = classifyBreakIntent({
-  structure: d.structure || "",
-  volumeAlign: d.volumeAlign || "neutral",
-  volumeBreakout: d.volumeBreakout === true
-});
 
   /* ================= MARKET DOMINANCE PROBABILITY MODIFIER ================= */
 if (marketDom && bias.includes("Continuation")) {
@@ -3096,6 +3080,13 @@ prob = applyHTFProbabilityAdjustment({
   aiVerdict
 });
 
+  // ================= BREAK INTENT (SAFE ATTACHMENT) =================
+d.breakIntent = classifyBreakIntent({
+  structure: d.structure || "",
+  volumeAlign: d.volumeAlign || "neutral",
+  volumeBreakout: d.volumeBreakout === true
+});
+  
   
 
   return {sym,price,change,bull,prob,bias,structure,structureType,volumeStructure,structureQuality,volumeAlign,defenseFailure,S:sw.S,R:sw.R,dailyRSI,rsi15,rsi15Momentum,volumeBreakout,
