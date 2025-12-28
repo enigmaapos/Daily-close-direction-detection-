@@ -3265,6 +3265,48 @@ if (df !== "all") {
 
   symbolSearch.value = "";
 }
+
+  function formatBreakIntent(intent) {
+  if (!intent) return null;
+
+  if (intent.includes("BULL ATTACK")) {
+    return {
+      icon: "🐂",
+      cls: "bull",
+      text: intent
+    };
+  }
+
+  if (intent.includes("BEAR ATTACK")) {
+    return {
+      icon: "🐻",
+      cls: "bear",
+      text: intent
+    };
+  }
+
+  if (intent.includes("STRUCTURE DEFENDED")) {
+    return {
+      icon: "🛡",
+      cls: "neutral",
+      text: intent
+    };
+  }
+
+  if (intent.includes("VOLUME-LED")) {
+    return {
+      icon: "⚠️",
+      cls: "neutral",
+      text: intent
+    };
+  }
+
+  return {
+    icon: "🧠",
+    cls: "neutral",
+    text: intent
+  };
+  }
   
 /* ================= RENDER ================= */
   function renderCard(d, el, isFav=false, skipFilter=false){
@@ -3529,12 +3571,14 @@ ${d.defenseFailure !== "NONE" ? `
   </b>
 </div>
 
-${d.breakIntent ? `
-  <div class="muted">
-    🧠 Break Intent: <b>${d.breakIntent}</b>
-  </div>
-` : ""}
-
+${d.breakIntent ? (() => {
+  const bi = formatBreakIntent(d.breakIntent);
+  return `
+    <div class="muted ${bi.cls}">
+      ${bi.icon} <b>Break Intent:</b> ${bi.text}
+    </div>
+  `;
+})() : ""}
 
   <div class="muted ${
     structureBias === "bullish" ? "bull" :
