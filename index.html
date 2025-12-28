@@ -2837,6 +2837,13 @@ prob = Math.max(40, Math.min(prob, 95));
       : "NONE"
 };
 
+  /* ================= BREAK INTENT ================= */
+const breakIntent = classifyBreakIntent({
+  structure,
+  volumeAlign,
+  volumeBreakout
+});
+
 
 
   /* ================= MARKET DOMINANCE PROBABILITY MODIFIER ================= */
@@ -3074,13 +3081,6 @@ prob = applyHTFProbabilityAdjustment({
   aiVerdict
 });
 
-
-  // ================= BREAK INTENT (SAFE ATTACHMENT) =================
-d.breakIntent = classifyBreakIntent({
-  structure: d.structure || "",
-  volumeAlign: d.volumeAlign || "neutral",
-  volumeBreakout: d.volumeBreakout === true
-});
   
   
 
