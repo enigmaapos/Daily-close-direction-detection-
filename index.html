@@ -1692,6 +1692,7 @@ function findSwings(h, l, c, v){
 /* ================= BREAK INTENT CLASSIFIER ================= */
 function classifyBreakIntent(d) {
   const trend = d.mainTrend;
+  const bull = d.bull;
   const structure = d.structure || "";       
   const volStruct = d.volumeStructure?.name || ""; 
   const momentum = d.rsiMomentumShift;       
@@ -2895,6 +2896,7 @@ prob = Math.max(40, Math.min(prob, 95));
 /* ================= BREAK INTENT ================= */
   const breakIntent = classifyBreakIntent({
   mainTrend,
+  bull,
   structure: structure || "",
   volumeStructure: volumeStructure || { name: "" },
   rsiMomentumShift: intradayRSIDiv || null
