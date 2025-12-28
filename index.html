@@ -2797,6 +2797,33 @@ if (
     mainTrend
   );
   }
+
+  /* ================= STRONG ZONE DEFENSE ================= */
+
+let strongZoneDefended = false;
+
+const momentumResolved = isMomentumResolved(
+  intradayRSIDiv,
+  rsi15Momentum
+);
+
+// 🛡 Bullish: support survived bearish momentum
+if (
+  momentumResolved &&
+  intradayRSIDiv?.bearish &&
+  structure.startsWith("support holding")
+) {
+  strongZoneDefended = true;
+}
+
+// 🛡 Bearish: resistance survived bullish momentum
+if (
+  momentumResolved &&
+  intradayRSIDiv?.bullish &&
+  structure.startsWith("resistance failed")
+) {
+  strongZoneDefended = true;
+}
   
 
   const volumeStructure = {
@@ -2918,6 +2945,9 @@ prob = Math.max(40, Math.min(prob, 95));
       ? (bull ? "BUY_CLIMAX" : "SELL_CLIMAX")
       : "NONE"
 };
+
+
+
 
 /* ================= BREAK INTENT ================= */
   const breakIntent = classifyBreakIntent({
@@ -3086,7 +3116,7 @@ moveStrength,
     volumeContext
 });
 
-  const rsiMomentumShift = volAI?.intradayRSIDiv;
+  const rsiMomentumShift = intradayRSIDiv;
 
   /* ================= RSI MOMENTUM SHIFT PROBABILITY ADJUSTMENT ================= */
 
@@ -3163,31 +3193,6 @@ prob = applyHTFProbabilityAdjustment({
   moveStrength,
   aiVerdict
 });
-
-      let strongZoneDefended = false;
-
-const momentumResolved = isMomentumResolved(
-  rsiMomentumShift,
-  rsi15Momentum
-);
-
-// 🛡 Bullish case: support survived bearish momentum
-if (
-  momentumResolved &&
-  rsiMomentumShift?.bearish &&
-  structure.includes("support holding")
-) {
-  strongZoneDefended = true;
-}
-
-// 🛡 Bearish case: resistance survived bullish momentum
-if (
-  momentumResolved &&
-  rsiMomentumShift?.bullish &&
-  structure.includes("resistance holding")
-) {
-  strongZoneDefended = true;
-  }
 
   
   
