@@ -1701,7 +1701,7 @@ function classifyBreakIntent(d) {
 
     // 🐂 Bulls attacking resistance and winning
     if (
-      !momentum &&
+      !momentum?.bullish &&
       structure.includes("resistance failed") &&
       volumeAlign === "confirmed"
     ) {
@@ -1730,7 +1730,7 @@ function classifyBreakIntent(d) {
 
     // 🐻 Bears attacking support and winning
     if (
-      !momentum &&
+      !momentum?.bearish &&
       structure.includes("support failed") &&
       volumeAlign === "confirmed"
     ) {
