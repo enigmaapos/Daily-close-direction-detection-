@@ -1727,7 +1727,7 @@ function classifyBreakIntent(d) {
 
   /* ================= BEARISH ENVIRONMENT ================= */
   // Only allow bearish logic if dominant volume is GREEN
-  if (trend === "bearish" && domVBull === true) {
+  if (trend === "bearish" && bull === true) {
 
     // 🐂 Bulls attacking bearish structure but failing
     if (
@@ -3292,7 +3292,7 @@ if (fa !== "all") {
   if (intent.includes("STRUCTURE DEFENDED")) {
     return {
       icon: "🛡",
-      cls: "neutral",
+      cls: "bull",
       text: intent
     };
   }
