@@ -3286,22 +3286,7 @@ if (fa !== "all") {
   function formatBreakIntent(intent) {
   if (!intent) return null;
 
-  if (intent.includes("BULL ATTACK")) {
-    return {
-      icon: "🐂",
-      cls: "bull",
-      text: intent
-    };
-  }
-
-  if (intent.includes("BEAR ATTACK")) {
-    return {
-      icon: "🐻",
-      cls: "bear",
-      text: intent
-    };
-  }
-
+  // 🛡 Highest priority — outcome
   if (intent.includes("STRUCTURE DEFENDED")) {
     return {
       icon: "🛡",
@@ -3310,10 +3295,29 @@ if (fa !== "all") {
     };
   }
 
+  // ⚠ Volume-led / warning
   if (intent.includes("VOLUME-LED")) {
     return {
       icon: "⚠️",
       cls: "neutral",
+      text: intent
+    };
+  }
+
+  // 🐂 Bull attack
+  if (intent.includes("BULL ATTACK")) {
+    return {
+      icon: "🐂",
+      cls: "bull",
+      text: intent
+    };
+  }
+
+  // 🐻 Bear attack
+  if (intent.includes("BEAR ATTACK")) {
+    return {
+      icon: "🐻",
+      cls: "bear",
       text: intent
     };
   }
@@ -3323,7 +3327,7 @@ if (fa !== "all") {
     cls: "neutral",
     text: intent
   };
-  }
+}
   
 /* ================= RENDER ================= */
   function renderCard(d, el, isFav=false, skipFilter=false){
