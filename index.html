@@ -3629,15 +3629,6 @@ ${d.structure === "none" && d.volumeStructure?.name !== "none" ? `
   </div>
 ` : ""}
 
-${d.breakIntent ? (() => {
-  const bi = formatBreakIntent(d.breakIntent);
-  return `
-    <div class="muted ${bi.cls}">
-      ${bi.icon} <b>Break Intent:</b> ${bi.text}
-    </div>
-  `;
-})() : ""}
-
 
 <div class="muted ${aiVerdict.verdictClass}">
     🧠 AI Verdict: <b>${aiVerdict.verdict}</b>
@@ -3681,6 +3672,15 @@ ${d.breakIntent ? (() => {
   <div class="muted ${execClass}">
     🧭 Execution Zone: <b>${executionZone}</b>
   </div>
+
+  ${d.breakIntent ? (() => {
+  const bi = formatBreakIntent(d.breakIntent);
+  return `
+    <div class="muted ${bi.cls}">
+      ${bi.icon} <b>Break Intent:</b> ${bi.text}
+    </div>
+  `;
+})() : ""}
 
   <hr style="opacity:.15">
 
