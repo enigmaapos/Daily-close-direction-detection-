@@ -1717,10 +1717,10 @@ function classifyBreakIntent(d) {
 
     // 🐂 Bulls attempting without structural permission
     if (
-      d.volumeBreakout &&
-      structure.includes("resistance weak")
+      momentum == null &&
+      volStruct.includes("resistance weak")
     ) {
-      return "BULL ATTACK → VOLUME-LED ATTEMPT";
+      return "BULL ATTACK → BEAR DEFENSE WEAK → BREAKOUT SETUP FORMING";
     }
   }
 
@@ -1745,10 +1745,10 @@ function classifyBreakIntent(d) {
 
     // 🐻 Bears attempting without structural permission
     if (
-      d.volumeBreakout &&
-      structure.includes("support weak")
+      momentum == null &&
+      volStruct.includes("support weak")
     ) {
-      return "BEAR ATTACK → VOLUME-LED ATTEMPT";
+      return "BEAR ATTACK → BULL DEFENSE WEAK → BREAKDOWN SETUP FORMING;
     }
   }
 
