@@ -1683,24 +1683,28 @@ function findSwings(h, l, c, v){
 
   /* ================= BREAK INTENT CLASSIFIER ================= */
 function classifyBreakIntent(d) {
+  const structure = d.structure || "";
+  const volumeAlign = d.volumeAlign || "neutral";
+  const volumeBreakout = d.volumeBreakout === true;
+
   if (
-    d.structure?.includes("broken (accepted)") &&
-    d.volumeAlign === "confirmed"
+    structure.includes("broken (accepted)") &&
+    volumeAlign === "confirmed"
   ) {
     return "TREND-LED BREAK";
   }
 
   if (
-    d.volumeBreakout &&
-    (d.structure?.includes("weak") ||
-     d.structure?.includes("unaccepted"))
+    volumeBreakout &&
+    (structure.includes("weak") ||
+     structure.includes("unaccepted"))
   ) {
     return "VOLUME-LED ATTEMPT";
   }
 
   if (
-    d.volumeAlign === "conflict" &&
-    d.structure?.includes("holding")
+    volumeAlign === "conflict" &&
+    structure.includes("holding")
   ) {
     return "STRUCTURE DEFENDED";
   }
@@ -2850,8 +2854,12 @@ const breakIntent = classifyBreakIntent({
   volumeBreakout
 });
 
-d.breakIntent = classifyBreakIntent(d);
-  
+// ================= BREAK INTENT (SAFE ATTACHMENT) =================
+d.breakIntent = classifyBreakIntent({
+  structure: d.structure || "",
+  volumeAlign: d.volumeAlign || "neutral",
+  volumeBreakout: d.volumeBreakout === true
+});
 
   /* ================= MARKET DOMINANCE PROBABILITY MODIFIER ================= */
 if (marketDom && bias.includes("Continuation")) {
