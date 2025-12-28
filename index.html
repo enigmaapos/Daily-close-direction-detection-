@@ -2800,12 +2800,13 @@ if (
 
   /* ================= STRONG ZONE DEFENSE ================= */
 
+/* ================= STRONG ZONE DEFENSE ================= */
+
 let strongZoneDefended = false;
 
-const momentumResolved = isMomentumResolved(
-  intradayRSIDiv,
-  rsi15Momentum
-);
+const momentumResolved =
+  intradayRSIDiv &&
+  !["BULLISH","BEARISH"].includes(rsi15Momentum);
 
 // 🛡 Bullish: support survived bearish momentum
 if (
