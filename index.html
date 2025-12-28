@@ -1681,23 +1681,29 @@ function findSwings(h, l, c, v){
   };
 }
 
-  /* ================= BREAK INTENT CLASSIFIER ================= */
-function classifyBreakIntent(d = {}) {
-  const structure = d.structure || "";
-  const volumeAlign = d.volumeAlign || "neutral";
-  const volumeBreakout = d.volumeBreakout === true;
-
-  if (structure.includes("broken (accepted)") && volumeAlign === "confirmed")
+/* ================= BREAK INTENT CLASSIFIER ================= */
+function classifyBreakIntent(d) {
+  if (
+    d.structure?.includes("broken (accepted)") &&
+    d.volumeAlign === "confirmed"
+  ) {
     return "TREND-LED BREAK";
+  }
 
   if (
-    volumeBreakout &&
-    (structure.includes("weak") || structure.includes("unaccepted"))
-  )
+    d.volumeBreakout &&
+    (d.structure?.includes("weak") ||
+     d.structure?.includes("unaccepted"))
+  ) {
     return "VOLUME-LED ATTEMPT";
+  }
 
-  if (volumeAlign === "conflict" && structure.includes("holding"))
+  if (
+    d.volumeAlign === "conflict" &&
+    d.structure?.includes("holding")
+  ) {
     return "STRUCTURE DEFENDED";
+  }
 
   return "NO BREAK ATTEMPT";
 }
