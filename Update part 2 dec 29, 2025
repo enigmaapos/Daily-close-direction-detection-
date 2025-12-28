@@ -444,6 +444,14 @@ button.secondary{
   <option value="EARLY WARNING">Early Warning</option>
   <option value="CRITICAL FAILURE">Critical Failure</option>
   </select>
+  
+
+  <select id="filterAttack">
+  <option value="all">All Attacks</option>
+  <option value="BULL">🐂 Bull Attacks</option>
+  <option value="BEAR">🐻 Bear Attacks</option>
+  <option value="NONE">No Attack</option>
+  </select>
   </div>
 
   <div class="muted">
@@ -1314,7 +1322,6 @@ if (
   return zone;
 }
 
-
   
   
 
@@ -1650,9 +1657,9 @@ function findSwings(h, l, c, v){
       lastPrice > priceLow + priceRange * 0.5;
 
     bearish =
-      rsiHigh >= 45 &&        // RSI had strength
-      rsiLow <= 35 &&         // RSI collapsed
-      rsiRange >= 10 &&       // meaningful decay
+      rsiHigh >= 50 &&        // RSI had strength
+      rsiLow <= 50 &&         // RSI collapsed
+      rsiRange >= 50 &&       // meaningful decay
       priceHolding;           // price did NOT follow RSI down
   }
 
@@ -1663,9 +1670,9 @@ function findSwings(h, l, c, v){
       lastPrice < priceLow + priceRange * 0.5;
 
     bullish =
-      rsiLow <= 40 &&         // RSI was weak
+      rsiLow <= 50 &&         // RSI was weak
       rsiHigh >= 50 &&        // RSI recovered
-      rsiRange >= 10 &&       // meaningful recovery
+      rsiRange >= 50 &&       // meaningful recovery
       priceHolding;           // price did NOT follow RSI up
   }
 
@@ -1680,6 +1687,75 @@ function findSwings(h, l, c, v){
     tf: "15m",
     window: "24h"
   };
+}
+
+/* ================= BREAK INTENT CLASSIFIER ================= */
+function classifyBreakIntent(d) {
+  const trend = d.mainTrend;
+  const bull = d.bull;
+  const structure = d.structure || "";       
+  const volStruct = d.volumeStructure?.name || ""; 
+  const momentum = d.rsiMomentumShift;       
+
+  /* ================= BULLISH ENVIRONMENT ================= */
+  // Only allow bullish logic if dominant volume is RED
+  if (trend === "bullish" && bull === false) {
+
+    // 🐻 Bears attacking bullish structure but failing
+    if (
+      momentum?.bearish &&
+      structure.includes("support holding")
+    ) {
+      return "BEAR ATTACK → BULLISH STRUCTURE DEFENDED";
+    }
+
+    // 🐂 Bulls attack & trap bears (no momentum)
+    if (
+      momentum == null &&
+      volStruct.includes("resistance failed")
+    ) {
+      return "BULL ATTACK → BEAR DEFENSE → BULLS STALLED AT RESISTANCE";
+    }
+
+    // 🐂 Bulls attempting without structural permission
+    if (
+      momentum == null &&
+      volStruct.includes("resistance weak")
+    ) {
+      return "BULL ATTACK → BEAR DEFENSE WEAK → BREAKOUT SETUP FORMING";
+    }
+  }
+
+  /* ================= BEARISH ENVIRONMENT ================= */
+  // Only allow bearish logic if dominant volume is GREEN
+  if (trend === "bearish" && bull === true) {
+
+    // 🐂 Bulls attacking bearish structure but failing
+    if (
+      momentum?.bullish &&
+      structure.includes("resistance holding")
+    ) {
+      return "BULL ATTACK → BEARISH STRUCTURE DEFENDED";
+    }
+
+    // 🐻 Bears attack & trap bulls (no momentum)
+    if (
+      momentum == null &&
+      volStruct.includes("support failed")
+    ) {
+      return "BEAR ATTACK → BULL DEFENSE → SELLERS STALLED AT SUPPORT";
+    }
+
+    // 🐻 Bears attempting without structural permission
+    if (
+      momentum == null &&
+      volStruct.includes("support weak")
+    ) {
+      return "BEAR ATTACK → BULL DEFENSE WEAK → BREAKDOWN SETUP FORMING";
+    }
+  }
+
+  return "NO CLEAR ATTACK";
 }
   
 
@@ -2816,7 +2892,16 @@ prob = Math.max(40, Math.min(prob, 95));
       ? (bull ? "BUY_CLIMAX" : "SELL_CLIMAX")
       : "NONE"
 };
-  
+
+/* ================= BREAK INTENT ================= */
+  const breakIntent = classifyBreakIntent({
+  mainTrend,
+  bull,
+  structure: structure || "",
+  volumeStructure: volumeStructure || { name: "" },
+  rsiMomentumShift: intradayRSIDiv || null
+});
+
 
   /* ================= MARKET DOMINANCE PROBABILITY MODIFIER ================= */
 if (marketDom && bias.includes("Continuation")) {
@@ -3054,6 +3139,7 @@ prob = applyHTFProbabilityAdjustment({
 });
 
   
+  
 
   return {sym,price,change,bull,prob,bias,structure,structureType,volumeStructure,structureQuality,volumeAlign,defenseFailure,S:sw.S,R:sw.R,dailyRSI,rsi15,rsi15Momentum,volumeBreakout,
   breakoutAge,volumeBreakoutType,fakeVolumeBreak,postVolBreakRSIConfirm: postVolBreakRSIConfirmSafe,
@@ -3062,7 +3148,7 @@ prob = applyHTFProbabilityAdjustment({
   ema21: ema21Last,
   emaShortBias,
   emaShortCross,aiVerdict,marketDom: GLOBAL_MARKET_DOM,changeState,moveType,
-moveStrength,directionalBias,setupScore,htf,volumeContext,probability: prob};
+moveStrength,directionalBias,setupScore,htf,volumeContext,probability: prob,breakIntent};
 }
 
 /* ================= FILTERS ================= */
@@ -3080,6 +3166,7 @@ function applyFilters(){
   const vai = document.getElementById("filterVolAI")?.value || "all";
   const rrFilter = document.getElementById("filterRR")?.value || "all";
   const df = document.getElementById("filterDefense")?.value || "all";
+  const fa = document.getElementById("filterAttack")?.value || "all";
   
 
   document.querySelectorAll(".card").forEach(c => {
@@ -3104,6 +3191,7 @@ function applyFilters(){
   if(ez !== "all" && c.dataset.execution !== ez) ok = false;
     if (vai !== "all" && c.dataset.volai !== vai) ok = false;
     
+    
 // ================= RR PRESENCE FILTER =================
 if (rrFilter === "present") {
   if (!c.dataset.rr) ok = false;
@@ -3121,9 +3209,17 @@ if (df !== "all") {
   }
 }
 
+    // ================= ATTACK INTENT FILTER =================
+if (fa !== "all") {
+  if ((c.dataset.attack || "NONE") !== fa) {
+    ok = false;
+  }
+}
+
   c.style.display = ok ? "" : "none";
 });
 }
+  
   
 
          function resetFilters(){
@@ -3140,6 +3236,7 @@ if (df !== "all") {
            document.getElementById("filterVolAI").value = "all";
            document.getElementById("filterRR").value = "all";
            document.getElementById("filterDefense").value = "all";
+           document.getElementById("filterAttack").value = "all";
            
            
 
@@ -3188,6 +3285,52 @@ if (df !== "all") {
   status.className = "muted";
 
   symbolSearch.value = "";
+}
+
+  function formatBreakIntent(intent) {
+  if (!intent) return null;
+
+  // 🛡 Highest priority — outcome
+  if (intent.includes("STRUCTURE DEFENDED")) {
+    return {
+      icon: "🛡",
+      cls: "bull",
+      text: intent
+    };
+  }
+
+  // ⚠ Volume-led / warning
+  if (intent.includes("VOLUME-LED")) {
+    return {
+      icon: "⚠️",
+      cls: "neutral",
+      text: intent
+    };
+  }
+
+  // 🐂 Bull attack
+  if (intent.includes("BULL ATTACK")) {
+    return {
+      icon: "🐂",
+      cls: "bull",
+      text: intent
+    };
+  }
+
+  // 🐻 Bear attack
+  if (intent.includes("BEAR ATTACK")) {
+    return {
+      icon: "🐻",
+      cls: "bear",
+      text: intent
+    };
+  }
+
+  return {
+    icon: "🧠",
+    cls: "neutral",
+    text: intent
+  };
 }
   
 /* ================= RENDER ================= */
@@ -3263,12 +3406,12 @@ card.dataset.structureQuality =
 
 // ================= RR CALCULATION =================
 const rr =
-  aiVerdict.executionZone === "ENTRY ZONE" &&
   (aiVerdict.tradeSide === "LONG" || aiVerdict.tradeSide === "SHORT")
     ? calculateRR(d, aiVerdict.tradeSide)
     : null;
 
-const rrDisplay = rr && rr >= 1.2 ? rr : null;
+const rrDisplay =
+  rr !== null && rr >= 1.2 ? rr : null;
 
     const tpProb =
   rrDisplay ? estimateTPProbability(d, rrDisplay) : null;
@@ -3285,6 +3428,13 @@ if (rrDisplay !== null) {
 } else {
   delete card.dataset.tpprob;
     }
+
+  const attackSide =
+  d.breakIntent?.startsWith("BULL ATTACK") ? "BULL" :
+  d.breakIntent?.startsWith("BEAR ATTACK") ? "BEAR" :
+  "NONE";
+
+card.dataset.attack = attackSide;
 
     if (el.id === "searchGrid") {
   card.dataset.manual = "true";
@@ -3438,6 +3588,21 @@ ${d.defenseFailure !== "NONE" ? `
   </div>
 ` : ""}
 
+<div class="muted ${rsiShiftClass}">
+  🧭 24h RSI Momentum Shift (15m):
+  <b>
+    ${
+      d.intradayRSIDiv
+        ? d.intradayRSIDiv.bearish
+          ? "Bearish Momentum Collapse"
+          : d.intradayRSIDiv.bullish
+          ? "Bullish Momentum Recovery"
+          : "Momentum Unstable"
+        : "None"
+    }
+  </b>
+</div>
+
 
   <div class="muted ${
     structureBias === "bullish" ? "bull" :
@@ -3508,6 +3673,15 @@ ${d.structure === "none" && d.volumeStructure?.name !== "none" ? `
     🧭 Execution Zone: <b>${executionZone}</b>
   </div>
 
+  ${d.breakIntent ? (() => {
+  const bi = formatBreakIntent(d.breakIntent);
+  return `
+    <div class="muted ${bi.cls}">
+      ${bi.icon} <b>Break Intent:</b> ${bi.text}
+    </div>
+  `;
+})() : ""}
+
   <hr style="opacity:.15">
 
   <!-- ================= STRUCTURE ================= -->
@@ -3557,21 +3731,6 @@ ${d.structure === "none" && d.volumeStructure?.name !== "none" ? `
     ⏱ 15m RSI14: ${d.rsi15}
   </div>
 ` : ""}
-
-<div class="muted ${rsiShiftClass}">
-  🧭 24h RSI Momentum Shift (15m):
-  <b>
-    ${
-      d.intradayRSIDiv
-        ? d.intradayRSIDiv.bearish
-          ? "Bearish Momentum Collapse"
-          : d.intradayRSIDiv.bullish
-          ? "Bullish Momentum Recovery"
-          : "Momentum Unstable"
-        : "None"
-    }
-  </b>
-</div>
 
 <div class="muted neutral" title="Context only. Describes the likely market phase, not a trade signal.">
   ⚠ Market Phase: <b>${d.volAI.futureOutcome}</b>
@@ -4111,7 +4270,8 @@ async function runSearch(){
   "filterTradeSide",
   "filterExecution",
   "filterRR",
-    "filterDefense"
+    "filterDefense",
+    "filterAttack"
 ].forEach(id=>{
   document.getElementById(id)?.addEventListener("change", applyFilters);
 });
