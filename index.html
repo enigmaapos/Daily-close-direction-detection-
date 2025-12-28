@@ -1689,6 +1689,17 @@ function findSwings(h, l, c, v){
   };
 }
 
+  function isMomentumResolved(rsiMomentumShift, rsi15Momentum) {
+  if (!rsiMomentumShift) return false;
+
+  // Momentum is considered resolved if 15m RSI is neutral
+  return (
+    rsi15Momentum === "neutral" ||
+    rsi15Momentum === "decay" ||
+    rsi15Momentum === "loss"
+  );
+    }
+
 /* ================= BREAK INTENT CLASSIFIER ================= */
 function classifyBreakIntent(d) {
   const trend = d.mainTrend;
@@ -1754,6 +1765,21 @@ function classifyBreakIntent(d) {
       return "BEAR ATTACK → BULL DEFENSE WEAK → BREAKDOWN SETUP FORMING";
     }
   }
+
+  // 🛡 STRONG DEFENSE (post-momentum)
+if (
+  d.strongZoneDefended &&
+  d.mainTrend === "bullish"
+) {
+  return "🛡 STRONG ZONE DEFENDED (BEAR ATTACK FAILED)";
+}
+
+if (
+  d.strongZoneDefended &&
+  d.mainTrend === "bearish"
+) {
+  return "🛡 STRONG ZONE DEFENDED (BULL ATTACK FAILED)";
+}
 
   return "NO CLEAR ATTACK";
 }
@@ -3138,6 +3164,31 @@ prob = applyHTFProbabilityAdjustment({
   aiVerdict
 });
 
+      let strongZoneDefended = false;
+
+const momentumResolved = isMomentumResolved(
+  rsiMomentumShift,
+  rsi15Momentum
+);
+
+// 🛡 Bullish case: support survived bearish momentum
+if (
+  momentumResolved &&
+  rsiMomentumShift?.bearish &&
+  structure.includes("support holding")
+) {
+  strongZoneDefended = true;
+}
+
+// 🛡 Bearish case: resistance survived bullish momentum
+if (
+  momentumResolved &&
+  rsiMomentumShift?.bullish &&
+  structure.includes("resistance holding")
+) {
+  strongZoneDefended = true;
+  }
+
   
   
 
@@ -3148,7 +3199,7 @@ prob = applyHTFProbabilityAdjustment({
   ema21: ema21Last,
   emaShortBias,
   emaShortCross,aiVerdict,marketDom: GLOBAL_MARKET_DOM,changeState,moveType,
-moveStrength,directionalBias,setupScore,htf,volumeContext,probability: prob,breakIntent};
+moveStrength,directionalBias,setupScore,htf,volumeContext,probability: prob,breakIntent,strongZoneDefended};
 }
 
 /* ================= FILTERS ================= */
@@ -3540,6 +3591,8 @@ const marketDomIcon =
     ? "bull"
     : "neutral";
 
+    
+
 card.innerHTML = `
   ${card.dataset.manual === "true"
   ? `<div class="close" onclick="closeManualSearch()">✖</div>`
@@ -3675,12 +3728,29 @@ ${d.structure === "none" && d.volumeStructure?.name !== "none" ? `
 
   ${d.breakIntent ? (() => {
   const bi = formatBreakIntent(d.breakIntent);
-  return `
+  let out = `
     <div class="muted ${bi.cls}">
       ${bi.icon} <b>Break Intent:</b> ${bi.text}
     </div>
   `;
+
+  if (d.strongZoneDefended) {
+    out += `
+      <div class="muted" style="color:#22c55e;font-weight:600">
+        🛡 Strong Zone Defended (Post-Momentum)
+      </div>
+    `;
+  }
+
+  return out;
 })() : ""}
+
+${(d.rsiMomentumShift && d.momentumResolved) ? `
+  <div class="muted">
+    🧭 Prior Momentum Shift:
+    ${d.rsiMomentumShift.bearish ? "Bearish" : "Bullish"} (Resolved)
+  </div>
+` : ""}
 
   <hr style="opacity:.15">
 
