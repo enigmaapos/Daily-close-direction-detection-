@@ -1691,14 +1691,14 @@ function findSwings(h, l, c, v){
 
 /* ================= BREAK INTENT CLASSIFIER ================= */
 function classifyBreakIntent(d) {
-  const trend = d.mainTrend;                 
+  const trend = d.mainTrend;
   const structure = d.structure || "";       
   const volStruct = d.volumeStructure?.name || ""; 
   const momentum = d.rsiMomentumShift;       
 
   /* ================= BULLISH ENVIRONMENT ================= */
   // Only allow bullish logic if dominant volume is RED
-  if (trend === "bullish" && domVBull === false) {
+  if (trend === "bullish" && bull === false) {
 
     // 🐻 Bears attacking bullish structure but failing
     if (
