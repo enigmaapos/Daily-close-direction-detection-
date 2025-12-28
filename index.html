@@ -3573,14 +3573,6 @@ ${d.defenseFailure !== "NONE" ? `
   </b>
 </div>
 
-${d.breakIntent ? (() => {
-  const bi = formatBreakIntent(d.breakIntent);
-  return `
-    <div class="muted ${bi.cls}">
-      ${bi.icon} <b>Break Intent:</b> ${bi.text}
-    </div>
-  `;
-})() : ""}
 
   <div class="muted ${
     structureBias === "bullish" ? "bull" :
@@ -3606,6 +3598,15 @@ ${d.structure === "none" && d.volumeStructure?.name !== "none" ? `
     ⏳ Volume pressure detected — waiting for structure confirmation
   </div>
 ` : ""}
+
+${d.breakIntent ? (() => {
+  const bi = formatBreakIntent(d.breakIntent);
+  return `
+    <div class="muted ${bi.cls}">
+      ${bi.icon} <b>Break Intent:</b> ${bi.text}
+    </div>
+  `;
+})() : ""}
 
 
 <div class="muted ${aiVerdict.verdictClass}">
