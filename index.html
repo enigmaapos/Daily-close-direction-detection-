@@ -2885,12 +2885,13 @@ prob = Math.max(40, Math.min(prob, 95));
 };
 
 /* ================= BREAK INTENT ================= */
-  const breakIntent = classifyBreakIntent({
+  /* ================= BREAK INTENT ================= */
+const breakIntent = classifyBreakIntent({
   structure,
   volumeAlign,
   volumeBreakout,
   mainTrend,
-  rsiMomentumShift
+  rsiMomentumShift: intradayRSIDiv
 });
 
 
