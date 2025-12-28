@@ -444,6 +444,14 @@ button.secondary{
   <option value="EARLY WARNING">Early Warning</option>
   <option value="CRITICAL FAILURE">Critical Failure</option>
   </select>
+  
+
+  <select id="filterAttack">
+  <option value="all">All Attacks</option>
+  <option value="BULL">🐂 Bull Attacks</option>
+  <option value="BEAR">🐻 Bear Attacks</option>
+  <option value="NONE">No Attack</option>
+  </select>
   </div>
 
   <div class="muted">
@@ -3155,6 +3163,7 @@ function applyFilters(){
   const vai = document.getElementById("filterVolAI")?.value || "all";
   const rrFilter = document.getElementById("filterRR")?.value || "all";
   const df = document.getElementById("filterDefense")?.value || "all";
+  const fa = document.getElementById("filterAttack")?.value || "all";
   
 
   document.querySelectorAll(".card").forEach(c => {
@@ -3179,6 +3188,7 @@ function applyFilters(){
   if(ez !== "all" && c.dataset.execution !== ez) ok = false;
     if (vai !== "all" && c.dataset.volai !== vai) ok = false;
     
+    
 // ================= RR PRESENCE FILTER =================
 if (rrFilter === "present") {
   if (!c.dataset.rr) ok = false;
@@ -3196,9 +3206,17 @@ if (df !== "all") {
   }
 }
 
+    // ================= ATTACK INTENT FILTER =================
+if (fa !== "all") {
+  if ((c.dataset.attack || "NONE") !== fa) {
+    ok = false;
+  }
+}
+
   c.style.display = ok ? "" : "none";
 });
 }
+  
   
 
          function resetFilters(){
@@ -3215,6 +3233,7 @@ if (df !== "all") {
            document.getElementById("filterVolAI").value = "all";
            document.getElementById("filterRR").value = "all";
            document.getElementById("filterDefense").value = "all";
+           document.getElementById("filterAttack").value = "all";
            
            
 
@@ -3402,6 +3421,13 @@ if (rrDisplay !== null) {
 } else {
   delete card.dataset.tpprob;
     }
+
+  const attackSide =
+  d.breakIntent?.startsWith("BULL ATTACK") ? "BULL" :
+  d.breakIntent?.startsWith("BEAR ATTACK") ? "BEAR" :
+  "NONE";
+
+card.dataset.attack = attackSide;
 
     if (el.id === "searchGrid") {
   card.dataset.manual = "true";
@@ -4237,7 +4263,8 @@ async function runSearch(){
   "filterTradeSide",
   "filterExecution",
   "filterRR",
-    "filterDefense"
+    "filterDefense",
+    "filterAttack"
 ].forEach(id=>{
   document.getElementById(id)?.addEventListener("change", applyFilters);
 });
