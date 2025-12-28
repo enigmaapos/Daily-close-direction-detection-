@@ -1691,15 +1691,16 @@ function findSwings(h, l, c, v){
 
 /* ================= BREAK INTENT CLASSIFIER ================= */
 function classifyBreakIntent(d) {
-  const trend = d.mainTrend;                 // "bullish" | "bearish"
-  const structure = d.structure || "";       // trend structure
-  const volStruct = d.volumeStructure?.name || ""; // volume structure
-  const momentum = d.rsiMomentumShift;       // { bullish, bearish } | null
+  const trend = d.mainTrend;                 
+  const structure = d.structure || "";       
+  const volStruct = d.volumeStructure?.name || ""; 
+  const momentum = d.rsiMomentumShift;       
 
   /* ================= BULLISH ENVIRONMENT ================= */
-  if (trend === "bullish") {
+  // Only allow bullish logic if dominant volume is RED
+  if (trend === "bullish" && domVBull === false) {
 
-    // 🐻 Bears attacking bullish structure (support) but failing
+    // 🐻 Bears attacking bullish structure but failing
     if (
       momentum?.bearish &&
       structure.includes("support holding")
@@ -1707,7 +1708,7 @@ function classifyBreakIntent(d) {
       return "BEAR ATTACK → BULLISH STRUCTURE DEFENDED";
     }
 
-    // 🐂 Bulls attack & trap bears (no momentum, SELLERS failed at resistance)
+    // 🐂 Bulls attack & trap bears (no momentum)
     if (
       momentum == null &&
       volStruct.includes("resistance failed")
@@ -1725,9 +1726,10 @@ function classifyBreakIntent(d) {
   }
 
   /* ================= BEARISH ENVIRONMENT ================= */
-  if (trend === "bearish") {
+  // Only allow bearish logic if dominant volume is GREEN
+  if (trend === "bearish" && domVBull === true) {
 
-    // 🐂 Bulls attacking bearish structure (resistance) but failing
+    // 🐂 Bulls attacking bearish structure but failing
     if (
       momentum?.bullish &&
       structure.includes("resistance holding")
@@ -1735,7 +1737,7 @@ function classifyBreakIntent(d) {
       return "BULL ATTACK → BEARISH STRUCTURE DEFENDED";
     }
 
-    // 🐻 Bears attack & trap bulls (no momentum, BUYERS failed at support)
+    // 🐻 Bears attack & trap bulls (no momentum)
     if (
       momentum == null &&
       volStruct.includes("support failed")
@@ -1753,7 +1755,7 @@ function classifyBreakIntent(d) {
   }
 
   return "NO CLEAR ATTACK";
-  }
+}
   
 
     /* ================= DAILY RSI CONTEXT ================= */
