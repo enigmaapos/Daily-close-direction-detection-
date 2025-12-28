@@ -1683,29 +1683,70 @@ function findSwings(h, l, c, v){
 
 /* ================= BREAK INTENT CLASSIFIER ================= */
 function classifyBreakIntent(d) {
-  if (
-    d.structure?.includes("broken (accepted)") &&
-    d.volumeAlign === "confirmed"
-  ) {
-    return "TREND-LED BREAK";
+  const trend = d.mainTrend; // "bullish" | "bearish"
+  const structure = d.structure || "";
+  const volumeAlign = d.volumeAlign || "neutral";
+  const momentum = d.rsiMomentumShift; // { bullish, bearish } or null
+
+  /* ================= BULLISH ENVIRONMENT ================= */
+  if (trend === "bullish") {
+
+    // 🐻 Bears attacking bullish structure (support)
+    if (
+      momentum?.bearish &&
+      structure.includes("support holding")
+    ) {
+      return "BEAR ATTACK → BULLISH STRUCTURE DEFENDED";
+    }
+
+    // 🐂 Bulls attacking resistance and winning
+    if (
+      !momentum &&
+      structure.includes("resistance failed") &&
+      volumeAlign === "confirmed"
+    ) {
+      return "BULL ATTACK → TREND-LED BREAK";
+    }
+
+    // 🐂 Bulls trying without permission
+    if (
+      d.volumeBreakout &&
+      structure.includes("resistance weak")
+    ) {
+      return "BULL ATTACK → VOLUME-LED ATTEMPT";
+    }
   }
 
-  if (
-    d.volumeBreakout &&
-    (d.structure?.includes("weak") ||
-     d.structure?.includes("unaccepted"))
-  ) {
-    return "VOLUME-LED ATTEMPT";
+  /* ================= BEARISH ENVIRONMENT ================= */
+  if (trend === "bearish") {
+
+    // 🐂 Bulls attacking bearish structure (resistance)
+    if (
+      momentum?.bullish &&
+      structure.includes("resistance holding")
+    ) {
+      return "BULL ATTACK → BEARISH STRUCTURE DEFENDED";
+    }
+
+    // 🐻 Bears attacking support and winning
+    if (
+      !momentum &&
+      structure.includes("support failed") &&
+      volumeAlign === "confirmed"
+    ) {
+      return "BEAR ATTACK → TREND-LED BREAK";
+    }
+
+    // 🐻 Bears trying without permission
+    if (
+      d.volumeBreakout &&
+      structure.includes("support weak")
+    ) {
+      return "BEAR ATTACK → VOLUME-LED ATTEMPT";
+    }
   }
 
-  if (
-    d.volumeAlign === "conflict" &&
-    d.structure?.includes("holding")
-  ) {
-    return "STRUCTURE DEFENDED";
-  }
-
-  return "NO BREAK ATTEMPT";
+  return "NO CLEAR ATTACK";
 }
   
 
