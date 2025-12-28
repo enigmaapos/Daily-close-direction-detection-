@@ -1712,7 +1712,7 @@ function classifyBreakIntent(d) {
       momentum == null &&
       volStruct.includes("resistance failed")
     ) {
-      return "BULL ATTACK → BEARS TRAPPED ABOVE FAILED RESISTANCE";
+      return "BULL ATTACK → BEAR DEFENSE → BULLS STALLED AT RESISTANCE";
     }
 
     // 🐂 Bulls attempting without structural permission
@@ -1740,7 +1740,7 @@ function classifyBreakIntent(d) {
       momentum == null &&
       volStruct.includes("support failed")
     ) {
-      return "BEAR ATTACK → BULLS TRAPPED BELOW FAILED SUPPORT";
+      return "BEAR ATTACK → BULL DEFENSE → SELLERS STALLED AT SUPPORT";
     }
 
     // 🐻 Bears attempting without structural permission
