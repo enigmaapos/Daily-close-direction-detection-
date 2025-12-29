@@ -2846,17 +2846,7 @@ const rsiMomentumAge =
   activeMomentum
     ? rsi15Arr.length - 1 - activeMomentum.triggerIndex
     : null;
-
-/* ================= MOMENTUM LABEL ================= */
-const momentumTypeLabel =
-  activeMomentum?.type === "momentum-collapse"
-    ? "RSI Momentum Collapse"
-    : "RSI Momentum Recovery";
-
-const rsiMomentumLabel =
-  activeMomentum
-    ? `${momentumTypeLabel} · ${rsiMomentumAge} candles ago`
-    : null;
+  
   
 /* ================= MOMENTUM INTERPRETATION ================= */
 let momentumAttack = null;
@@ -3328,9 +3318,8 @@ prob = applyHTFProbabilityAdjustment({
   rsiMomentumAge:
     activeMomentum
       ? rsi15Arr.length - 1 - activeMomentum.triggerIndex
-      : null,
-    
-    rsiMomentumLabel
+      : null
+  
 };
 
 /* ================= FILTERS ================= */
@@ -3780,10 +3769,6 @@ ${d.defenseFailure !== "NONE" ? `
   </b>
 </div>
 
-<div class="muted ${rsiShiftClass}">
-  🧭 24h RSI Momentum Shift (15m):
-  <b>${d.rsiMomentumLabel ?? "None"}</b>
-</div>
 
 ${d.rsiMomentumShift ? `
   <div class="muted">
