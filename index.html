@@ -3716,6 +3716,10 @@ card.innerHTML = `
     💸 Funding Fee: ${fundingInfo.label}
   </div>
 
+  <div class="muted ${d.bull ? "bull" : "bear"}">
+    Dominant Volume: <b>${d.bull ? "BUYERS" : "SELLERS"}</b>
+  </div>
+
 
   <div class="prob ${
     d.bias.includes("Bull") ? "bull" :
@@ -3900,9 +3904,6 @@ ${(d.rsiMomentumShift && d.momentumCollapseDone) ? `
   (Net ${d.marketDom?.net ?? "—"}%)
 </div>
 
-<div class="muted ${d.bull ? "bull" : "bear"}">
-    Dominant Volume: <b>${d.bull ? "BUYERS" : "SELLERS"}</b>
-  </div>
 
   <div class="muted ${
     d.mainTrend === "bullish" ? "bull" :
