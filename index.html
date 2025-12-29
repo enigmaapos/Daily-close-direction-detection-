@@ -3757,7 +3757,7 @@ ${d.structure === "none" && d.volumeStructure?.name !== "none" ? `
   return out;
 })() : ""}
 
-${(d.rsiMomentumShift && d.momentumResolved) ? `
+${(d.rsiMomentumShift && d.momentumCollapseDone) ? `
   <div class="muted">
     🧭 Prior Momentum Shift:
     ${d.rsiMomentumShift.bearish ? "Bearish" : "Bullish"} (Resolved)
