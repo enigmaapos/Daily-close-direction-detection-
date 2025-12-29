@@ -3725,18 +3725,15 @@ ${d.defenseFailure !== "NONE" ? `
 </div>
 
 
-${d.intradayRSIDiv != null ? `
-
+${d.intradayRSIDiv ? `
   <div class="muted">
     📍 Trigger Index:
-    <b>${d.rsiMomentumTriggerIndex}</b>
+    <b>${d.intradayRSIDiv.triggerIndex}</b>
   </div>
-
   <div class="muted">
     ⏱ Age:
-    <b>${d.rsiMomentumAge} candles ago</b>
+    <b>${d.intradayRSIDiv.age} candles ago</b>
   </div>
-
 ` : ""}
 
 
