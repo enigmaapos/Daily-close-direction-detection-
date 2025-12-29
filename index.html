@@ -2649,6 +2649,7 @@ for(let i = k.length - 96; i < k.length - 1; i++){
   }
 }
 
+
   const ema14 = ema(c.slice(-100), 14);
 const ema21 = ema(c.slice(-100), 21);
   const ema70 = ema(c.slice(-300), 70);
@@ -2681,6 +2682,11 @@ const mainTrend = getMainTrendOnly(
   l
 );
 
+  let ema200DistPct = null;
+
+if (ema200 && price) {
+  ema200DistPct = ((price - ema200) / ema200) * 100;
+}
   
 
   // 🧠 Market dominance side (logic-safe)
@@ -3316,7 +3322,7 @@ prob = applyHTFProbabilityAdjustment({
 moveStrength,directionalBias,setupScore,htf,volumeContext,probability: prob,breakIntent,strongZoneDefended,momentumAttack,momentumCollapseDone,
   rsiMomentumShift: activeMomentum,
   rsiMomentumTriggerIndex: activeMomentum?.triggerIndex ?? null,
-  rsiMomentumAge};
+  rsiMomentumAge,ema200DistPct: ema200DistPct};
 }
 
 
@@ -3788,6 +3794,11 @@ ${d.defenseFailure !== "NONE" ? `
 
 ${d.intradayRSIDiv ? (() => {
   const triggerTimePH = getPHTriggerTime(d.intradayRSIDiv.age);
+
+  <div class="muted">
+  📏 EMA200 Distance:
+  <b>${ema200DistPct?.toFixed(2)}%</b>
+</div>
 
   return `
     <div class="muted">
