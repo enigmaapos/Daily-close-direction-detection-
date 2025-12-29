@@ -3573,6 +3573,11 @@ card.dataset.aiverdict = aiVerdict.verdict;
     card.dataset.volai = d.volAI?.meaning || "Neutral";
     card.dataset.volstructure = volumeStruct.name;
     card.dataset.defense = d.defenseFailure || "NONE";
+
+    card.dataset.momentum =
+  d.rsiMomentumShift
+    ? (d.rsiMomentumShift.bearish ? "bearish" : "bullish")
+    : "none";
     
 
 card.dataset.structureQuality =
