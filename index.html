@@ -2682,10 +2682,13 @@ const mainTrend = getMainTrendOnly(
   l
 );
 
-  let ema200DistPct = null;
+  const ema200Last = Array.isArray(ema200)
+  ? ema200.at(-1)
+  : ema200;
 
-if (ema200 && price) {
-  ema200DistPct = ((price - ema200) / ema200) * 100;
+let ema200DistPct = null;
+if (ema200Last != null && price != null) {
+  ema200DistPct = ((price - ema200Last) / ema200Last) * 100;
 }
   
 
