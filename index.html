@@ -2411,6 +2411,40 @@ if (typeof d.change === "number" && Math.abs(d.change) >= 25) {
   return "NONE";
   }
 
+  function getTrendStructureRisk(d) {
+  const s = d.structure || "";
+  const failure = d.defenseFailure; // "NONE" | "EARLY WARNING" | "CRITICAL FAILURE"
+
+  const isWeakStructure =
+    s.includes("weak") || s.includes("unaccepted");
+
+  if (!isWeakStructure) {
+    return null; // no structure risk to show
+  }
+
+  if (failure === "CRITICAL FAILURE") {
+    return {
+      level: "CRITICAL",
+      label: "🔴 Trend Structure: CRITICAL FAILURE",
+      cls: "critical"
+    };
+  }
+
+  if (failure === "EARLY WARNING") {
+    return {
+      level: "WARNING",
+      label: "🟡 Trend Structure: WARNING",
+      cls: "warning"
+    };
+  }
+
+  return {
+    level: "WEAK",
+    label: "⚠️ Trend Structure: WEAK",
+    cls: "neutral"
+  };
+  }
+
 
   function getDirectionalBias(d){
   // Only allowed in neutral / no-edge states
@@ -3129,6 +3163,8 @@ prob = Math.max(40, Math.min(prob, 95));
     intradayRSIDiv
 });
 
+    d.trendStructureRisk = getTrendStructureRisk(d);
+
 // clamp
 prob = Math.max(40, Math.min(prob, 95));
 
@@ -3784,6 +3820,14 @@ ${d.defenseFailure !== "NONE" ? `
     🛡 Defense Status: <b>${d.defenseFailure}</b>
   </div>
 ` : ""}
+
+    if (d.trendStructureRisk) {
+  html += `
+    <div class="structure-risk ${d.trendStructureRisk.cls}">
+      ${d.trendStructureRisk.label}
+    </div>
+  `;
+}
 
 <div class="muted ${rsiShiftClass}">
   🧭 24h RSI Momentum Shift (15m):
