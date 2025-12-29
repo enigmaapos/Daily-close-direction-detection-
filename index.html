@@ -3143,7 +3143,7 @@ if (rsiMomentumShift) {
   /* 🧭 INTRADAY RSI DIVERGENCE — CONTINUATION SOFT DOWNGRADE */
 if (
   bias.includes("Continuation") &&
-  volAI?.intradayRSIDiv
+  intradayRSIDiv
 ) {
   prob -= 2;
 }
@@ -3189,7 +3189,7 @@ prob = applyHTFProbabilityAdjustment({
   return {sym,price,change,bull,prob,bias,structure,structureType,volumeStructure,structureQuality,volumeAlign,defenseFailure,S:sw.S,R:sw.R,dailyRSI,rsi15,rsi15Momentum,volumeBreakout,
   breakoutAge,volumeBreakoutType,fakeVolumeBreak,postVolBreakRSIConfirm: postVolBreakRSIConfirmSafe,
   domV,
-  lastVol,mainTrend,volAI,intradayRSIDiv: volAI?.intradayRSIDiv || null,fundingRate,ema14: ema14Last,
+  lastVol,mainTrend,volAI,intradayRSIDiv,fundingRate,ema14: ema14Last,
   ema21: ema21Last,
   emaShortBias,
   emaShortCross,aiVerdict,marketDom: GLOBAL_MARKET_DOM,changeState,moveType,
