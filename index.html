@@ -2682,12 +2682,11 @@ const mainTrend = getMainTrendOnly(
   l
 );
 
-  const ema200Last = Array.isArray(ema200)
-  ? ema200.at(-1)
-  : ema200;
+  const ema200Arr = ema200;              // reuse existing array
+const ema200Last = ema200Arr.at(-1);   // scalar
 
 let ema200DistPct = null;
-if (ema200Last != null && price != null) {
+if (ema200Last != null && price != null && ema200Last !== 0) {
   ema200DistPct = ((price - ema200Last) / ema200Last) * 100;
 }
   
@@ -3798,7 +3797,7 @@ ${d.defenseFailure !== "NONE" ? `
 ${d.intradayRSIDiv ? (() => {
   const triggerTimePH = getPHTriggerTime(d.intradayRSIDiv.age);
 
-  ${d.ema200DistPct != null ? `
+${typeof d.ema200DistPct === "number" ? `
   <div class="muted">
     📏 EMA200 Distance:
     <b>${d.ema200DistPct.toFixed(2)}%</b>
