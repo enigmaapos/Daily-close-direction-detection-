@@ -3811,20 +3811,25 @@ card.innerHTML = `
   </div>
 ` : ""}
 
-${d.defenseFailure !== "NONE" ? `
-  <div class="muted ${
-    d.defenseFailure === "CRITICAL FAILURE"
-      ? "bear"
-      : "neutral"
-  }">
-    🛡 Defense Status: <b>${d.defenseFailure}</b>
-  </div>
-` : ""}
 
-    if (d.trendStructureRisk) {
+// 🛡 Defense Status
+if (d.defenseFailure && d.defenseFailure !== "NONE") {
+  html += `
+    <div class="muted ${
+      d.defenseFailure === "CRITICAL FAILURE"
+        ? "bear"
+        : "neutral"
+    }">
+      🛡 Defense Status: <b>${d.defenseFailure}</b>
+    </div>
+  `;
+}
+
+// 📐 Trend Structure / Continuation Risk
+if (d.trendStructureRisk) {
   html += `
     <div class="structure-risk ${d.trendStructureRisk.cls}">
-      ${d.trendStructureRisk.label}
+      📐 ${d.trendStructureRisk.label}
     </div>
   `;
 }
