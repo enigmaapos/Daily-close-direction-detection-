@@ -452,6 +452,13 @@ button.secondary{
   <option value="BEAR">🐻 Bear Attacks</option>
   <option value="NONE">No Attack</option>
   </select>
+
+    <select id="filterMomentum">
+  <option value="all">All Momentum</option>
+  <option value="none">No Momentum Shift</option>
+  <option value="bearish">Bearish Momentum Shift</option>
+  <option value="bullish">Bullish Momentum Shift</option>
+    </select>
   </div>
 
   <div class="muted">
@@ -3329,6 +3336,7 @@ function applyFilters(){
   const rrFilter = document.getElementById("filterRR")?.value || "all";
   const df = document.getElementById("filterDefense")?.value || "all";
   const fa = document.getElementById("filterAttack")?.value || "all";
+  const fm = document.getElementById("filterMomentum")?.value || "all";
   
 
   document.querySelectorAll(".card").forEach(c => {
@@ -3377,6 +3385,12 @@ if (fa !== "all") {
     ok = false;
   }
 }
+    // ================= MOMENTUM SHIFT FILTER =================
+if (fm !== "all") {
+  const momentum = c.dataset.momentum || "none";
+
+  if (fm !== momentum) ok = false;
+}
 
   c.style.display = ok ? "" : "none";
 });
@@ -3399,6 +3413,7 @@ if (fa !== "all") {
            document.getElementById("filterRR").value = "all";
            document.getElementById("filterDefense").value = "all";
            document.getElementById("filterAttack").value = "all";
+           document.getElementById("filterMomentum").value = "all";
            
            
 
@@ -4471,7 +4486,8 @@ async function runSearch(){
   "filterExecution",
   "filterRR",
     "filterDefense",
-    "filterAttack"
+    "filterAttack",
+    "filterMomentum"
 ].forEach(id=>{
   document.getElementById(id)?.addEventListener("change", applyFilters);
 });
