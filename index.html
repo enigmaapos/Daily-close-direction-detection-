@@ -3748,6 +3748,13 @@ card.innerHTML = `
     Dominant Volume: <b>${d.bull ? "BUYERS" : "SELLERS"}</b>
   </div>
 
+  ${typeof d.ema200DistPct === "number" ? `
+  <div class="muted">
+    📏 EMA200 Distance:
+    <b>${d.ema200DistPct.toFixed(2)}%</b>
+  </div>
+` : ""}
+
 
   <div class="prob ${
     d.bias.includes("Bull") ? "bull" :
@@ -3816,13 +3823,6 @@ ${d.intradayRSIDiv ? (() => {
     ` : ""}
   `;
 })() : ""}
-
-${typeof d.ema200DistPct === "number" ? `
-  <div class="muted">
-    📏 EMA200 Distance:
-    <b>${d.ema200DistPct.toFixed(2)}%</b>
-  </div>
-` : ""}
 
 
   <div class="muted ${
