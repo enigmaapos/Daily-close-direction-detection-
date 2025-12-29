@@ -2826,44 +2826,49 @@ if (
 }
 
 /* ================= MOMENTUM MEMORY UPDATE ================= */
-      if (intradayRSIDiv?.triggerIndex != null) {
+if (intradayRSIDiv?.triggerIndex != null) {
   const prev = rsiMomentumMemory[sym];
   if (!prev || prev.triggerIndex !== intradayRSIDiv.triggerIndex) {
     rsiMomentumMemory[sym] = {
-      ...intradayRSIDiv,
+      bearish: intradayRSIDiv.bearish,
+      bullish: intradayRSIDiv.bullish,
+      type: intradayRSIDiv.type,
       triggerIndex: intradayRSIDiv.triggerIndex,
       updatedAt: Date.now()
     };
   }
-  }
-
-  /* ================= ENRICH INTRADAY MOMENTUM FOR UI ================= */
-const activeMomentum = rsiMomentumMemory[sym] || null;
-
-if (intradayRSIDiv && activeMomentum) {
-  intradayRSIDiv = {
-    ...intradayRSIDiv,
-    triggerIndex: activeMomentum.triggerIndex,
-    age: rsi15Arr.length - 1 - activeMomentum.triggerIndex
-  };
 }
 
+/* ================= ACTIVE MOMENTUM ================= */
+let activeMomentum = rsiMomentumMemory[sym] || null;
 
 /* ================= MOMENTUM AGE ================= */
-const rsiMomentumAge =
+let rsiMomentumAge =
   activeMomentum
     ? rsi15Arr.length - 1 - activeMomentum.triggerIndex
     : null;
 
-  const MOMENTUM_TTL = 24; // candles (6h on 15m)
+const MOMENTUM_TTL = 24; // candles (6h on 15m)
 
+/* ================= EXPIRE MOMENTUM ================= */
 if (
   activeMomentum &&
   rsiMomentumAge != null &&
   rsiMomentumAge > MOMENTUM_TTL
 ) {
   delete rsiMomentumMemory[sym];
-  }
+  activeMomentum = null;
+  rsiMomentumAge = null;
+}
+
+/* ================= ENRICH INTRADAY MOMENTUM FOR UI ================= */
+if (intradayRSIDiv && activeMomentum) {
+  intradayRSIDiv = {
+    ...intradayRSIDiv,
+    triggerIndex: activeMomentum.triggerIndex,
+    age: rsiMomentumAge
+  };
+}
   
 /* ================= MOMENTUM INTERPRETATION ================= */
 let momentumAttack = null;
@@ -3278,9 +3283,9 @@ prob = applyHTFProbabilityAdjustment({
   emaShortBias,
   emaShortCross,aiVerdict,marketDom: GLOBAL_MARKET_DOM,changeState,moveType,
 moveStrength,directionalBias,setupScore,htf,volumeContext,probability: prob,breakIntent,strongZoneDefended,momentumAttack,momentumCollapseDone,
+  rsiMomentumShift: activeMomentum,
   rsiMomentumTriggerIndex: activeMomentum?.triggerIndex ?? null,
-  rsiMomentumAge,
-  rsiMomentumShift: activeMomentum};
+  rsiMomentumAge};
 }
 
 
