@@ -2865,9 +2865,11 @@ if (activeMomentum?.bullish) momentumAttack = "bullish";
 
 const momentumCollapseDone = isMomentumResolved({
   momentumAttack,
-  intradayRSIDiv: activeMomentum,
+  intradayRSIDiv,
   rsi15Momentum
 });
+
+  const rsiMomentumShift = intradayRSIDiv;
 
   const volumeStructure = {
   name: "none",
