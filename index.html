@@ -1733,7 +1733,7 @@ function classifyBreakIntent(d) {
 
     // 🐂 Bulls attack & trap bears (no momentum ever)
     if (
-      momentumAttack === null  &&
+      momentum == null  &&
       volStruct.includes("resistance failed")
     ) {
       return "BULL ATTACK → BEAR DEFENSE → BULLS STALLED AT RESISTANCE";
@@ -1741,7 +1741,7 @@ function classifyBreakIntent(d) {
 
     // 🐂 Bulls attempting without structural permission
     if (
-      momentumAttack === null  &&
+      momentum == null  &&
       volStruct.includes("resistance weak")
     ) {
       return "BULL ATTACK → BEAR DEFENSE WEAK → BREAKOUT SETUP FORMING";
@@ -1762,7 +1762,7 @@ function classifyBreakIntent(d) {
 
     // 🐻 Bears attack & trap bulls (no momentum ever)
     if (
-      momentumAttack === null  &&
+      momentum == null  &&
       volStruct.includes("support failed")
     ) {
       return "BEAR ATTACK → BULL DEFENSE → SELLERS STALLED AT SUPPORT";
@@ -1770,7 +1770,7 @@ function classifyBreakIntent(d) {
 
     // 🐻 Bears attempting without structural permission
     if (
-      momentumAttack === null  &&
+      momentum == null  &&
       volStruct.includes("support weak")
     ) {
       return "BEAR ATTACK → BULL DEFENSE WEAK → BREAKDOWN SETUP FORMING";
