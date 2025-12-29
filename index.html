@@ -3798,10 +3798,12 @@ ${d.defenseFailure !== "NONE" ? `
 ${d.intradayRSIDiv ? (() => {
   const triggerTimePH = getPHTriggerTime(d.intradayRSIDiv.age);
 
-  <div class="muted">
-  📏 EMA200 Distance:
-  <b>${ema200DistPct?.toFixed(2)}%</b>
-</div>
+  ${d.ema200DistPct != null ? `
+      <div class="muted">
+        📏 EMA200 Distance:
+        <b>${d.ema200DistPct.toFixed(2)}%</b>
+      </div>
+    ` : ""}
 
   return `
     <div class="muted">
