@@ -2785,8 +2785,10 @@ if (
   );
   }
 
-    const momentumAttack = intradayRSIDiv;
+    let momentumAttack = null;
 
+if (intradayRSIDiv?.bearish) momentumAttack = "bearish";
+if (intradayRSIDiv?.bullish) momentumAttack = "bullish";
   
 
   const volumeStructure = {
@@ -3046,23 +3048,23 @@ const structureType =
 
 let strongZoneDefended = false;
 
-// momentum is considered resolved if RSI is no longer accelerating
+// momentum resolved = RSI no longer accelerating
 const momentumResolved =
   !["accel", "reclaim"].includes(rsi15Momentum);
 
-// 🛡 Bullish defense
+// 🛡 Bullish defense (bear attack failed)
 if (
   momentumResolved &&
-  intradayRSIDiv?.bearish &&
+  momentumAttack === "bearish" &&
   structure.startsWith("support holding")
 ) {
   strongZoneDefended = true;
 }
 
-// 🛡 Bearish defense
+// 🛡 Bearish defense (bull attack failed)
 if (
   momentumResolved &&
-  intradayRSIDiv?.bullish &&
+  momentumAttack === "bullish" &&
   structure.startsWith("resistance failed")
 ) {
   strongZoneDefended = true;
