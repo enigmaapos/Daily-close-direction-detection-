@@ -3812,27 +3812,36 @@ card.innerHTML = `
 ` : ""}
 
 
-// 🛡 Defense Status
-if (d.defenseFailure && d.defenseFailure !== "NONE") {
-  html += `
-    <div class="muted ${
-      d.defenseFailure === "CRITICAL FAILURE"
-        ? "bear"
-        : "neutral"
-    }">
-      🛡 Defense Status: <b>${d.defenseFailure}</b>
-    </div>
-  `;
-}
+${(d.defenseFailure && d.defenseFailure !== "NONE") || d.trendStructureRisk
+  ? (() => {
+      let out = "";
 
-// 📐 Trend Structure / Continuation Risk
-if (d.trendStructureRisk) {
-  html += `
-    <div class="structure-risk ${d.trendStructureRisk.cls}">
-      📐 ${d.trendStructureRisk.label}
-    </div>
-  `;
-}
+      /* 🛡 Defense Status */
+      if (d.defenseFailure && d.defenseFailure !== "NONE") {
+        out += `
+          <div class="muted ${
+            d.defenseFailure === "CRITICAL FAILURE"
+              ? "bear"
+              : "neutral"
+          }">
+            🛡 <b>Defense Status:</b> ${d.defenseFailure}
+          </div>
+        `;
+      }
+
+      /* 📐 Trend Structure / Continuation Risk */
+      if (d.trendStructureRisk) {
+        out += `
+          <div class="structure-risk ${d.trendStructureRisk.cls}">
+            📐 <b>Trend Structure:</b> ${d.trendStructureRisk.label}
+          </div>
+        `;
+      }
+
+      return out;
+    })()
+  : ""}
+  
 
 <div class="muted ${rsiShiftClass}">
   🧭 24h RSI Momentum Shift (15m):
