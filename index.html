@@ -2837,8 +2837,17 @@ if (
   }
   }
 
-/* ================= MOMENTUM MEMORY ================= */
+  /* ================= ENRICH INTRADAY MOMENTUM FOR UI ================= */
 const activeMomentum = rsiMomentumMemory[sym] || null;
+
+if (intradayRSIDiv && activeMomentum) {
+  intradayRSIDiv = {
+    ...intradayRSIDiv,
+    triggerIndex: activeMomentum.triggerIndex,
+    age: rsi15Arr.length - 1 - activeMomentum.triggerIndex
+  };
+}
+
 
 /* ================= MOMENTUM AGE ================= */
 const rsiMomentumAge =
@@ -3270,9 +3279,7 @@ prob = applyHTFProbabilityAdjustment({
   emaShortCross,aiVerdict,marketDom: GLOBAL_MARKET_DOM,changeState,moveType,
 moveStrength,directionalBias,setupScore,htf,volumeContext,probability: prob,breakIntent,strongZoneDefended,momentumAttack,momentumCollapseDone,
   rsiMomentumTriggerIndex: activeMomentum?.triggerIndex ?? null,
-  rsiMomentumAge: activeMomentum
-    ? rsi15Arr.length - 1 - activeMomentum.triggerIndex
-    : null,
+  rsiMomentumAge,
   rsiMomentumShift: activeMomentum};
 }
 
