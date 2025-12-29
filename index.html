@@ -3412,43 +3412,53 @@ prob = applyHTFProbabilityAdjustment({
 
     /* ================= STRUCTURE EXTENSION ================= */
 
-// zones from swings
+// === Zones
 const resistanceZones = sw.R.map(makeZone);
 const supportZones    = sw.S.map(makeZone);
 
-// nearest zones
-const nearestResistanceZone = resistanceZones[0] || null;
-const nearestSupportZone    = supportZones[0] || null;
+const nearestResistanceZone =
+  resistanceZones
+    .map(z => ({ z, dist: Math.abs(z.low - price) }))
+    .sort((a,b) => a.dist - b.dist)[0]?.z || null;
 
-// pressure (you already have RSI)
+const nearestSupportZone =
+  supportZones
+    .map(z => ({ z, dist: Math.abs(price - z.high) }))
+    .sort((a,b) => a.dist - b.dist)[0]?.z || null;
+
+// === Pressure
 const pressure =
   rsi15 > 50 ? "BUY" :
   rsi15 < 50 ? "SELL" :
   "NEUTRAL";
 
-// reactions
-const resistanceReaction = structureReaction(
-  nearestResistanceZone,
-  candles15m
-);
+// === VWAP
+const vwap = calculateVWAP(candles15m);
+const aboveVWAP = vwap !== null && price > vwap;
 
-const supportReaction = structureReaction(
-  nearestSupportZone,
-  candles15m
-);
+// === Reactions
+const resistanceReaction = structureReaction(nearestResistanceZone, candles15m);
+const supportReaction    = structureReaction(nearestSupportZone, candles15m);
 
-// structure confidence score
+// === Structure Score
 let structureScore = 0;
 if (nearestResistanceZone || nearestSupportZone) structureScore++;
-if (resistanceReaction !== "UNDECIDED") structureScore++;
-if (pressure !== "NEUTRAL") structureScore++;
-if (Math.abs(ema200Dist) < 20) structureScore++;
-if (htfTrend === mainTrend) structureScore++;
+if (resistanceReaction !== "UNDECIDED" || supportReaction !== "UNDECIDED") structureScore++;
+if (
+  (pressure === "BUY" && aboveVWAP) ||
+  (pressure === "SELL" && !aboveVWAP)
+) structureScore++;
+if (htf.htfTrend === mainTrend) structureScore++;
 
-// intent
+// === Intent
+const activeReaction =
+  pressure === "BUY"
+    ? resistanceReaction
+    : supportReaction;
+
 const structureIntent = classifyStructureIntent({
   pressure,
-  reaction: resistanceReaction,
+  reaction: activeReaction,
   score: structureScore
 });
 
