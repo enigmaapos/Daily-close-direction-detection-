@@ -4450,6 +4450,10 @@ document.getElementById("scanLimit")
   ?.addEventListener("change", enforceScanLimitRules);
 
   window.addEventListener("load", enforceScanLimitRules);
+
+  document.addEventListener("click", () => {
+  executionAlert.play().then(() => executionAlert.pause());
+}, { once: true });
 </script>
 </body>
 </html>
