@@ -1979,13 +1979,6 @@ function detect24hVolumeLocationAI(
   }));
 
 
-  // ================= 24h INTRADAY RSI (15m) =================
-const closes15m = last24h.map(c => c.close);
-const rsi15m = calculateRSI(closes15m);
-
-  const intradayRSIDiv =
-  detect24hRSIMomentumShift(closes15m, rsi15m, mainTrend);
-
   let dayHigh = -Infinity;
   let dayLow  = Infinity;
 
@@ -2111,8 +2104,7 @@ const rsi15m = calculateRSI(closes15m);
     volume: top.baseVol,
     time: top.openTime,
     high: top.high,
-    low: top.low,
-    intradayRSIDiv
+    low: top.low
   };
 }
 
@@ -3000,7 +2992,7 @@ prob = Math.max(40, Math.min(prob, 95));
   volAI,
   volumeAlign,
     change,
-    intradayRSIDiv: volAI?.intradayRSIDiv
+    intradayRSIDiv
 });
 
 // clamp
