@@ -2857,7 +2857,7 @@ const rsiMomentumLabel =
   activeMomentum
     ? `${momentumTypeLabel} · ${rsiMomentumAge} candles ago`
     : null;
-
+  
 /* ================= MOMENTUM INTERPRETATION ================= */
 let momentumAttack = null;
 
@@ -3328,7 +3328,9 @@ prob = applyHTFProbabilityAdjustment({
   rsiMomentumAge:
     activeMomentum
       ? rsi15Arr.length - 1 - activeMomentum.triggerIndex
-      : null
+      : null,
+    
+    rsiMomentumLabel
 };
 
 /* ================= FILTERS ================= */
