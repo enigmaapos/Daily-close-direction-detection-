@@ -2826,9 +2826,8 @@ if (
 }
 
 /* ================= MOMENTUM MEMORY UPDATE ================= */
-const prev = rsiMomentumMemory[sym];
-
-if (intradayRSIDiv?.triggerIndex != null) {
+      if (intradayRSIDiv?.triggerIndex != null) {
+  const prev = rsiMomentumMemory[sym];
   if (!prev || prev.triggerIndex !== intradayRSIDiv.triggerIndex) {
     rsiMomentumMemory[sym] = {
       ...intradayRSIDiv,
@@ -2836,7 +2835,7 @@ if (intradayRSIDiv?.triggerIndex != null) {
       updatedAt: Date.now()
     };
   }
-}
+  }
 
 /* ================= MOMENTUM MEMORY ================= */
 const activeMomentum = rsiMomentumMemory[sym] || null;
@@ -3722,7 +3721,7 @@ ${d.defenseFailure !== "NONE" ? `
 </div>
 
 
-${d.activeMomentum ? `
+${d.rsiMomentumTriggerIndex != null ? `
 
   <div class="muted">
     📍 Trigger Index:
