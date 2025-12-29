@@ -1690,15 +1690,10 @@ function findSwings(h, l, c, v){
 }
 
   function isMomentumResolved(rsiMomentumShift, rsi15Momentum) {
-  if (!rsiMomentumShift) return false;
-
-  // Momentum is considered resolved if 15m RSI is neutral
-  return (
-    rsi15Momentum === "neutral" ||
-    rsi15Momentum === "decay" ||
-    rsi15Momentum === "loss"
-  );
-    }
+  // momentum resolved = RSI no longer accelerating
+  return !["accel", "reclaim"].includes(rsi15Momentum);
+}
+  
 
 /* ================= BREAK INTENT CLASSIFIER ================= */
 function classifyBreakIntent(d) {
@@ -2798,33 +2793,8 @@ if (
   );
   }
 
-  /* ================= STRONG ZONE DEFENSE ================= */
+    const momentumAttack = intradayRSIDiv;
 
-/* ================= STRONG ZONE DEFENSE ================= */
-
-let strongZoneDefended = false;
-
-const momentumResolved =
-  intradayRSIDiv &&
-  !["BULLISH","BEARISH"].includes(rsi15Momentum);
-
-// 🛡 Bullish: support survived bearish momentum
-if (
-  momentumResolved &&
-  intradayRSIDiv?.bearish &&
-  structure.startsWith("support holding")
-) {
-  strongZoneDefended = true;
-}
-
-// 🛡 Bearish: resistance survived bullish momentum
-if (
-  momentumResolved &&
-  intradayRSIDiv?.bullish &&
-  structure.startsWith("resistance failed")
-) {
-  strongZoneDefended = true;
-}
   
 
   const volumeStructure = {
@@ -3080,6 +3050,32 @@ const structureType =
   structure.startsWith("resistance weak")   ? "resistance weak" :
   "none";
 
+  /* ================= STRONG ZONE DEFENSE ================= */
+
+let strongZoneDefended = false;
+
+// momentum is considered resolved if RSI is no longer accelerating
+const momentumResolved =
+  !["accel", "reclaim"].includes(rsi15Momentum);
+
+// 🛡 Bullish defense
+if (
+  momentumResolved &&
+  intradayRSIDiv?.bearish &&
+  structure.startsWith("support holding")
+) {
+  strongZoneDefended = true;
+}
+
+// 🛡 Bearish defense
+if (
+  momentumResolved &&
+  intradayRSIDiv?.bullish &&
+  structure.startsWith("resistance failed")
+) {
+  strongZoneDefended = true;
+}
+
 const postVolBreakRSIConfirmSafe =
   postVolBreakRSIConfirm && structureHolding;
 
@@ -3205,7 +3201,7 @@ prob = applyHTFProbabilityAdjustment({
   ema21: ema21Last,
   emaShortBias,
   emaShortCross,aiVerdict,marketDom: GLOBAL_MARKET_DOM,changeState,moveType,
-moveStrength,directionalBias,setupScore,htf,volumeContext,probability: prob,breakIntent,strongZoneDefended,momentumResolved};
+moveStrength,directionalBias,setupScore,htf,volumeContext,probability: prob,breakIntent,strongZoneDefended,momentumResolved,momentumAttack};
 }
 
 /* ================= FILTERS ================= */
