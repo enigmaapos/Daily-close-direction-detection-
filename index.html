@@ -1706,9 +1706,18 @@ function findSwings(h, l, c, v){
 function classifyBreakIntent(d) {
   const trend = d.mainTrend;
   const bull = d.bull;
-  const structure = d.structure || "";       
-  const volStruct = d.volumeStructure?.name || ""; 
-  const momentum = d.rsiMomentumShift;       
+  const structure = d.structure || "";
+  const volStruct = d.volumeStructure?.name || "";
+  const momentum = d.rsiMomentumShift;
+
+  /* 🛡 STRONG DEFENSE (post-momentum OVERRIDE) */
+  if (d.strongZoneDefended && trend === "bullish") {
+    return "🛡 STRONG ZONE DEFENDED (BEAR ATTACK FAILED)";
+  }
+
+  if (d.strongZoneDefended && trend === "bearish") {
+    return "🛡 STRONG ZONE DEFENDED (BULL ATTACK FAILED)";
+  }
 
   /* ================= BULLISH ENVIRONMENT ================= */
   // Only allow bullish logic if dominant volume is RED
@@ -1722,22 +1731,22 @@ function classifyBreakIntent(d) {
       return "BEAR ATTACK → BULLISH STRUCTURE DEFENDED";
     }
 
-    
-   // 🐂 Bulls attack & trap bears (no momentum ever)
-if (
-  d.momentumAttack === null &&
-  volStruct.includes("resistance failed")
-) {
-  return "BULL ATTACK → BEAR DEFENSE → BULLS STALLED AT RESISTANCE";
-}
+    // 🐂 Bulls attack & trap bears (no momentum ever)
+    if (
+      d.momentumAttack === null &&
+      volStruct.includes("resistance failed")
+    ) {
+      return "BULL ATTACK → BEAR DEFENSE → BULLS STALLED AT RESISTANCE";
+    }
 
-// 🐂 Bulls attempting without structural permission
-if (
-  d.momentumAttack === null &&
-  volStruct.includes("resistance weak")
-) {
-  return "BULL ATTACK → BEAR DEFENSE WEAK → BREAKOUT SETUP FORMING";
-}
+    // 🐂 Bulls attempting without structural permission
+    if (
+      d.momentumAttack === null &&
+      volStruct.includes("resistance weak")
+    ) {
+      return "BULL ATTACK → BEAR DEFENSE WEAK → BREAKOUT SETUP FORMING";
+    }
+  }
 
   /* ================= BEARISH ENVIRONMENT ================= */
   // Only allow bearish logic if dominant volume is GREEN
@@ -1752,38 +1761,25 @@ if (
     }
 
     // 🐻 Bears attack & trap bulls (no momentum ever)
-if (
-  d.momentumAttack === null &&
-  volStruct.includes("support failed")
-) {
-  return "BEAR ATTACK → BULL DEFENSE → SELLERS STALLED AT SUPPORT";
-}
+    if (
+      d.momentumAttack === null &&
+      volStruct.includes("support failed")
+    ) {
+      return "BEAR ATTACK → BULL DEFENSE → SELLERS STALLED AT SUPPORT";
+    }
 
-// 🐻 Bears attempting without structural permission
-if (
-  d.momentumAttack === null &&
-  volStruct.includes("support weak")
-) {
-  return "BEAR ATTACK → BULL DEFENSE WEAK → BREAKDOWN SETUP FORMING";
-}
-
-  // 🛡 STRONG DEFENSE (post-momentum)
-if (
-  d.strongZoneDefended &&
-  d.mainTrend === "bullish"
-) {
-  return "🛡 STRONG ZONE DEFENDED (BEAR ATTACK FAILED)";
-}
-
-if (
-  d.strongZoneDefended &&
-  d.mainTrend === "bearish"
-) {
-  return "🛡 STRONG ZONE DEFENDED (BULL ATTACK FAILED)";
-}
+    // 🐻 Bears attempting without structural permission
+    if (
+      d.momentumAttack === null &&
+      volStruct.includes("support weak")
+    ) {
+      return "BEAR ATTACK → BULL DEFENSE WEAK → BREAKDOWN SETUP FORMING";
+    }
+  }
 
   return "NO CLEAR ATTACK";
 }
+
   
 
     /* ================= DAILY RSI CONTEXT ================= */
