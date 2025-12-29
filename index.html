@@ -3722,7 +3722,8 @@ ${d.defenseFailure !== "NONE" ? `
 </div>
 
 
-${d.intradayRSIDiv ? `
+${d.rsiMomentumTriggerIndex != null ? `
+
   <div class="muted">
     📍 Trigger Index:
     <b>${d.rsiMomentumTriggerIndex}</b>
@@ -3732,6 +3733,7 @@ ${d.intradayRSIDiv ? `
     ⏱ Age:
     <b>${d.rsiMomentumAge} candles ago</b>
   </div>
+
 ` : ""}
 
 
