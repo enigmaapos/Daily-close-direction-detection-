@@ -3251,76 +3251,18 @@ prob = applyHTFProbabilityAdjustment({
   
   
 
-  return {
-  sym,
-  price,
-  change,
-
-  bull,
-  prob,
-  bias,
-
-  structure,
-  structureType,
-  volumeStructure,
-  structureQuality,
-  volumeAlign,
-  defenseFailure,
-
-  S: sw.S,
-  R: sw.R,
-
-  dailyRSI,
-  rsi15,
-  rsi15Momentum,
-
-  volumeBreakout,
-  breakoutAge,
-  volumeBreakoutType,
-  fakeVolumeBreak,
-  postVolBreakRSIConfirm: postVolBreakRSIConfirmSafe,
-
+  return {sym,price,change,bull,prob,bias,structure,structureType,volumeStructure,structureQuality,volumeAlign,defenseFailure,S:sw.S,R:sw.R,dailyRSI,rsi15,rsi15Momentum,volumeBreakout,
+  breakoutAge,volumeBreakoutType,fakeVolumeBreak,postVolBreakRSIConfirm: postVolBreakRSIConfirmSafe,
   domV,
-  lastVol,
-  mainTrend,
-  volAI,
-  intradayRSIDiv,
-  fundingRate,
-
-  ema14: ema14Last,
+  lastVol,mainTrend,volAI,intradayRSIDiv,fundingRate,ema14: ema14Last,
   ema21: ema21Last,
   emaShortBias,
-  emaShortCross,
+  emaShortCross,aiVerdict,marketDom: GLOBAL_MARKET_DOM,changeState,moveType,
+moveStrength,directionalBias,setupScore,htf,volumeContext,probability: prob,breakIntent,strongZoneDefended,momentumAttack,momentumCollapseDone,
+         rsiMomentumShift: activeMomentum,rsiMomentumTriggerIndex: activeMomentum?.triggerIndex ?? null,rsiMomentumAge: activeMomentum ? rsi15Arr.length - 1 - activeMomentum.triggerIndex : null
+  };
+}
 
-  aiVerdict,
-  marketDom: GLOBAL_MARKET_DOM,
-
-  changeState,
-  moveType,
-  moveStrength,
-  directionalBias,
-  setupScore,
-  htf,
-  volumeContext,
-
-  probability: prob,
-  breakIntent,
-  strongZoneDefended,
-  momentumAttack,
-  momentumCollapseDone,
-
-  /* ================= 🧭 RSI MOMENTUM (ADDED) ================= */
-  rsiMomentumShift: activeMomentum,
-
-  rsiMomentumTriggerIndex:
-    activeMomentum?.triggerIndex ?? null,
-
-  rsiMomentumAge:
-    activeMomentum
-      ? rsi15Arr.length - 1 - activeMomentum.triggerIndex
-      : null
-  
-};
 
 /* ================= FILTERS ================= */
 function applyFilters(){
