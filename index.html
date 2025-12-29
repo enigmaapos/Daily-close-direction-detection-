@@ -1713,6 +1713,11 @@ function findSwings(h, l, c, v){
 
   if (!bearish && !bullish) return null;
 
+    // 🔁 fallback: no clean cross, use last candle as trigger
+if (triggerIndex === null && (bearish || bullish)) {
+  triggerIndex = rsi15m.length - 1;
+}
+
   return {
     bearish,
     bullish,
