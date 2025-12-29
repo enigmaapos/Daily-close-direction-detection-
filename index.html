@@ -4239,15 +4239,14 @@ ${d.volumeBreakout ? `
   🌊 Symbol Behavior:
   <b class="behavior-${behavior}">${behavior}</b>
 </div>
-`;
 
-    ${d.structureIntent ? (() => {
+${d.structureIntent ? (() => {
   let out = "";
 
   /* ================= STRUCTURE ZONE ================= */
   if (d.resistanceZone) {
     out += `
-      <div class="structure-zone">
+      <div class="muted">
         📐 <b>Structure Zone:</b>
         ${d.resistanceZone.low.toFixed(4)} – ${d.resistanceZone.high.toFixed(4)}
       </div>
@@ -4257,7 +4256,7 @@ ${d.volumeBreakout ? `
   /* ================= STRUCTURE STRENGTH ================= */
   out += `
     <div class="muted">
-      Zone Strength:
+      Strength:
       ${"●".repeat(d.structureScore)}
       ${"○".repeat(5 - d.structureScore)}
       <span class="muted">(${d.structureScore}/5)</span>
@@ -4273,7 +4272,7 @@ ${d.volumeBreakout ? `
         ? "neutral"
         : ""
     }">
-      🧱 <b>Structure Reaction:</b> ${d.resistanceReaction}
+      🧱 <b>Reaction:</b> ${d.resistanceReaction}
     </div>
   `;
 
@@ -4292,7 +4291,7 @@ ${d.volumeBreakout ? `
 
   /* ================= STRUCTURE INTENT ================= */
   out += `
-    <div class="structure-intent ${
+    <div class="${
       d.structureScore >= 4
         ? "bull"
         : d.structureScore >= 2
@@ -4319,6 +4318,7 @@ ${d.volumeBreakout ? `
 
   return out;
 })() : ""}
+`;
 
 
     if (!skipFilter) {
