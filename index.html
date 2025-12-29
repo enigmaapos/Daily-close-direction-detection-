@@ -1689,9 +1689,16 @@ function findSwings(h, l, c, v){
   };
 }
 
-  function isMomentumResolved(rsiMomentumShift, rsi15Momentum) {
-  // momentum resolved = RSI no longer accelerating
-  return !["accel", "reclaim"].includes(rsi15Momentum);
+  function isMomentumResolved({
+  momentumAttack,
+  intradayRSIDiv,
+  rsi15Momentum
+}) {
+  return (
+    momentumAttack !== null &&
+    intradayRSIDiv === null &&
+    !["accel", "reclaim"].includes(rsi15Momentum)
+  );
 }
   
 
@@ -2785,10 +2792,16 @@ if (
   );
   }
 
-    let momentumAttack = null;
+let momentumAttack = null;
 
 if (intradayRSIDiv?.bearish) momentumAttack = "bearish";
 if (intradayRSIDiv?.bullish) momentumAttack = "bullish";
+
+     const momentumCollapseDone = isMomentumResolved({
+  momentumAttack,
+  intradayRSIDiv,
+  rsi15Momentum
+});
   
 
   const volumeStructure = {
@@ -3049,21 +3062,24 @@ const structureType =
 let strongZoneDefended = false;
 
 // momentum resolved = RSI no longer accelerating
-const momentumResolved =
-  !["accel", "reclaim"].includes(rsi15Momentum);
+const momentumCollapseDone =
+  momentumAttack !== null &&           // attack happened
+  intradayRSIDiv === null &&           // collapse signal gone
+  !["accel", "reclaim"].includes(rsi15Momentum); // RSI calm
 
-// 🛡 Bullish defense (bear attack failed)
+
+// 🛡 Bullish defense
 if (
-  momentumResolved &&
+  momentumCollapseDone &&
   momentumAttack === "bearish" &&
   structure.startsWith("support holding")
 ) {
   strongZoneDefended = true;
 }
 
-// 🛡 Bearish defense (bull attack failed)
+// 🛡 Bearish defense
 if (
-  momentumResolved &&
+  momentumCollapseDone &&
   momentumAttack === "bullish" &&
   structure.startsWith("resistance failed")
 ) {
@@ -3195,7 +3211,7 @@ prob = applyHTFProbabilityAdjustment({
   ema21: ema21Last,
   emaShortBias,
   emaShortCross,aiVerdict,marketDom: GLOBAL_MARKET_DOM,changeState,moveType,
-moveStrength,directionalBias,setupScore,htf,volumeContext,probability: prob,breakIntent,strongZoneDefended,momentumResolved,momentumAttack};
+moveStrength,directionalBias,setupScore,htf,volumeContext,probability: prob,breakIntent,strongZoneDefended,momentumCollapseDone,momentumAttack};
 }
 
 /* ================= FILTERS ================= */
