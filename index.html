@@ -3270,7 +3270,9 @@ prob = applyHTFProbabilityAdjustment({
   emaShortCross,aiVerdict,marketDom: GLOBAL_MARKET_DOM,changeState,moveType,
 moveStrength,directionalBias,setupScore,htf,volumeContext,probability: prob,breakIntent,strongZoneDefended,momentumAttack,momentumCollapseDone,
   rsiMomentumTriggerIndex: activeMomentum?.triggerIndex ?? null,
-  rsiMomentumAge,
+  rsiMomentumAge: activeMomentum
+    ? rsi15Arr.length - 1 - activeMomentum.triggerIndex
+    : null,
   rsiMomentumShift: activeMomentum};
 }
 
