@@ -261,7 +261,7 @@ button.secondary{
   ℹ Scans above 30 symbols are limited to one side for stability
     </span>
   <label class="muted">
-    <input type="checkbox" id="scanGreen" />
+    <input type="checkbox" id="scanGreen" checked />
     🟢 Scan Top Gainers
   </label>
 
@@ -595,27 +595,19 @@ const execAlertCooldown = {};
   await runScan();
 });
 
-  // save on change
-scanGreen.addEventListener("change", () =>
-  localStorage.setItem("scanGreen", scanGreen.checked)
-);
-scanRed.addEventListener("change", () =>
-  localStorage.setItem("scanRed", scanRed.checked)
-);
-
-// restore on load
-window.addEventListener("load", () => {
-  scanGreen.checked = localStorage.getItem("scanGreen") !== "false";
-  scanRed.checked   = localStorage.getItem("scanRed") === "true";
+scanGreen.addEventListener("change", () => {
+  localStorage.setItem("scanGreen", scanGreen.checked);
+  onScanControlChange();
 });
 
-  scanLimit.addEventListener("change", () =>
-  localStorage.setItem("scanLimit", scanLimit.value)
-);
+scanRed.addEventListener("change", () => {
+  localStorage.setItem("scanRed", scanRed.checked);
+  onScanControlChange();
+});
 
-window.addEventListener("load", () => {
-  const saved = localStorage.getItem("scanLimit");
-  if (saved) scanLimit.value = saved;
+scanLimit.addEventListener("change", () => {
+  localStorage.setItem("scanLimit", scanLimit.value);
+  onScanControlChange();
 });
 
 
@@ -4854,36 +4846,27 @@ scrollTopBtn.addEventListener("click", () => {
 
   if (!green || !red) return;
 
-  // Heavy scan mode
   if (limit > 30) {
+    // only one side allowed — DO NOT change checked state
     if (green.checked && !red.checked) {
-      red.checked = false;
       red.disabled = true;
       green.disabled = false;
     }
     else if (red.checked && !green.checked) {
-      green.checked = false;
       green.disabled = true;
       red.disabled = false;
     }
-    else if (green.checked && red.checked) {
-      // both checked → force only one
-      red.checked = false;
-      green.disabled = false;
-      red.disabled = true;
-    }
     else {
-      // none checked → allow both
+      // both checked OR both unchecked → allow choice
       green.disabled = false;
       red.disabled = false;
     }
-  }
-  else {
-    // Normal mode (30/30)
+  } else {
+    // normal mode
     green.disabled = false;
     red.disabled = false;
   }
-  }
+}
 
   document.getElementById("scanGreen")
   ?.addEventListener("change", enforceScanLimitRules);
