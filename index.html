@@ -2802,6 +2802,8 @@ if (intradayRSIDiv?.bullish) momentumAttack = "bullish";
   intradayRSIDiv,
   rsi15Momentum
 });
+
+    const rsiMomentumShift = intradayRSIDiv;
   
 
   const volumeStructure = {
@@ -3061,14 +3063,6 @@ const structureType =
 
 let strongZoneDefended = false;
 
-// momentum resolved = RSI no longer accelerating
-const momentumCollapseDone =
-  momentumAttack !== null &&           // attack happened
-  intradayRSIDiv === null &&           // collapse signal gone
-  !["accel", "reclaim"].includes(rsi15Momentum); // RSI calm
-
-
-// 🛡 Bullish defense
 if (
   momentumCollapseDone &&
   momentumAttack === "bearish" &&
@@ -3077,7 +3071,6 @@ if (
   strongZoneDefended = true;
 }
 
-// 🛡 Bearish defense
 if (
   momentumCollapseDone &&
   momentumAttack === "bullish" &&
@@ -3123,7 +3116,7 @@ moveStrength,
     volumeContext
 });
 
-  const rsiMomentumShift = intradayRSIDiv;
+  
 
   /* ================= RSI MOMENTUM SHIFT PROBABILITY ADJUSTMENT ================= */
 
