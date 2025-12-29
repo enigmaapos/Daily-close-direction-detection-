@@ -1624,56 +1624,91 @@ function findSwings(h, l, c, v){
   return result;
   }
 
-
   function detect24hRSIMomentumShift(closes15m, rsi15m, mainTrend) {
-    if (
-  mainTrend !== "bullish" &&
-  mainTrend !== "bearish"
-) return null;
-    
+  if (mainTrend !== "bullish" && mainTrend !== "bearish") return null;
   if (!rsi15m || rsi15m.length < 96) return null;
 
-  const recentRSI = rsi15m.slice(-96).filter(v => v !== null);
-  if (recentRSI.length < 20) return null;
+  const startIndex = rsi15m.length - 96;
 
-  const rsiHigh  = Math.max(...recentRSI);
-  const rsiLow   = Math.min(...recentRSI);
+  const recentRSI = rsi15m.slice(startIndex);
+  const recentCloses = closes15m.slice(startIndex);
+
+  const cleanRSI = recentRSI.filter(v => v !== null);
+  if (cleanRSI.length < 20) return null;
+
+  const rsiHigh  = Math.max(...cleanRSI);
+  const rsiLow   = Math.min(...cleanRSI);
   const rsiRange = rsiHigh - rsiLow;
 
-  const recentCloses = closes15m.slice(-96);
   const priceHigh = Math.max(...recentCloses);
   const priceLow  = Math.min(...recentCloses);
-  const lastPrice = recentCloses.at(-1);
-
   const priceRange = priceHigh - priceLow;
+  const lastPrice = recentCloses.at(-1);
 
   let bearish = false;
   let bullish = false;
+  let triggerIndex = null;
 
   /* ================= 🔴 BEARISH MOMENTUM COLLAPSE ================= */
-  // Only valid in BULLISH trend
   if (mainTrend === "bullish") {
     const priceHolding =
       lastPrice > priceLow + priceRange * 0.5;
 
     bearish =
-      rsiHigh >= 50 &&        // RSI had strength
-      rsiLow <= 50 &&         // RSI collapsed
-      rsiRange >= 50 &&       // meaningful decay
-      priceHolding;           // price did NOT follow RSI down
+      rsiHigh >= 50 &&
+      rsiLow <= 50 &&
+      rsiRange >= 50 &&
+      priceHolding;
+
+    // 🔍 find LAST RSI cross below 50 while price held
+    if (bearish) {
+      for (let i = 1; i < recentRSI.length; i++) {
+        const prev = recentRSI[i - 1];
+        const curr = recentRSI[i];
+        const price = recentCloses[i];
+
+        if (
+          prev != null &&
+          curr != null &&
+          prev > 50 &&
+          curr <= 50 &&
+          price > priceLow + priceRange * 0.5
+        ) {
+          triggerIndex = startIndex + i;
+        }
+      }
+    }
   }
 
   /* ================= 🟢 BULLISH MOMENTUM RECOVERY ================= */
-  // Only valid in BEARISH trend
   if (mainTrend === "bearish") {
     const priceHolding =
       lastPrice < priceLow + priceRange * 0.5;
 
     bullish =
-      rsiLow <= 50 &&         // RSI was weak
-      rsiHigh >= 50 &&        // RSI recovered
-      rsiRange >= 50 &&       // meaningful recovery
-      priceHolding;           // price did NOT follow RSI up
+      rsiLow <= 50 &&
+      rsiHigh >= 50 &&
+      rsiRange >= 50 &&
+      priceHolding;
+
+    // 🔍 find LAST RSI cross above 50 while price held
+    if (bullish) {
+      for (let i = 1; i < recentRSI.length; i++) {
+        const prev = recentRSI[i - 1];
+        const curr = recentRSI[i];
+        const price = recentCloses[i];
+
+        if (
+          prev != null &&
+          curr != null &&
+          prev < 50 &&
+          curr >= 50 &&
+          price < priceLow + priceRange * 0.5
+        ) {
+          triggerIndex = startIndex + i;
+        }
+      }
+    }
   }
 
   if (!bearish && !bullish) return null;
@@ -1681,13 +1716,15 @@ function findSwings(h, l, c, v){
   return {
     bearish,
     bullish,
-    type: bearish
-      ? "momentum-collapse"
-      : "momentum-recovery",
+    type: bearish ? "momentum-collapse" : "momentum-recovery",
+    triggerIndex,   // ✅ candle index where it last appeared
     tf: "15m",
     window: "24h"
   };
-}
+  }
+
+  const rsiMomentumMemory = {};
+
 
   function isMomentumResolved({
   momentumAttack,
@@ -2612,6 +2649,7 @@ const mainTrend = getMainTrendOnly(
   h,
   l
 );
+
   
 
   // 🧠 Market dominance side (logic-safe)
@@ -2644,7 +2682,7 @@ const breakoutAge =
   volumeBreakout &&
   (Date.now() - k.at(-1)[6] < 45 * 60 * 1000);
 
-  // direction conflict with main trend
+  // direction conflict with man trend
 const directionConflict =
   (mainTrend === "bullish" && lastBull === false) ||
   (mainTrend === "bearish" && lastBull === true);
@@ -2771,7 +2809,7 @@ else {
   structure = "none";
 }
 
-    /* ================= INTRADAY RSI MOMENTUM (GUARDED) ================= */
+/* ================= INTRADAY RSI MOMENTUM (GUARDED) ================= */
 let intradayRSIDiv = null;
 
 if (
@@ -2785,21 +2823,52 @@ if (
     rsi15Arr,
     mainTrend
   );
-  }
+}
 
+/* ================= MOMENTUM MEMORY UPDATE ================= */
+const prev = rsiMomentumMemory[sym];
+
+if (intradayRSIDiv?.triggerIndex != null) {
+  if (!prev || prev.triggerIndex !== intradayRSIDiv.triggerIndex) {
+    rsiMomentumMemory[sym] = {
+      ...intradayRSIDiv,
+      triggerIndex: intradayRSIDiv.triggerIndex,
+      updatedAt: Date.now()
+    };
+  }
+}
+
+/* ================= MOMENTUM MEMORY ================= */
+const activeMomentum = rsiMomentumMemory[sym] || null;
+
+/* ================= MOMENTUM AGE ================= */
+const rsiMomentumAge =
+  activeMomentum
+    ? rsi15Arr.length - 1 - activeMomentum.triggerIndex
+    : null;
+
+/* ================= MOMENTUM LABEL ================= */
+const momentumTypeLabel =
+  activeMomentum?.type === "momentum-collapse"
+    ? "RSI Momentum Collapse"
+    : "RSI Momentum Recovery";
+
+const rsiMomentumLabel =
+  activeMomentum
+    ? `${momentumTypeLabel} · ${rsiMomentumAge} candles ago`
+    : null;
+
+/* ================= MOMENTUM INTERPRETATION ================= */
 let momentumAttack = null;
 
-if (intradayRSIDiv?.bearish) momentumAttack = "bearish";
-if (intradayRSIDiv?.bullish) momentumAttack = "bullish";
+if (activeMomentum?.bearish) momentumAttack = "bearish";
+if (activeMomentum?.bullish) momentumAttack = "bullish";
 
-     const momentumCollapseDone = isMomentumResolved({
+const momentumCollapseDone = isMomentumResolved({
   momentumAttack,
-  intradayRSIDiv,
+  intradayRSIDiv: activeMomentum,
   rsi15Momentum
 });
-
-    const rsiMomentumShift = intradayRSIDiv;
-  
 
   const volumeStructure = {
   name: "none",
@@ -3192,15 +3261,75 @@ prob = applyHTFProbabilityAdjustment({
   
   
 
-  return {sym,price,change,bull,prob,bias,structure,structureType,volumeStructure,structureQuality,volumeAlign,defenseFailure,S:sw.S,R:sw.R,dailyRSI,rsi15,rsi15Momentum,volumeBreakout,
-  breakoutAge,volumeBreakoutType,fakeVolumeBreak,postVolBreakRSIConfirm: postVolBreakRSIConfirmSafe,
+  return {
+  sym,
+  price,
+  change,
+
+  bull,
+  prob,
+  bias,
+
+  structure,
+  structureType,
+  volumeStructure,
+  structureQuality,
+  volumeAlign,
+  defenseFailure,
+
+  S: sw.S,
+  R: sw.R,
+
+  dailyRSI,
+  rsi15,
+  rsi15Momentum,
+
+  volumeBreakout,
+  breakoutAge,
+  volumeBreakoutType,
+  fakeVolumeBreak,
+  postVolBreakRSIConfirm: postVolBreakRSIConfirmSafe,
+
   domV,
-  lastVol,mainTrend,volAI,intradayRSIDiv,fundingRate,ema14: ema14Last,
+  lastVol,
+  mainTrend,
+  volAI,
+  intradayRSIDiv,
+  fundingRate,
+
+  ema14: ema14Last,
   ema21: ema21Last,
   emaShortBias,
-  emaShortCross,aiVerdict,marketDom: GLOBAL_MARKET_DOM,changeState,moveType,
-moveStrength,directionalBias,setupScore,htf,volumeContext,probability: prob,breakIntent,strongZoneDefended,momentumAttack,momentumCollapseDone};
-}
+  emaShortCross,
+
+  aiVerdict,
+  marketDom: GLOBAL_MARKET_DOM,
+
+  changeState,
+  moveType,
+  moveStrength,
+  directionalBias,
+  setupScore,
+  htf,
+  volumeContext,
+
+  probability: prob,
+  breakIntent,
+  strongZoneDefended,
+  momentumAttack,
+  momentumCollapseDone,
+
+  /* ================= 🧭 RSI MOMENTUM (ADDED) ================= */
+  rsiMomentumShift: activeMomentum,
+
+  rsiMomentumTriggerIndex:
+    activeMomentum?.triggerIndex ?? null,
+
+  rsiMomentumAge:
+    activeMomentum
+      ? rsi15Arr.length - 1 - activeMomentum.triggerIndex
+      : null
+};
 
 /* ================= FILTERS ================= */
 function applyFilters(){
@@ -3648,6 +3777,23 @@ ${d.defenseFailure !== "NONE" ? `
     }
   </b>
 </div>
+
+<div class="muted ${rsiShiftClass}">
+  🧭 24h RSI Momentum Shift (15m):
+  <b>${d.rsiMomentumLabel ?? "None"}</b>
+</div>
+
+${d.rsiMomentumShift ? `
+  <div class="muted">
+    📍 Trigger Index:
+    <b>${d.rsiMomentumTriggerIndex}</b>
+  </div>
+
+  <div class="muted">
+    ⏱ Age:
+    <b>${d.rsiMomentumAge} candles ago</b>
+  </div>
+` : ""}
 
 
   <div class="muted ${
