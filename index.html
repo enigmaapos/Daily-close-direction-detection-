@@ -2701,6 +2701,14 @@ async function analyze(sym,change){
 
   const mappedK = mapKlines(k);
 
+  const candles = k.map(x => ({
+  open:  +x[1],
+  high:  +x[2],
+  low:   +x[3],
+  close: +x[4],
+  volume:+x[5]
+}));
+
   const changeState = getChange24hState(change);
 const moveType = get24hMoveType(change);
 const moveStrength = get24hMoveStrength(change);
@@ -3433,12 +3441,12 @@ const pressure =
   "NEUTRAL";
 
 // === VWAP
-const vwap = calculateVWAP(candles15m);
+const vwap = calculateVWAP(candles);
 const aboveVWAP = vwap !== null && price > vwap;
 
 // === Reactions
-const resistanceReaction = structureReaction(nearestResistanceZone, candles15m);
-const supportReaction    = structureReaction(nearestSupportZone, candles15m);
+const resistanceReaction = structureReaction(nearestResistanceZone, candles);
+const supportReaction    = structureReaction(nearestSupportZone, candles);
 
 // === Structure Score
 let structureScore = 0;
