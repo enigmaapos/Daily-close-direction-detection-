@@ -2846,7 +2846,16 @@ const rsiMomentumAge =
   activeMomentum
     ? rsi15Arr.length - 1 - activeMomentum.triggerIndex
     : null;
-  
+
+  const MOMENTUM_TTL = 24; // candles (6h on 15m)
+
+if (
+  activeMomentum &&
+  rsiMomentumAge != null &&
+  rsiMomentumAge > MOMENTUM_TTL
+) {
+  delete rsiMomentumMemory[sym];
+  }
   
 /* ================= MOMENTUM INTERPRETATION ================= */
 let momentumAttack = null;
