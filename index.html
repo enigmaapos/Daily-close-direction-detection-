@@ -1848,6 +1848,66 @@ function classifyBreakIntent(d) {
   return "NO CLEAR ATTACK";
 }
 
+  /* ================= STRUCTURE HELPERS ================= */
+
+const ZONE_PAD = 0.003;
+
+function makeZone(level) {
+  return {
+    low: level * (1 - ZONE_PAD),
+    high: level * (1 + ZONE_PAD)
+  };
+}
+
+function calculateVWAP(candles) {
+  let pv = 0, v = 0;
+  for (const c of candles) {
+    const price = (c.high + c.low + c.close) / 3;
+    pv += price * c.volume;
+    v  += c.volume;
+  }
+  return v ? pv / v : null;
+}
+
+function structureReaction(zone, candles) {
+  if (!zone) return "UNDECIDED";
+
+  let failedBreaks = 0;
+  let closesInside = 0;
+
+  const recent = candles.slice(-20);
+
+  for (const c of recent) {
+    const inZone = c.close >= zone.low && c.close <= zone.high;
+    const brokeAbove = c.high > zone.high && c.close < zone.high;
+    const brokeBelow = c.low < zone.low && c.close > zone.low;
+
+    if (inZone) closesInside++;
+    if (brokeAbove || brokeBelow) failedBreaks++;
+  }
+
+  if (failedBreaks >= 3) return "DEFENDED";
+  if (closesInside >= 6) return "WEAKENING";
+
+  return "UNDECIDED";
+}
+
+function classifyStructureIntent({ pressure, reaction, score }) {
+  if (score < 3) return "NO CLEAR STRUCTURE";
+
+  if (reaction === "WEAKENING" && pressure === "BUY")
+    return "RESISTANCE UNDER ATTACK";
+
+  if (reaction === "WEAKENING" && pressure === "SELL")
+    return "SUPPORT UNDER ATTACK";
+
+  if (reaction === "DEFENDED")
+    return "STRUCTURE DEFENDED";
+
+  return "CONFLICT";
+}
+  
+
   
 
     /* ================= DAILY RSI CONTEXT ================= */
@@ -3350,6 +3410,50 @@ prob = applyHTFProbabilityAdjustment({
   aiVerdict
 });
 
+    /* ================= STRUCTURE EXTENSION ================= */
+
+// zones from swings
+const resistanceZones = sw.R.map(makeZone);
+const supportZones    = sw.S.map(makeZone);
+
+// nearest zones
+const nearestResistanceZone = resistanceZones[0] || null;
+const nearestSupportZone    = supportZones[0] || null;
+
+// pressure (you already have RSI)
+const pressure =
+  rsi15 > 50 ? "BUY" :
+  rsi15 < 50 ? "SELL" :
+  "NEUTRAL";
+
+// reactions
+const resistanceReaction = structureReaction(
+  nearestResistanceZone,
+  candles15m
+);
+
+const supportReaction = structureReaction(
+  nearestSupportZone,
+  candles15m
+);
+
+// structure confidence score
+let structureScore = 0;
+if (nearestResistanceZone || nearestSupportZone) structureScore++;
+if (resistanceReaction !== "UNDECIDED") structureScore++;
+if (pressure !== "NEUTRAL") structureScore++;
+if (Math.abs(ema200Dist) < 20) structureScore++;
+if (htfTrend === mainTrend) structureScore++;
+
+// intent
+const structureIntent = classifyStructureIntent({
+  pressure,
+  reaction: resistanceReaction,
+  score: structureScore
+});
+
+  
+
   
   
 
@@ -3363,7 +3467,13 @@ prob = applyHTFProbabilityAdjustment({
 moveStrength,directionalBias,setupScore,htf,volumeContext,probability: prob,breakIntent,strongZoneDefended,momentumAttack,momentumCollapseDone,
   rsiMomentumShift: activeMomentum,
   rsiMomentumTriggerIndex: activeMomentum?.triggerIndex ?? null,
-  rsiMomentumAge,ema200DistPct: ema200DistPct};
+  rsiMomentumAge,ema200DistPct: ema200DistPct,pressure,
+  structureIntent,
+  structureScore,
+  resistanceReaction,
+  supportReaction,
+  resistanceZone: nearestResistanceZone,
+  supportZone: nearestSupportZone};
 }
 
 
@@ -3763,6 +3873,10 @@ const marketDomIcon =
     ? "bull"
     : "neutral";
 
+
+    
+
+    
     
 
 card.innerHTML = `
@@ -3843,7 +3957,7 @@ ${(d.defenseFailure && d.defenseFailure !== "NONE") || d.trendStructureRisk
 
       return out;
     })()
-  : ""}
+  : ""} 
   
 
 <div class="muted ${rsiShiftClass}">
@@ -4126,6 +4240,85 @@ ${d.volumeBreakout ? `
   <b class="behavior-${behavior}">${behavior}</b>
 </div>
 `;
+
+    ${d.structureIntent ? (() => {
+  let out = "";
+
+  /* ================= STRUCTURE ZONE ================= */
+  if (d.resistanceZone) {
+    out += `
+      <div class="structure-zone">
+        📐 <b>Structure Zone:</b>
+        ${d.resistanceZone.low.toFixed(4)} – ${d.resistanceZone.high.toFixed(4)}
+      </div>
+    `;
+  }
+
+  /* ================= STRUCTURE STRENGTH ================= */
+  out += `
+    <div class="muted">
+      Zone Strength:
+      ${"●".repeat(d.structureScore)}
+      ${"○".repeat(5 - d.structureScore)}
+      <span class="muted">(${d.structureScore}/5)</span>
+    </div>
+  `;
+
+  /* ================= STRUCTURE REACTION ================= */
+  out += `
+    <div class="muted ${
+      d.resistanceReaction === "DEFENDED"
+        ? "bull"
+        : d.resistanceReaction === "WEAKENING"
+        ? "neutral"
+        : ""
+    }">
+      🧱 <b>Structure Reaction:</b> ${d.resistanceReaction}
+    </div>
+  `;
+
+  /* ================= PRESSURE ================= */
+  out += `
+    <div class="muted ${
+      d.pressure === "BUY"
+        ? "bull"
+        : d.pressure === "SELL"
+        ? "bear"
+        : "neutral"
+    }">
+      🧭 <b>Pressure:</b> ${d.pressure}
+    </div>
+  `;
+
+  /* ================= STRUCTURE INTENT ================= */
+  out += `
+    <div class="structure-intent ${
+      d.structureScore >= 4
+        ? "bull"
+        : d.structureScore >= 2
+        ? "neutral"
+        : "muted"
+    }">
+      🧠 <b>Structure Intent:</b> ${d.structureIntent}
+    </div>
+  `;
+
+  /* ================= CONFIDENCE ================= */
+  out += `
+    <div class="muted">
+      Confidence:
+      ${
+        d.structureScore >= 4
+          ? "HIGH"
+          : d.structureScore >= 2
+          ? "MEDIUM"
+          : "LOW"
+      }
+    </div>
+  `;
+
+  return out;
+})() : ""}
 
 
     if (!skipFilter) {
