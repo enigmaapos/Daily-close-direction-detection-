@@ -3493,15 +3493,15 @@ card.dataset.attack = attackSide;
   
 
   // 🔔 SOUND ALERT — only on 24h volume breakout
-if (d.volumeBreakout) {
-  const now = Date.now();
+//if (d.volumeBreakout) {
+  //const now = Date.now();
 
    //prevent repeat spam per symbol
-  if (!volumeAlertCooldown[d.sym] || now - volumeAlertCooldown[d.sym] > ALERT_COOLDOWN) {
-    volumeAlert.play().catch(()=>{});
-    volumeAlertCooldown[d.sym] = now;
-  }
-}
+  //if (!volumeAlertCooldown[d.sym] || now - volumeAlertCooldown[d.sym] > ALERT_COOLDOWN) {
+    //volumeAlert.play().catch(()=>{});
+    //volumeAlertCooldown[d.sym] = now;
+  //}
+//}
 
 
     
@@ -3525,44 +3525,37 @@ const volumeStructClass =
     : "muted";
 
 
-/* ================= TOP 30 DIRECTIONAL ALERT ================= */
-const now = Date.now();
-const alertKey = `${d.sym}-${aiVerdict.tradeSide}`;
+/* ================= EXECUTION ALERT ================= */
+  const now = Date.now();
+  const alertKey = `${d.sym}-${aiVerdict.tradeSide}`;
 
-const isManual = card.dataset.manual === "true";
-const isFavGrid = el.id === "favGrid";
+  const isManual = card.dataset.manual === "true";
+  const isFavGrid = el.id === "favGrid";
 
-// Only defense regimes
-const isBullishDefense = d.bias === "Bullish Defense";
-const isBearishDefense = d.bias === "Bearish Defense";
+  const isLongExecution =
+    aiVerdict.tradeSide === "LONG" &&
+    aiVerdict.executionZone === "ENTRY ZONE" &&
+    el.id === "redGrid";     // 🔴 Top 30 Red
 
-// Location logic
-const inTopGreen = el.id === "greenGrid"; // gainers
-const inTopRed   = el.id === "redGrid";   // losers
+  const isShortExecution =
+    aiVerdict.tradeSide === "SHORT" &&
+    aiVerdict.executionZone === "ENTRY ZONE" &&
+    el.id === "greenGrid";   // 🟢 Top 30 Green
 
-// 🔔 SOUND CONDITIONS
-const shouldAlert =
-  (
-    isBearishDefense && inTopGreen   // sell-side defense on strength
-  ) ||
-  (
-    isBullishDefense && inTopRed     // buy-side defense on weakness
-  );
-
-if (
-  isNewCard &&
-  shouldAlert &&
-  !isManual &&
-  !isFavGrid
-) {
   if (
-    !execAlertCooldown[alertKey] ||
-    now - execAlertCooldown[alertKey] > EXEC_ALERT_COOLDOWN
+    isNewCard &&
+    !isManual &&
+    !isFavGrid &&
+    (isLongExecution || isShortExecution)
   ) {
-    executionAlert.play().catch(() => {});
-    execAlertCooldown[alertKey] = now;
+    if (
+      !execAlertCooldown[alertKey] ||
+      now - execAlertCooldown[alertKey] > EXEC_ALERT_COOLDOWN
+    ) {
+      executionAlert.play().catch(()=>{});
+      execAlertCooldown[alertKey] = now;
+    }
   }
-}
 
     const marketDomBias = d.marketDom?.bias || "Neutral";
 
