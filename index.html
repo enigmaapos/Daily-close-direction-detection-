@@ -3797,13 +3797,6 @@ ${d.defenseFailure !== "NONE" ? `
 ${d.intradayRSIDiv ? (() => {
   const triggerTimePH = getPHTriggerTime(d.intradayRSIDiv.age);
 
-${typeof d.ema200DistPct === "number" ? `
-  <div class="muted">
-    📏 EMA200 Distance:
-    <b>${d.ema200DistPct.toFixed(2)}%</b>
-  </div>
-` : ""}
-
   return `
     <div class="muted">
       📍 Trigger Index:
@@ -3823,6 +3816,13 @@ ${typeof d.ema200DistPct === "number" ? `
     ` : ""}
   `;
 })() : ""}
+
+${typeof d.ema200DistPct === "number" ? `
+  <div class="muted">
+    📏 EMA200 Distance:
+    <b>${d.ema200DistPct.toFixed(2)}%</b>
+  </div>
+` : ""}
 
 
   <div class="muted ${
