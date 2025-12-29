@@ -1722,22 +1722,22 @@ function classifyBreakIntent(d) {
       return "BEAR ATTACK → BULLISH STRUCTURE DEFENDED";
     }
 
-    // 🐂 Bulls attack & trap bears (no momentum)
-    if (
-      momentum == null &&
-      volStruct.includes("resistance failed")
-    ) {
-      return "BULL ATTACK → BEAR DEFENSE → BULLS STALLED AT RESISTANCE";
-    }
+    
+   // 🐂 Bulls attack & trap bears (no momentum ever)
+if (
+  d.momentumAttack === null &&
+  volStruct.includes("resistance failed")
+) {
+  return "BULL ATTACK → BEAR DEFENSE → BULLS STALLED AT RESISTANCE";
+}
 
-    // 🐂 Bulls attempting without structural permission
-    if (
-      momentum == null &&
-      volStruct.includes("resistance weak")
-    ) {
-      return "BULL ATTACK → BEAR DEFENSE WEAK → BREAKOUT SETUP FORMING";
-    }
-  }
+// 🐂 Bulls attempting without structural permission
+if (
+  d.momentumAttack === null &&
+  volStruct.includes("resistance weak")
+) {
+  return "BULL ATTACK → BEAR DEFENSE WEAK → BREAKOUT SETUP FORMING";
+}
 
   /* ================= BEARISH ENVIRONMENT ================= */
   // Only allow bearish logic if dominant volume is GREEN
@@ -1751,22 +1751,21 @@ function classifyBreakIntent(d) {
       return "BULL ATTACK → BEARISH STRUCTURE DEFENDED";
     }
 
-    // 🐻 Bears attack & trap bulls (no momentum)
-    if (
-      momentum == null &&
-      volStruct.includes("support failed")
-    ) {
-      return "BEAR ATTACK → BULL DEFENSE → SELLERS STALLED AT SUPPORT";
-    }
+    // 🐻 Bears attack & trap bulls (no momentum ever)
+if (
+  d.momentumAttack === null &&
+  volStruct.includes("support failed")
+) {
+  return "BEAR ATTACK → BULL DEFENSE → SELLERS STALLED AT SUPPORT";
+}
 
-    // 🐻 Bears attempting without structural permission
-    if (
-      momentum == null &&
-      volStruct.includes("support weak")
-    ) {
-      return "BEAR ATTACK → BULL DEFENSE WEAK → BREAKDOWN SETUP FORMING";
-    }
-  }
+// 🐻 Bears attempting without structural permission
+if (
+  d.momentumAttack === null &&
+  volStruct.includes("support weak")
+) {
+  return "BEAR ATTACK → BULL DEFENSE WEAK → BREAKDOWN SETUP FORMING";
+}
 
   // 🛡 STRONG DEFENSE (post-momentum)
 if (
