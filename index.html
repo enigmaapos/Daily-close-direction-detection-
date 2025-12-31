@@ -990,7 +990,29 @@ function biasTimeLog(sym, label, series) {
   return null;
   }
 
-    function countPolarityFlipAttempts(series) {
+  const LAST_FLIP_LOG = {};
+
+function logFlipAttempt(sym, flip) {
+  if (!flip) return;
+
+  const key = `${flip.timeFrom}-${flip.timeTo}`;
+  if (LAST_FLIP_LOG[sym] === key) return;
+
+  LAST_FLIP_LOG[sym] = key;
+
+  const tFrom = new Date(flip.timeFrom)
+    .toISOString()
+    .slice(11, 16);
+  const tTo = new Date(flip.timeTo)
+    .toISOString()
+    .slice(11, 16);
+
+  console.warn(
+    `[FLIP ATTEMPT] ${sym} ${tFrom} ${flip.from} → ${tTo} ${flip.to}`
+  );
+  }
+
+  function countPolarityFlipAttempts(series) {
   if (!series || series.length < 3) return 0;
 
   let count = 0;
@@ -1013,28 +1035,6 @@ function biasTimeLog(sym, label, series) {
   }
 
   return count;
-}
-
-  const LAST_FLIP_LOG = {};
-
-function logFlipAttempt(sym, flip) {
-  if (!flip) return;
-
-  const key = `${flip.timeFrom}-${flip.timeTo}`;
-  if (LAST_FLIP_LOG[sym] === key) return;
-
-  LAST_FLIP_LOG[sym] = key;
-
-  const tFrom = new Date(flip.timeFrom)
-    .toISOString()
-    .slice(11, 16);
-  const tTo = new Date(flip.timeTo)
-    .toISOString()
-    .slice(11, 16);
-
-  console.warn(
-    `[FLIP ATTEMPT] ${sym} ${tFrom} ${flip.from} → ${tTo} ${flip.to}`
-  );
   }
 
   /* ================= TIME FORMAT (BINANCE / LOCAL) ================= */
@@ -4808,10 +4808,7 @@ ${d.volumeBreakout ? `
   <b class="behavior-${behavior}">${behavior}</b>
 </div>
 
-
-      <div class="bias-chart-wrap">
-  <canvas class="bias-chart" width="320" height="160"></canvas>
-  ${flipAttempt ? `
+${flipAttempt ? `
 <div class="muted">
   ⚠ Polarity Flip Attempt<br>
   <b>
@@ -4829,6 +4826,10 @@ ${flipAttemptCount > 0 ? `
   <b>${flipAttemptCount}</b>
 </div>
 ` : ""}
+
+
+      <div class="bias-chart-wrap">
+  <canvas class="bias-chart" width="320" height="160"></canvas>
 </div>
 
   <button class="secondary"
