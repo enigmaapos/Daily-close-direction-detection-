@@ -5170,9 +5170,9 @@ async function processChartBias(d, canvas) {
   const flipAttempt = detectPolarityFlipAttempt(rawSeries);
   if (!flipAttempt) return;
 
-  registerFlipAttempt(sym, flipAttempt, mainTrend);
-  logFlipAttempt(sym, flipAttempt);
-  playFlipSound(sym, flipAttempt);
+  registerFlipAttempt(d.sym, flipAttempt, mainTrend);
+  logFlipAttempt(d.sym, flipAttempt);
+  playFlipSound(d.sym, flipAttempt);
 
   // allow repaint during scan
   await new Promise(r => setTimeout(r, 0));
