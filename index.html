@@ -732,6 +732,43 @@ function drawBiasChart(canvas, points) {
   });
   }
 
+  /* ================= DRAW SINGLE BIAS POINT ================= */
+function drawSingleBiasPoint(canvas, point) {
+  if (!canvas || !point) return;
+
+  const ctx = canvas.getContext("2d");
+  const w = canvas.width;
+  const h = canvas.height;
+
+  ctx.clearRect(0, 0, w, h);
+
+  // zero line
+  ctx.strokeStyle = "#334155";
+  ctx.beginPath();
+  ctx.moveTo(0, h / 2);
+  ctx.lineTo(w, h / 2);
+  ctx.stroke();
+
+  const minY = -3;
+  const maxY =  3;
+
+  const scaleY = y =>
+    h - ((y - minY) / (maxY - minY)) * h;
+
+  const y = scaleY(point.y);
+  const x = w / 2;
+
+  ctx.beginPath();
+  ctx.arc(x, y, 5, 0, Math.PI * 2);
+
+  ctx.fillStyle =
+    point.y > 0 ? "#22c55e" :
+    point.y < 0 ? "#fb7185" :
+    "#facc15";
+
+  ctx.fill();
+}
+
 
     /* ================= 4H HTF CACHE ================= */
 const HTF_CACHE = {};
@@ -3866,10 +3903,26 @@ const id = `card-${scope}-${d.sym}`;
 
     /* ================= BIAS CHART RENDER ================= */
 const canvas = card.querySelector(".bias-chart");
-if (canvas) {
-  const series = compressBias15m(d.sym).slice(-96); // last 24h
+if (!canvas) return;
+
+/* 1️⃣ Seed bias history if empty */
+if (!BIAS_HISTORY[d.sym] || BIAS_HISTORY[d.sym].length === 0) {
+  BIAS_HISTORY[d.sym] = [{
+    ts: Date.now(),
+    bias: d.bias ?? "Neutral",
+    y: BIAS_Y_MAP[d.bias] ?? 0
+  }];
+}
+
+/* 2️⃣ Compress AFTER seeding */
+const series = compressBias15m(d.sym).slice(-96);
+
+/* 3️⃣ Draw based on number of points */
+if (series.length >= 2) {
   drawBiasChart(canvas, series);
-  }
+} else if (series.length === 1) {
+  drawSingleBiasPoint(canvas, series[0]);
+}
 
   
   card.dataset.bias = d.bias;
