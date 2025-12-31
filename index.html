@@ -587,12 +587,10 @@ button.secondary{
   <div id="marketNet" class="neutral">⚖ Net: —</div>
   </div>
 
-<div class="flip-card ${f.trendDir}">
-  <section id="flipPanel">
+<section id="flipPanel">
   <h2>⚠ Polarity Flip Attempts</h2>
   <div id="flipGrid"></div>
-  </section>
-</div>
+</section>
 
 <h2>⭐ Favorites</h2>
 <div class="grid" id="favGrid"></div>
@@ -1111,16 +1109,18 @@ const FLIP_REGISTRY = {};
   function registerFlipAttempt(sym, flip, mainTrend) {
   if (!flip) return;
 
+  const mt = (mainTrend || "").toUpperCase();
+
   const trendDir =
-    mainTrend === "BULLISH" ? "bull" :
-    mainTrend === "BEARISH" ? "bear" :
+    mt === "BULLISH" ? "bull" :
+    mt === "BEARISH" ? "bear" :
     "neutral";
 
   FLIP_REGISTRY[sym] = {
     sym,
     from: flip.from,
     to: flip.to,
-    trendDir,          // 🔴 from MAIN TREND
+    trendDir,
     timeFrom: flip.timeFrom,
     timeTo: flip.timeTo,
     ts: flip.timeTo
@@ -4986,7 +4986,8 @@ if (!BIAS_HISTORY[d.sym] || BIAS_HISTORY[d.sym].length < 96) {
 
     if (!skipFilter) {
   applyFilters();
-      renderFlipPanel();
+      registerFlipAttempt(d.sym, flipAttempt, d.mainTrend);
+renderFlipPanel();
 }
   }
 
