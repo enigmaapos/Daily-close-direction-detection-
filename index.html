@@ -4640,10 +4640,10 @@ const marketDomIcon =
     : "neutral";
 
 
-const rawSeries = compressRawBias15m(d.sym).slice(-96);
+const biasSeries = compressBias15m(d.sym).slice(-96);
 
-const flipAttempt = detectPolarityFlipAttempt(rawSeries);
-const flipAttemptCount = countPolarityFlipAttempts(rawSeries);
+flipAttempt = detectPolarityFlipAttempt(biasSeries);
+flipAttemptCount = countPolarityFlipAttempts(biasSeries);
 
     
     
@@ -5123,8 +5123,8 @@ const canvas = card.querySelector(".bias-chart");
 if (!canvas) return;
 
 async function processBiasAndFlip() {
-  const series = compressBias15m(d.sym).slice(-96);
-  const flipAttempt = detectPolarityFlipAttempt(series);
+  const rawSeries = compressRawBias15m(d.sym).slice(-96);
+  const flipAttempt = detectPolarityFlipAttempt(rawSeries);
 
   if (flipAttempt) {
     registerFlipAttempt(d.sym, flipAttempt, d.mainTrend);
