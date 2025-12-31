@@ -4682,12 +4682,12 @@ ${d.volumeBreakout ? `
 </div>
 `;
 
-    /* ================= BIAS CHART RENDER ================= */
+   /* ================= BIAS CHART RENDER ================= */
 const canvas = card.querySelector(".bias-chart");
 if (!canvas) return;
 
-/* Seed historical bias ONLY if missing */
-if (!BIAS_HISTORY[d.sym]) {
+/* ✅ Seed from 15m history if insufficient data */
+if (!BIAS_HISTORY[d.sym] || BIAS_HISTORY[d.sym].length < 96) {
   seedBiasFrom15mHistory(d.sym).then(() => {
     const series = compressBias15m(d.sym).slice(-96);
 
