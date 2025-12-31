@@ -5073,17 +5073,18 @@ ${flipAttemptCount > 0 ? `
 `;
 
 /* ================= BIAS CHART RENDER ================= */
-const canvas = card.querySelector(".bias-chart");
-if (!canvas) return;
+async function renderCard(d, grid, isFav = false) {
 
-async function renderBiasAndFlip(sym, canvas, htfTrend, mainTrend) {
-  // 1️⃣ Chart (historical, HTF-aware, visual only)
-  await renderBiasChart(sym, canvas, htfTrend);
+  const canvas = card.querySelector(".bias-chart");
+  if (!canvas) return;
 
-  // 2️⃣ Flip detection (event-based, no UI coupling)
-  processFlipDetection(sym, mainTrend);
+  // 1️⃣ Chart ONLY (historical, HTF-aware)
+  await renderBiasChart(d.sym, canvas, htf.htfTrend);
 
-  // 3️⃣ Flip panel UI (aggregated, no chart logic)
+  // 2️⃣ Flip detection ONLY (event-based)
+  processFlipEvents(d.sym, d.mainTrend);
+
+  // 3️⃣ Flip panel UI ONLY (aggregated)
   renderFlipPanel();
 }
 
