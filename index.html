@@ -4686,28 +4686,26 @@ ${d.volumeBreakout ? `
 const canvas = card.querySelector(".bias-chart");
 if (!canvas) return;
 
-/* 1️⃣ Seed from 15m history ONCE (if empty) */
+/* Seed historical bias ONLY if missing */
 if (!BIAS_HISTORY[d.sym]) {
-  await seedBiasFrom15mHistory(d.sym);
+  seedBiasFrom15mHistory(d.sym).then(() => {
+    const series = compressBias15m(d.sym).slice(-96);
+
+    if (series.length >= 2) {
+      drawBiasChart(canvas, series);
+    } else if (series.length === 1) {
+      drawSingleBiasPoint(canvas, series[0]);
+    }
+  });
 }
+else {
+  const series = compressBias15m(d.sym).slice(-96);
 
-/* 2️⃣ Fallback ONLY if history truly failed */
-if (!BIAS_HISTORY[d.sym] || BIAS_HISTORY[d.sym].length === 0) {
-  BIAS_HISTORY[d.sym] = [{
-    ts: Date.now(),
-    bias: d.bias ?? "Neutral",
-    y: BIAS_Y_MAP[d.bias] ?? 0
-  }];
-}
-
-/* 3️⃣ Compress AFTER seeding */
-const series = compressBias15m(d.sym).slice(-96);
-
-/* 4️⃣ Draw */
-if (series.length >= 2) {
-  drawBiasChart(canvas, series);
-} else if (series.length === 1) {
-  drawSingleBiasPoint(canvas, series[0]);
+  if (series.length >= 2) {
+    drawBiasChart(canvas, series);
+  } else if (series.length === 1) {
+    drawSingleBiasPoint(canvas, series[0]);
+  }
 }
 
 
