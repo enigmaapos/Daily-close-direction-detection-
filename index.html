@@ -756,6 +756,43 @@ function compressBias15m(symbol) {
     });
 }
 
+  const RAW_BIAS_HISTORY = {};
+
+  function computeRawBias(k, idx, all) {
+  const close = +k[4];
+  const open  = +k[1];
+  const prev  = idx > 0 ? +all[idx - 1][4] : close;
+
+  if (close > prev) return +1;
+  if (close < prev) return -1;
+  return 0;
+  }
+
+  function compressRawBias15m(sym) {
+  const data = RAW_BIAS_HISTORY[sym];
+  if (!data || data.length === 0) return [];
+
+  const buckets = {};
+
+  for (const p of data) {
+    const key = Math.floor(p.ts / (15 * 60 * 1000));
+    if (!buckets[key]) buckets[key] = [];
+    buckets[key].push(p);
+  }
+
+  return Object.entries(buckets)
+    .sort((a, b) => a[0] - b[0])
+    .map(([k, arr]) => {
+      let sum = 0;
+      arr.forEach(p => sum += p.y);
+
+      return {
+        time: Number(k) * 15 * 60 * 1000,
+        y: Math.sign(sum) // -1, 0, +1
+      };
+    });
+}
+
   /* ================= BIAS → Y AXIS MAP ================= */
 const BIAS_Y_MAP = {
   "Bullish Continuation":  +3,
@@ -1027,27 +1064,55 @@ function computeHistoricalBias(k, idx, all, htfTrend = "neutral") {
   return "Neutral";
 }
 
+  function computeRawBias(k, idx, all) {
+  const close = +k[4];
+  const open  = +k[1];
+  const high  = +k[2];
+  const low   = +k[3];
 
-  async function seedBiasFrom15mHistory(sym, htfTrend = "neutral") {
+  const body = Math.abs(close - open);
+  const range = high - low;
+
+  const isBull = close > open;
+  const isBear = close < open;
+
+  const momentum = range > 0 ? body / range : 0;
+
+  const prev = idx > 0 ? +all[idx - 1][4] : close;
+  const up   = close > prev;
+  const down = close < prev;
+
+  if (up && isBull && momentum > 0.6) return "Bullish Continuation";
+  if (up && isBear) return "Bull Trap Risk";
+  if (down && isBear && momentum > 0.6) return "Bearish Continuation";
+  if (down && isBull) return "Bear Trap Risk";
+
+  return "Neutral";
+  }
+
+
+  async function seedBiasFrom15mHistory(sym) {
   const klines = await fetch15mHistory(sym);
   if (!klines || klines.length === 0) return;
 
   BIAS_HISTORY[sym] = [];
+  RAW_BIAS_HISTORY[sym] = [];
 
   klines.forEach((k, i) => {
-    const bias = computeHistoricalBias(
-      k,
-      i,
-      klines,
-      htfTrend
-    );
 
-    const y = BIAS_Y_MAP[bias] ?? 0;
-
+    // 🔵 chart bias (unchanged)
+    const bias = computeHistoricalBias(k, i, klines);
     BIAS_HISTORY[sym].push({
-      ts: k[0], // 15m open time
+      ts: k[0],
       bias,
-      y
+      y: BIAS_Y_MAP[bias] ?? 0
+    });
+
+    // 🔴 raw bias (new)
+    const raw = computeRawBias(k, i, klines);
+    RAW_BIAS_HISTORY[sym].push({
+      ts: k[0],
+      y: raw
     });
   });
 }
@@ -4575,10 +4640,10 @@ const marketDomIcon =
     : "neutral";
 
 
-const biasSeries = compressBias15m(d.sym).slice(-96);
+const rawSeries = compressRawBias15m(d.sym).slice(-96);
 
-flipAttempt = detectPolarityFlipAttempt(biasSeries);
-flipAttemptCount = countPolarityFlipAttempts(biasSeries);
+const flipAttempt = detectPolarityFlipAttempt(rawSeries);
+const flipAttemptCount = countPolarityFlipAttempts(rawSeries);
 
     
     
@@ -5058,8 +5123,8 @@ const canvas = card.querySelector(".bias-chart");
 if (!canvas) return;
 
 async function processBiasAndFlip() {
-  const series = compressBias15m(d.sym).slice(-96);
-  const flipAttempt = detectPolarityFlipAttempt(series);
+  const rawSeries = compressRawBias15m(d.sym).slice(-96);
+  const flipAttempt = detectPolarityFlipAttempt(rawSeries);
 
   if (flipAttempt) {
     registerFlipAttempt(d.sym, flipAttempt, d.mainTrend);
@@ -5080,10 +5145,10 @@ async function processBiasAndFlip() {
 
 /* Seed if needed, then process */
 if (!BIAS_HISTORY[d.sym] || BIAS_HISTORY[d.sym].length < 96) {
-  seedBiasFrom15mHistory(d.sym).then(processBiasAndFlip);
-} else {
-  processBiasAndFlip();
+  await seedRawBiasFrom15mHistory(d.sym);
 }
+
+processBiasAndFlip();
 
 
     if (!skipFilter) {
