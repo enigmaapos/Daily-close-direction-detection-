@@ -4672,7 +4672,7 @@ const marketDomIcon =
     ? "bull"
     : "neutral";
 
-const rawSeries = compressRawBias15m(sym).slice(-96);
+const rawSeries = compressRawBias15m(d.sym).slice(-96);
    
 flipAttempt = detectPolarityFlipAttempt(rawSeries);
 flipAttemptCount = countPolarityFlipAttempts(rawSeries);
@@ -5164,7 +5164,7 @@ async function processChartBias(d, canvas) {
 }
 
     async function processRawBiasAndFlip(sym, mainTrend) {
-  const rawSeries = compressRawBias15m(sym).slice(-96);
+  const rawSeries = compressRawBias15m(d.sym).slice(-96);
   if (rawSeries.length < 3) return;
 
   const flipAttempt = detectPolarityFlipAttempt(rawSeries);
