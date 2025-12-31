@@ -249,6 +249,98 @@ button.secondary{
   .behavior-SMOOTH { color: #22c55e; }
 .behavior-CONSOLIDATION { color: #facc15; }
 .behavior-CHOPPY { color: #fb7185; }
+
+.bias-chart {
+  display: block;
+  width: 100%;
+  margin-top: 10px;
+}
+  .bias-chart-wrap {
+  margin-top: 12px;
+  padding-top: 8px;
+  border-top: 1px solid #172033;
+    }
+  .card-header {
+  position: absolute;
+  }
+  .card {
+  outline: 1px solid red;
+  }
+
+/* ================= FLIP PANEL (COMPACT) ================= */
+
+#flipPanel {
+  margin: 6px 0;
+}
+
+#flipPanel h2 {
+  font-size: 12px;
+  font-weight: 600;
+  margin: 4px 0;
+  color: #facc15;
+}
+
+/* tight grid */
+#flipGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 4px;
+}
+
+/* ================= FLIP ITEM (VERY SMALL) ================= */
+
+.flip-card {
+  padding: 4px 6px;
+  border-radius: 4px;
+  border: 1px solid #7c2d12;
+  background: #1c0f0a;
+  font-size: 10px;
+  line-height: 1.2;
+}
+
+/* symbol */
+.flip-card b {
+  display: block;
+  font-size: 10px;
+  font-weight: 600;
+  color: #fb7185;
+  margin-bottom: 1px;
+}
+
+/* time + direction */
+.flip-card .muted {
+  font-size: 9px;
+  color: #9fb3cc;
+}
+
+  /* ================= FLIP DIRECTION COLORS ================= */
+
+.flip-card.bull {
+  border-color: #14532d;
+  background: #052e1a;
+}
+
+.flip-card.bull b {
+  color: #22c55e;
+}
+
+.flip-card.bear {
+  border-color: #7f1d1d;
+  background: #2a0f14;
+}
+
+.flip-card.bear b {
+  color: #fb7185;
+}
+
+  .flip-card {
+  cursor: pointer;
+}
+
+.flip-card:hover {
+  box-shadow: 0 0 10px rgba(56,189,248,0.4);
+  transform: scale(1.02);
+}
 </style>
 </head>
 
@@ -266,7 +358,7 @@ button.secondary{
   </label>
 
   <label class="muted">
-    <input type="checkbox" id="scanRed" />
+    <input type="checkbox" id="scanRed" checked />
     🔴 Scan Top Losers
   </label>
 
@@ -274,7 +366,7 @@ button.secondary{
     Scan count:
     <select id="scanLimit">
   <option value="30">30</option>
-  <option value="50" selected>50</option>
+  <option value="50">50</option>
   <option value="75">75</option>
   <option value="100">100</option>
 </select>
@@ -452,6 +544,13 @@ button.secondary{
   <option value="BEAR">🐻 Bear Attacks</option>
   <option value="NONE">No Attack</option>
   </select>
+
+    <select id="filterMomentum">
+  <option value="all">All Momentum</option>
+  <option value="none">No Momentum Shift</option>
+  <option value="bearish">Bearish Momentum Shift</option>
+  <option value="bullish">Bullish Momentum Shift</option>
+    </select>
   </div>
 
   <div class="muted">
@@ -497,17 +596,24 @@ button.secondary{
   <div id="marketNet" class="neutral">⚖ Net: —</div>
   </div>
 
+<section id="flipPanel">
+  <h2>⚠ Polarity Flip Attempts</h2>
+  <div id="flipGrid"></div>
+</section>
+
 <h2>⭐ Favorites</h2>
 <div class="grid" id="favGrid"></div>
 
 <h2>🔍 Manual</h2>
 <div class="grid" id="searchGrid"></div>
 
-<h2>🟢 Top Gainers — Short Execution Zone (Sell on Strength)</h2>
+<h2>🟢 Top Gainers — (Sell on Strength)</h2>
 <div class="grid" id="greenGrid"></div>
 
-<h2>🔴 Top Losers — Long Execution Zone (Buy on Weakness)</h2>
+<h2>🔴 Top Losers — (Buy on Weakness)</h2>
 <div class="grid" id="redGrid"></div>
+
+
 
   <button id="scrollTopBtn" title="Back to top">⬆</button>
 
@@ -588,30 +694,558 @@ const execAlertCooldown = {};
   await runScan();
 });
 
-  // save on change
-scanGreen.addEventListener("change", () =>
-  localStorage.setItem("scanGreen", scanGreen.checked)
-);
-scanRed.addEventListener("change", () =>
-  localStorage.setItem("scanRed", scanRed.checked)
-);
-
-// restore on load
-window.addEventListener("load", () => {
-  scanGreen.checked = localStorage.getItem("scanGreen") !== "false";
-  scanRed.checked   = localStorage.getItem("scanRed") === "true";
+scanGreen.addEventListener("change", () => {
+  localStorage.setItem("scanGreen", scanGreen.checked);
+  onScanControlChange();
 });
 
-  scanLimit.addEventListener("change", () =>
-  localStorage.setItem("scanLimit", scanLimit.value)
-);
-
-window.addEventListener("load", () => {
-  const saved = localStorage.getItem("scanLimit");
-  if (saved) scanLimit.value = saved;
+scanRed.addEventListener("change", () => {
+  localStorage.setItem("scanRed", scanRed.checked);
+  onScanControlChange();
 });
 
+scanLimit.addEventListener("change", () => {
+  localStorage.setItem("scanLimit", scanLimit.value);
+  onScanControlChange();
+});
 
+  const BIAS_CHART_PADDING = {
+  left: 48,   // space for Y labels
+  right: 8,
+  top: 8,
+  bottom: 20 // space for X labels
+};
+
+  /* ================= 15M BIAS COMPRESSION ================= */
+function compressBias15m(symbol) {
+  const data = BIAS_HISTORY[symbol];
+  if (!data || data.length === 0) return [];
+
+  const buckets = {};
+
+  for (const p of data) {
+    const key = Math.floor(p.ts / (15 * 60 * 1000));
+    if (!buckets[key]) buckets[key] = [];
+    buckets[key].push(p);
+  }
+
+  return Object.entries(buckets)
+    .sort((a, b) => a[0] - b[0])
+    .map(([k, arr]) => {
+      const freq = {};
+      arr.forEach(p => {
+        freq[p.bias] = (freq[p.bias] || 0) + 1;
+      });
+
+      // dominant bias
+      let dominant = "Neutral";
+      let max = 0;
+
+      for (const b in freq) {
+        if (freq[b] > max) {
+          max = freq[b];
+          dominant = b;
+        }
+      }
+
+      return {
+        time: Number(k) * 15 * 60 * 1000,
+        bias: dominant,
+        y: BIAS_Y_MAP[dominant] ?? 0
+      };
+    });
+}
+
+  /* ================= BIAS → Y AXIS MAP ================= */
+const BIAS_Y_MAP = {
+  "Bullish Continuation":  +3,
+  "Bullish Defense":       +2,
+  "Bull Trap Risk":        +1,
+
+  "Neutral":                0,
+
+  "Bear Trap Risk":        -1,
+  "Bearish Defense":       -2,
+  "Bearish Continuation":  -3
+};
+
+  /* ================= BIAS HISTORY ================= */
+// symbol → [{ ts, bias, y }]
+const BIAS_HISTORY = {};
+
+  /* ================= DRAW BIAS TREND ================= */
+function drawBiasChart(canvas, points) {
+  if (!canvas || points.length < 2) return;
+
+  const ctx = canvas.getContext("2d");
+  const w = canvas.width;
+  const h = canvas.height;
+  const pad = BIAS_CHART_PADDING;
+
+  ctx.clearRect(0, 0, w, h);
+
+  // Y axis + guides
+  drawBiasYAxis(ctx, w, h, pad);
+
+  const minY = -3;
+  const maxY =  3;
+
+  const plotW = w - pad.left - pad.right;
+  const plotH = h - pad.top - pad.bottom;
+
+  const scaleY = y =>
+    pad.top + plotH - ((y - minY) / (maxY - minY)) * plotH;
+
+  const stepX = plotW / (points.length - 1);
+
+  // zero line
+  ctx.strokeStyle = "#334155";
+  ctx.beginPath();
+  ctx.moveTo(pad.left, scaleY(0));
+  ctx.lineTo(w - pad.right, scaleY(0));
+  ctx.stroke();
+
+  // bias line
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = "#38bdf8";
+  ctx.beginPath();
+
+  points.forEach((p, i) => {
+    const x = pad.left + i * stepX;
+    const y = scaleY(p.y);
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
+
+  ctx.stroke();
+
+  // dots
+  points.forEach((p, i) => {
+    const x = pad.left + i * stepX;
+    const y = scaleY(p.y);
+
+    ctx.beginPath();
+    ctx.arc(x, y, 3, 0, Math.PI * 2);
+    ctx.fillStyle =
+      p.y > 0 ? "#22c55e" :
+      p.y < 0 ? "#fb7185" :
+      "#facc15";
+    ctx.fill();
+  });
+
+  // X axis labels
+  drawBiasXAxis(ctx, w, h, points, pad);
+}
+
+  /* ================= DRAW SINGLE BIAS POINT ================= */
+function drawSingleBiasPoint(canvas, point) {
+  if (!canvas || !point) return;
+
+  const ctx = canvas.getContext("2d");
+  const w = canvas.width;
+  const h = canvas.height;
+  const pad = BIAS_CHART_PADDING;
+
+  ctx.clearRect(0, 0, w, h);
+
+  drawBiasYAxis(ctx, w, h, pad);
+
+  const minY = -3;
+  const maxY = 3;
+
+  const plotH = h - pad.top - pad.bottom;
+
+  const scaleY = y =>
+    pad.top + plotH - ((y - minY) / (maxY - minY)) * plotH;
+
+  const x = pad.left + (w - pad.left - pad.right) / 2;
+  const y = scaleY(point.y);
+
+  // zero line
+  ctx.strokeStyle = "#334155";
+  ctx.beginPath();
+  ctx.moveTo(pad.left, scaleY(0));
+  ctx.lineTo(w - pad.right, scaleY(0));
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.arc(x, y, 5, 0, Math.PI * 2);
+  ctx.fillStyle =
+    point.y > 0 ? "#22c55e" :
+    point.y < 0 ? "#fb7185" :
+    "#facc15";
+  ctx.fill();
+}
+
+  function drawBiasYAxis(ctx, w, h, pad) {
+  const levels = [
+    { y: +3, label: "Bull Cont." },
+    { y: +2, label: "Bull Def." },
+    { y: +1, label: "Bull" },
+    { y:  0, label: "Neutral" },
+    { y: -1, label: "Bear" },
+    { y: -2, label: "Bear Def." },
+    { y: -3, label: "Bear Cont." }
+  ];
+
+  const minY = -3;
+  const maxY =  3;
+
+  const plotH = h - pad.top - pad.bottom;
+
+  const scaleY = y =>
+    pad.top + plotH - ((y - minY) / (maxY - minY)) * plotH;
+
+  ctx.font = "10px Inter, system-ui";
+  ctx.fillStyle = "#9fb3cc";
+  ctx.textAlign = "right";
+  ctx.textBaseline = "middle";
+
+  levels.forEach(l => {
+    const py = scaleY(l.y);
+
+    // guide line
+    ctx.strokeStyle = "#172033";
+    ctx.beginPath();
+    ctx.moveTo(pad.left, py);
+    ctx.lineTo(w - pad.right, py);
+    ctx.stroke();
+
+    // label
+    ctx.fillText(l.label, pad.left - 6, py);
+  });
+}
+
+  function drawBiasXAxis(ctx, w, h, points, pad) {
+  if (!points || points.length === 0) return;
+
+  ctx.font = "10px Inter, system-ui";
+  ctx.fillStyle = "#9fb3cc";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "top";
+
+  const plotW = w - pad.left - pad.right;
+  const plotY = h - pad.bottom;
+
+  const indices = [
+    0,
+    Math.floor(points.length / 2),
+    points.length - 1
+  ];
+
+  indices.forEach(i => {
+    const p = points[i];
+    if (!p) return;
+
+    const x = pad.left + (i / (points.length - 1)) * plotW;
+    const t = new Date(p.time);
+
+    const label = t.toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit"
+    });
+
+    ctx.fillText(label, x, plotY + 4);
+  });
+}
+
+  async function fetch15mHistory(sym) {
+  return fetchJSON(
+    `${API}/fapi/v1/klines?symbol=${sym}&interval=15m&limit=96`
+  );
+  }
+
+  function computeHistoricalBias(k, idx, all) {
+  const close = +k[4];
+  const open  = +k[1];
+  const high  = +k[2];
+  const low   = +k[3];
+
+  const body = Math.abs(close - open);
+  const range = high - low;
+
+  const isBull = close > open;
+  const isBear = close < open;
+
+  // momentum proxy
+  const momentum =
+    range > 0 ? body / range : 0;
+
+  // trend proxy using previous closes
+  const prev = idx > 0 ? +all[idx - 1][4] : close;
+  const trendUp = close > prev;
+  const trendDown = close < prev;
+
+  // ---- Bias classification ----
+  if (trendUp && isBull && momentum > 0.6) {
+    return "Bullish Continuation";
+  }
+
+  if (trendUp && isBear) {
+    return "Bull Trap Risk";
+  }
+
+  if (!trendUp && !trendDown) {
+    return "Neutral";
+  }
+
+  if (trendDown && isBear && momentum > 0.6) {
+    return "Bearish Continuation";
+  }
+
+  if (trendDown && isBull) {
+    return "Bear Trap Risk";
+  }
+
+  return "Neutral";
+  }
+
+  async function seedBiasFrom15mHistory(sym) {
+  const klines = await fetch15mHistory(sym);
+  if (!klines || klines.length === 0) return;
+
+  BIAS_HISTORY[sym] = [];
+
+  klines.forEach((k, i) => {
+    const bias = computeHistoricalBias(k, i, klines);
+    const y = BIAS_Y_MAP[bias] ?? 0;
+
+    BIAS_HISTORY[sym].push({
+      ts: k[0], // open time of 15m candle
+      bias,
+      y
+    });
+  });
+  }
+
+  const DEBUG_BIAS_TIME = true;
+
+function biasTimeLog(sym, label, series) {
+  if (!DEBUG_BIAS_TIME || !series || series.length === 0) return;
+
+  console.group(`[${sym}] ${label}`);
+
+  series.forEach(p => {
+    const t = new Date(p.time || p.ts);
+    const hh = t.getHours().toString().padStart(2, "0");
+    const mm = t.getMinutes().toString().padStart(2, "0");
+
+    console.log(`${hh}:${mm} → ${p.y}`);
+  });
+
+  console.groupEnd();
+}
+
+  function detectPolarityFlipAttempt(series) {
+  if (!series || series.length < 3) return null;
+
+  for (let i = 1; i < series.length - 1; i++) {
+    const prev = series[i - 1];
+    const curr = series[i];
+    const next = series[i + 1];
+
+    // direct polarity jump
+    const polarityFlip =
+      (prev.y < 0 && curr.y > 0) ||
+      (prev.y > 0 && curr.y < 0);
+
+    // neutral participation
+    const hasNeutral =
+      prev.y === 0 || next.y === 0;
+
+    if (polarityFlip && hasNeutral) {
+      return {
+        from: prev.y,
+        to: curr.y,
+        timeFrom: prev.time,
+        timeTo: curr.time
+      };
+    }
+  }
+
+  return null;
+  }
+
+  function countPolarityFlipAttempts(series) {
+  if (!series || series.length < 3) return 0;
+
+  let count = 0;
+
+  for (let i = 1; i < series.length - 1; i++) {
+    const prev = series[i - 1];
+    const curr = series[i];
+    const next = series[i + 1];
+
+    const polarityFlip =
+      (prev.y > 0 && curr.y < 0) ||
+      (prev.y < 0 && curr.y > 0);
+
+    const hasNeutral =
+      prev.y === 0 || next.y === 0;
+
+    if (polarityFlip && hasNeutral) {
+      count++;
+    }
+  }
+
+  return count;
+  }
+
+  const LAST_FLIP_LOG = {};
+
+function logFlipAttempt(sym, flip) {
+  if (!flip) return;
+
+  const key = `${flip.timeFrom}-${flip.timeTo}`;
+  if (LAST_FLIP_LOG[sym] === key) return;
+
+  LAST_FLIP_LOG[sym] = key;
+
+  const tFrom = new Date(flip.timeFrom)
+    .toISOString()
+    .slice(11, 16);
+  const tTo = new Date(flip.timeTo)
+    .toISOString()
+    .slice(11, 16);
+
+  console.warn(
+    `[FLIP ATTEMPT] ${sym} ${tFrom} ${flip.from} → ${tTo} ${flip.to}`
+  );
+  }
+
+  /* ================= FLIP REGISTRY ================= */
+const FLIP_REGISTRY = {};
+
+  function registerFlipAttempt(sym, flip, mainTrend) {
+  if (!flip) return;
+
+  const mt = (mainTrend || "").toUpperCase();
+
+  const trendDir =
+    mt === "BULLISH" ? "bull" :
+    mt === "BEARISH" ? "bear" :
+    "neutral";
+
+  FLIP_REGISTRY[sym] = {
+    sym,
+    from: flip.from,
+    to: flip.to,
+    trendDir,
+    timeFrom: flip.timeFrom,
+    timeTo: flip.timeTo,
+    ts: flip.timeTo
+  };
+}
+
+    function renderFlipPanel() {
+  const grid = document.getElementById("flipGrid");
+  if (!grid) return;
+
+  const flips = Object.values(FLIP_REGISTRY)
+    .sort((a, b) => b.ts - a.ts)
+    .slice(0, 10);
+
+  grid.innerHTML = flips.map(f => `
+  <div 
+    class="flip-card ${f.trendDir}" 
+    data-sym="${f.sym}"
+    onclick="openFlipSymbol('${f.sym}')"
+  >
+    <b>${f.sym}</b>
+    <div class="muted">
+      ${formatTime(f.timeFrom)} ${f.from}
+      →
+      ${formatTime(f.timeTo)} ${f.to}
+    </div>
+  </div>
+`).join("");
+}
+
+    async function openFlipSymbol(sym) {
+  // set as active manual symbol
+  activeSearchSymbol = sym;
+
+  // clear old manual card
+  searchGrid.innerHTML = "";
+
+  try {
+    const t = await fetchJSON(
+      `${API}/fapi/v1/ticker/24hr?symbol=${sym}`
+    );
+
+    const d = await analyze(sym, +t.priceChangePercent);
+
+    renderCard(d, searchGrid);
+
+    // optional: scroll to manual section
+    document
+      .getElementById("searchGrid")
+      .scrollIntoView({ behavior: "smooth", block: "start" });
+
+  } catch (e) {
+    console.error("Flip symbol load failed:", sym);
+  }
+  }
+  
+
+
+  /* ================= TIME FORMAT (BINANCE / LOCAL) ================= */
+function formatTime(ts) {
+  // Binance shows LOCAL time (PH = UTC+8)
+  return new Date(ts).toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false
+  });
+        }
+
+  function download24hBias(sym) {
+  const series = compressBias15m(sym).slice(-96);
+  if (!series.length) return;
+
+  let csv = "Time,Bias\n";
+
+  series.forEach(p => {
+    csv += `${formatTime(p.time)},${p.y}\n`;
+  });
+
+  const blob = new Blob([csv], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${sym}_24h_bias.csv`;
+  a.click();
+
+  URL.revokeObjectURL(url);
+  }
+
+  /* ================= FLIP SOUND ================= */
+const flipSound = new Audio("flip.mp3"); // <-- put file in same folder
+flipSound.volume = 0.6;
+
+/* prevent duplicate sound */
+const LAST_FLIP_SOUND_TS = {};
+
+  function playFlipSound(sym, flip) {
+  if (!flip) return;
+
+  const lastTs = LAST_FLIP_SOUND_TS[sym] || 0;
+
+  // only play if newer flip
+  if (flip.timeTo > lastTs) {
+    LAST_FLIP_SOUND_TS[sym] = flip.timeTo;
+
+    flipSound
+      .play()
+      .catch(() => {
+        // browser blocked autoplay – ignore safely
+      });
+  }
+  }
+
+  
+
+  
     /* ================= 4H HTF CACHE ================= */
 const HTF_CACHE = {};
 const HTF_TTL = 15 * 60 * 1000; // 15 minutes
@@ -1624,78 +2258,161 @@ function findSwings(h, l, c, v){
   return result;
   }
 
-
   function detect24hRSIMomentumShift(closes15m, rsi15m, mainTrend) {
-    if (
-  mainTrend !== "bullish" &&
-  mainTrend !== "bearish"
-) return null;
-    
+  if (mainTrend !== "bullish" && mainTrend !== "bearish") return null;
   if (!rsi15m || rsi15m.length < 96) return null;
 
-  const recentRSI = rsi15m.slice(-96).filter(v => v !== null);
-  if (recentRSI.length < 20) return null;
+  const startIndex = rsi15m.length - 96;
 
-  const rsiHigh  = Math.max(...recentRSI);
-  const rsiLow   = Math.min(...recentRSI);
+  const recentRSI = rsi15m.slice(startIndex);
+  const recentCloses = closes15m.slice(startIndex);
+
+  const cleanRSI = recentRSI.filter(v => v !== null);
+  if (cleanRSI.length < 20) return null;
+
+  const rsiHigh  = Math.max(...cleanRSI);
+  const rsiLow   = Math.min(...cleanRSI);
   const rsiRange = rsiHigh - rsiLow;
 
-  const recentCloses = closes15m.slice(-96);
   const priceHigh = Math.max(...recentCloses);
   const priceLow  = Math.min(...recentCloses);
-  const lastPrice = recentCloses.at(-1);
-
   const priceRange = priceHigh - priceLow;
+  const lastPrice = recentCloses.at(-1);
 
   let bearish = false;
   let bullish = false;
+  let triggerIndex = null;
 
   /* ================= 🔴 BEARISH MOMENTUM COLLAPSE ================= */
-  // Only valid in BULLISH trend
   if (mainTrend === "bullish") {
     const priceHolding =
       lastPrice > priceLow + priceRange * 0.5;
 
     bearish =
-      rsiHigh >= 50 &&        // RSI had strength
-      rsiLow <= 50 &&         // RSI collapsed
-      rsiRange >= 50 &&       // meaningful decay
-      priceHolding;           // price did NOT follow RSI down
+      rsiHigh >= 45 &&
+      rsiLow <= 35 &&
+      rsiRange >= 10 &&
+      priceHolding;
+
+    // 🔍 find LAST RSI cross below 50 while price held
+    if (bearish) {
+      for (let i = 1; i < recentRSI.length; i++) {
+        const prev = recentRSI[i - 1];
+        const curr = recentRSI[i];
+        const price = recentCloses[i];
+
+        if (
+          prev != null &&
+          curr != null &&
+          prev > 50 &&
+          curr <= 50 &&
+          price > priceLow + priceRange * 0.5
+        ) {
+          triggerIndex = startIndex + i;
+        }
+      }
+    }
   }
 
   /* ================= 🟢 BULLISH MOMENTUM RECOVERY ================= */
-  // Only valid in BEARISH trend
   if (mainTrend === "bearish") {
     const priceHolding =
       lastPrice < priceLow + priceRange * 0.5;
 
     bullish =
-      rsiLow <= 50 &&         // RSI was weak
-      rsiHigh >= 50 &&        // RSI recovered
-      rsiRange >= 50 &&       // meaningful recovery
-      priceHolding;           // price did NOT follow RSI up
+      rsiLow <= 55 &&
+      rsiHigh >= 65 &&
+      rsiRange >= 10 &&
+      priceHolding;
+
+    // 🔍 find LAST RSI cross above 50 while price held
+    if (bullish) {
+      for (let i = 1; i < recentRSI.length; i++) {
+        const prev = recentRSI[i - 1];
+        const curr = recentRSI[i];
+        const price = recentCloses[i];
+
+        if (
+          prev != null &&
+          curr != null &&
+          prev < 50 &&
+          curr >= 50 &&
+          price < priceLow + priceRange * 0.5
+        ) {
+          triggerIndex = startIndex + i;
+        }
+      }
+    }
   }
 
   if (!bearish && !bullish) return null;
 
+    // 🔁 fallback: no clean cross, use last candle as trigger
+if (triggerIndex === null && (bearish || bullish)) {
+  triggerIndex = rsi15m.length - 1;
+}
+
   return {
     bearish,
     bullish,
-    type: bearish
-      ? "momentum-collapse"
-      : "momentum-recovery",
+    type: bearish ? "momentum-collapse" : "momentum-recovery",
+    triggerIndex,   // ✅ candle index where it last appeared
     tf: "15m",
     window: "24h"
   };
+  }
+
+  const rsiMomentumMemory = {};
+
+
+  function isMomentumResolved({
+  momentumAttack,
+  intradayRSIDiv,
+  rsi15Momentum
+}) {
+  return (
+    momentumAttack !== null &&
+    intradayRSIDiv === null &&
+    !["accel", "reclaim"].includes(rsi15Momentum)
+  );
 }
+
+  function getPHTriggerTime(rsiMomentumAge) {
+  if (rsiMomentumAge == null) return null;
+
+  const minutesAgo = rsiMomentumAge * 15;
+  const now = new Date();
+
+  const triggerTime = new Date(now.getTime() - minutesAgo * 60000);
+
+  return triggerTime.toLocaleString("en-PH", {
+    timeZone: "Asia/Manila",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+    weekday: "short",
+    month: "short",
+    day: "numeric"
+  });
+  }
+  
 
 /* ================= BREAK INTENT CLASSIFIER ================= */
 function classifyBreakIntent(d) {
   const trend = d.mainTrend;
   const bull = d.bull;
-  const structure = d.structure || "";       
-  const volStruct = d.volumeStructure?.name || ""; 
-  const momentum = d.rsiMomentumShift;       
+  const structure = d.structure || "";
+  const volStruct = d.volumeStructure?.name || "";
+  const momentum = d.rsiMomentumShift;
+
+  /* 🛡 STRONG DEFENSE (post-momentum OVERRIDE) */
+  if (d.strongZoneDefended && trend === "bullish") {
+    return "🛡 STRONG ZONE DEFENDED (BEAR ATTACK FAILED)";
+  }
+
+  if (d.strongZoneDefended && trend === "bearish") {
+    return "🛡 STRONG ZONE DEFENDED (BULL ATTACK FAILED)";
+  }
 
   /* ================= BULLISH ENVIRONMENT ================= */
   // Only allow bullish logic if dominant volume is RED
@@ -1709,9 +2426,9 @@ function classifyBreakIntent(d) {
       return "BEAR ATTACK → BULLISH STRUCTURE DEFENDED";
     }
 
-    // 🐂 Bulls attack & trap bears (no momentum)
+    // 🐂 Bulls attack & trap bears (no momentum ever)
     if (
-      momentum == null &&
+      momentum == null  &&
       volStruct.includes("resistance failed")
     ) {
       return "BULL ATTACK → BEAR DEFENSE → BULLS STALLED AT RESISTANCE";
@@ -1719,7 +2436,7 @@ function classifyBreakIntent(d) {
 
     // 🐂 Bulls attempting without structural permission
     if (
-      momentum == null &&
+      momentum == null  &&
       volStruct.includes("resistance weak")
     ) {
       return "BULL ATTACK → BEAR DEFENSE WEAK → BREAKOUT SETUP FORMING";
@@ -1738,9 +2455,9 @@ function classifyBreakIntent(d) {
       return "BULL ATTACK → BEARISH STRUCTURE DEFENDED";
     }
 
-    // 🐻 Bears attack & trap bulls (no momentum)
+    // 🐻 Bears attack & trap bulls (no momentum ever)
     if (
-      momentum == null &&
+      momentum == null  &&
       volStruct.includes("support failed")
     ) {
       return "BEAR ATTACK → BULL DEFENSE → SELLERS STALLED AT SUPPORT";
@@ -1748,7 +2465,7 @@ function classifyBreakIntent(d) {
 
     // 🐻 Bears attempting without structural permission
     if (
-      momentum == null &&
+      momentum == null  &&
       volStruct.includes("support weak")
     ) {
       return "BEAR ATTACK → BULL DEFENSE WEAK → BREAKDOWN SETUP FORMING";
@@ -1757,6 +2474,67 @@ function classifyBreakIntent(d) {
 
   return "NO CLEAR ATTACK";
 }
+
+  /* ================= STRUCTURE HELPERS ================= */
+
+const ZONE_PAD = 0.003;
+
+function makeZone(level) {
+  return {
+    low: level * (1 - ZONE_PAD),
+    high: level * (1 + ZONE_PAD)
+  };
+}
+
+function calculateVWAP(candles) {
+  let pv = 0, v = 0;
+  for (const c of candles) {
+    const price = (c.high + c.low + c.close) / 3;
+    pv += price * c.volume;
+    v  += c.volume;
+  }
+  return v ? pv / v : null;
+}
+
+function structureReaction(zone, candles) {
+  if (!zone) return "UNDECIDED";
+
+  let failedBreaks = 0;
+  let closesInside = 0;
+
+  const recent = candles.slice(-20);
+
+  for (const c of recent) {
+    const inZone = c.close >= zone.low && c.close <= zone.high;
+    const brokeAbove = c.high > zone.high && c.close < zone.high;
+    const brokeBelow = c.low < zone.low && c.close > zone.low;
+
+    if (inZone) closesInside++;
+    if (brokeAbove || brokeBelow) failedBreaks++;
+  }
+
+  if (failedBreaks >= 3) return "DEFENDED";
+  if (closesInside >= 6) return "WEAKENING";
+
+  return "UNDECIDED";
+}
+
+function classifyStructureIntent({ pressure, reaction, score }) {
+  if (score < 3) return "NO CLEAR STRUCTURE";
+
+  if (reaction === "WEAKENING" && pressure === "BUY")
+    return "RESISTANCE UNDER ATTACK";
+
+  if (reaction === "WEAKENING" && pressure === "SELL")
+    return "SUPPORT UNDER ATTACK";
+
+  if (reaction === "DEFENDED")
+    return "STRUCTURE DEFENDED";
+
+  return "CONFLICT";
+}
+  
+
   
 
     /* ================= DAILY RSI CONTEXT ================= */
@@ -1958,13 +2736,6 @@ function detect24hVolumeLocationAI(
   }));
 
 
-  // ================= 24h INTRADAY RSI (15m) =================
-const closes15m = last24h.map(c => c.close);
-const rsi15m = calculateRSI(closes15m);
-
-  const intradayRSIDiv =
-  detect24hRSIMomentumShift(closes15m, rsi15m, mainTrend);
-
   let dayHigh = -Infinity;
   let dayLow  = Infinity;
 
@@ -2090,8 +2861,7 @@ const rsi15m = calculateRSI(closes15m);
     volume: top.baseVol,
     time: top.openTime,
     high: top.high,
-    low: top.low,
-    intradayRSIDiv
+    low: top.low
   };
 }
 
@@ -2328,6 +3098,40 @@ if (typeof d.change === "number" && Math.abs(d.change) >= 25) {
   return "NONE";
   }
 
+  function getTrendStructureRisk(d) {
+  const s = d.structure || "";
+  const failure = d.defenseFailure; // "NONE" | "EARLY WARNING" | "CRITICAL FAILURE"
+
+  const isWeakStructure =
+    s.includes("weak") || s.includes("unaccepted");
+
+  if (!isWeakStructure) {
+    return null; // no structure risk to show
+  }
+
+if (failure === "CRITICAL FAILURE") {
+  return {
+    level: "CRITICAL",
+    label: "CRITICAL FAILURE",
+    cls: "critical"
+  };
+}
+
+if (failure === "EARLY WARNING") {
+  return {
+    level: "WARNING",
+    label: "WARNING",
+    cls: "warning"
+  };
+}
+
+return {
+  level: "WEAK",
+  label: "WEAK",
+  cls: "neutral"
+};
+  }
+
 
   function getDirectionalBias(d){
   // Only allowed in neutral / no-edge states
@@ -2524,6 +3328,14 @@ async function analyze(sym,change){
 
   const mappedK = mapKlines(k);
 
+  const candles = k.map(x => ({
+  open:  +x[1],
+  high:  +x[2],
+  low:   +x[3],
+  close: +x[4],
+  volume:+x[5]
+}));
+
   const changeState = getChange24hState(change);
 const moveType = get24hMoveType(change);
 const moveStrength = get24hMoveStrength(change);
@@ -2566,6 +3378,7 @@ for(let i = k.length - 96; i < k.length - 1; i++){
   }
 }
 
+
   const ema14 = ema(c.slice(-100), 14);
 const ema21 = ema(c.slice(-100), 21);
   const ema70 = ema(c.slice(-300), 70);
@@ -2597,6 +3410,14 @@ const mainTrend = getMainTrendOnly(
   h,
   l
 );
+
+  const ema200Arr = ema200;              // reuse existing array
+const ema200Last = ema200Arr.at(-1);   // scalar
+
+let ema200DistPct = null;
+if (ema200Last != null && price != null && ema200Last !== 0) {
+  ema200DistPct = ((price - ema200Last) / ema200Last) * 100;
+}
   
 
   // 🧠 Market dominance side (logic-safe)
@@ -2629,7 +3450,7 @@ const breakoutAge =
   volumeBreakout &&
   (Date.now() - k.at(-1)[6] < 45 * 60 * 1000);
 
-  // direction conflict with main trend
+  // direction conflict with man trend
 const directionConflict =
   (mainTrend === "bullish" && lastBull === false) ||
   (mainTrend === "bearish" && lastBull === true);
@@ -2756,7 +3577,7 @@ else {
   structure = "none";
 }
 
-    /* ================= INTRADAY RSI MOMENTUM (GUARDED) ================= */
+/* ================= INTRADAY RSI MOMENTUM (GUARDED) ================= */
 let intradayRSIDiv = null;
 
 if (
@@ -2770,8 +3591,66 @@ if (
     rsi15Arr,
     mainTrend
   );
+}
+
+/* ================= MOMENTUM MEMORY UPDATE ================= */
+if (intradayRSIDiv?.triggerIndex != null) {
+  const prev = rsiMomentumMemory[sym];
+  if (!prev || prev.triggerIndex !== intradayRSIDiv.triggerIndex) {
+    rsiMomentumMemory[sym] = {
+      bearish: intradayRSIDiv.bearish,
+      bullish: intradayRSIDiv.bullish,
+      type: intradayRSIDiv.type,
+      triggerIndex: intradayRSIDiv.triggerIndex,
+      updatedAt: Date.now()
+    };
   }
+}
+
+/* ================= ACTIVE MOMENTUM ================= */
+let activeMomentum = rsiMomentumMemory[sym] || null;
+
+/* ================= MOMENTUM AGE ================= */
+let rsiMomentumAge =
+  activeMomentum
+    ? rsi15Arr.length - 1 - activeMomentum.triggerIndex
+    : null;
+
+const MOMENTUM_TTL = 24; // candles (6h on 15m)
+
+/* ================= EXPIRE MOMENTUM ================= */
+if (
+  activeMomentum &&
+  rsiMomentumAge != null &&
+  rsiMomentumAge > MOMENTUM_TTL
+) {
+  delete rsiMomentumMemory[sym];
+  activeMomentum = null;
+  rsiMomentumAge = null;
+}
+
+/* ================= ENRICH INTRADAY MOMENTUM FOR UI ================= */
+if (intradayRSIDiv && activeMomentum) {
+  intradayRSIDiv = {
+    ...intradayRSIDiv,
+    triggerIndex: activeMomentum.triggerIndex,
+    age: rsiMomentumAge
+  };
+}
   
+/* ================= MOMENTUM INTERPRETATION ================= */
+let momentumAttack = null;
+
+if (activeMomentum?.bearish) momentumAttack = "bearish";
+if (activeMomentum?.bullish) momentumAttack = "bullish";
+
+const momentumCollapseDone = isMomentumResolved({
+  momentumAttack,
+  intradayRSIDiv,
+  rsi15Momentum
+});
+
+  const rsiMomentumShift = intradayRSIDiv;
 
   const volumeStructure = {
   name: "none",
@@ -2893,6 +3772,9 @@ prob = Math.max(40, Math.min(prob, 95));
       : "NONE"
 };
 
+
+
+
 /* ================= BREAK INTENT ================= */
   const breakIntent = classifyBreakIntent({
   mainTrend,
@@ -2973,7 +3855,12 @@ prob = Math.max(40, Math.min(prob, 95));
   volAI,
   volumeAlign,
     change,
-    intradayRSIDiv: volAI?.intradayRSIDiv
+    intradayRSIDiv
+});
+
+    const trendStructureRisk = getTrendStructureRisk({
+  structure,
+  defenseFailure
 });
 
 // clamp
@@ -3023,6 +3910,26 @@ const structureType =
   structure.startsWith("resistance weak")   ? "resistance weak" :
   "none";
 
+  /* ================= STRONG ZONE DEFENSE ================= */
+
+let strongZoneDefended = false;
+
+if (
+  momentumCollapseDone &&
+  momentumAttack === "bearish" &&
+  structure.startsWith("support holding")
+) {
+  strongZoneDefended = true;
+}
+
+if (
+  momentumCollapseDone &&
+  momentumAttack === "bullish" &&
+  structure.startsWith("resistance failed")
+) {
+  strongZoneDefended = true;
+}
+
 const postVolBreakRSIConfirmSafe =
   postVolBreakRSIConfirm && structureHolding;
 
@@ -3060,7 +3967,7 @@ moveStrength,
     volumeContext
 });
 
-  const rsiMomentumShift = volAI?.intradayRSIDiv;
+  
 
   /* ================= RSI MOMENTUM SHIFT PROBABILITY ADJUSTMENT ================= */
 
@@ -3098,7 +4005,7 @@ if (rsiMomentumShift) {
   /* 🧭 INTRADAY RSI DIVERGENCE — CONTINUATION SOFT DOWNGRADE */
 if (
   bias.includes("Continuation") &&
-  volAI?.intradayRSIDiv
+  intradayRSIDiv
 ) {
   prob -= 2;
 }
@@ -3138,18 +4045,102 @@ prob = applyHTFProbabilityAdjustment({
   aiVerdict
 });
 
+    /* ================= STRUCTURE EXTENSION ================= */
+
+// === Zones
+const resistanceZones = sw.R.map(makeZone);
+const supportZones    = sw.S.map(makeZone);
+
+const nearestResistanceZone =
+  resistanceZones
+    .map(z => ({ z, dist: Math.abs(z.low - price) }))
+    .sort((a,b) => a.dist - b.dist)[0]?.z || null;
+
+const nearestSupportZone =
+  supportZones
+    .map(z => ({ z, dist: Math.abs(price - z.high) }))
+    .sort((a,b) => a.dist - b.dist)[0]?.z || null;
+
+// === Pressure
+const pressure =
+  rsi15 > 50 ? "BUY" :
+  rsi15 < 50 ? "SELL" :
+  "NEUTRAL";
+
+// === VWAP
+const vwap = calculateVWAP(candles);
+const aboveVWAP = vwap !== null && price > vwap;
+
+// === Reactions
+const resistanceReaction = structureReaction(nearestResistanceZone, candles);
+const supportReaction    = structureReaction(nearestSupportZone, candles);
+
+// === Structure Score
+let structureScore = 0;
+if (nearestResistanceZone || nearestSupportZone) structureScore++;
+if (resistanceReaction !== "UNDECIDED" || supportReaction !== "UNDECIDED") structureScore++;
+if (
+  (pressure === "BUY" && aboveVWAP) ||
+  (pressure === "SELL" && !aboveVWAP)
+) structureScore++;
+if (htf.htfTrend === mainTrend) structureScore++;
+
+// === Intent
+const activeReaction =
+  pressure === "BUY"
+    ? resistanceReaction
+    : supportReaction;
+
+const structureIntent = classifyStructureIntent({
+  pressure,
+  reaction: activeReaction,
+  score: structureScore
+});
+
+  /* ================= BIAS SNAPSHOT ================= */
+if (bias) {
+  if (!BIAS_HISTORY[sym]) BIAS_HISTORY[sym] = [];
+
+  const y = BIAS_Y_MAP[bias] ?? 0;
+
+  BIAS_HISTORY[sym].push({
+    ts: Date.now(),
+    bias,
+    y
+  });
+
+  const DAY = 24 * 60 * 60 * 1000;
+  BIAS_HISTORY[sym] = BIAS_HISTORY[sym].filter(
+    p => Date.now() - p.ts <= DAY
+  );
+}
+
+  
+
   
   
 
-  return {sym,price,change,bull,prob,bias,structure,structureType,volumeStructure,structureQuality,volumeAlign,defenseFailure,S:sw.S,R:sw.R,dailyRSI,rsi15,rsi15Momentum,volumeBreakout,
+  return {sym,price,change,bull,prob,bias,structure,structureType,volumeStructure,structureQuality,volumeAlign,defenseFailure,trendStructureRisk,S:sw.S,R:sw.R,dailyRSI,rsi15,rsi15Momentum,volumeBreakout,
   breakoutAge,volumeBreakoutType,fakeVolumeBreak,postVolBreakRSIConfirm: postVolBreakRSIConfirmSafe,
   domV,
-  lastVol,mainTrend,volAI,intradayRSIDiv: volAI?.intradayRSIDiv || null,fundingRate,ema14: ema14Last,
+  lastVol,mainTrend,volAI,intradayRSIDiv,fundingRate,ema14: ema14Last,
   ema21: ema21Last,
   emaShortBias,
   emaShortCross,aiVerdict,marketDom: GLOBAL_MARKET_DOM,changeState,moveType,
-moveStrength,directionalBias,setupScore,htf,volumeContext,probability: prob,breakIntent};
+moveStrength,directionalBias,setupScore,htf,htfTrend: htf.htfTrend,
+  htfRSIState: htf.htfRSIState,
+  htfStructure: htf.htfStructure,volumeContext,probability: prob,breakIntent,strongZoneDefended,momentumAttack,momentumCollapseDone,
+  rsiMomentumShift: activeMomentum,
+  rsiMomentumTriggerIndex: activeMomentum?.triggerIndex ?? null,
+  rsiMomentumAge,ema200DistPct: ema200DistPct,pressure,
+  structureIntent,
+  structureScore,
+  resistanceReaction,
+  supportReaction,
+  resistanceZone: nearestResistanceZone,
+  supportZone: nearestSupportZone};
 }
+
 
 /* ================= FILTERS ================= */
 function applyFilters(){
@@ -3167,6 +4158,7 @@ function applyFilters(){
   const rrFilter = document.getElementById("filterRR")?.value || "all";
   const df = document.getElementById("filterDefense")?.value || "all";
   const fa = document.getElementById("filterAttack")?.value || "all";
+  const fm = document.getElementById("filterMomentum")?.value || "all";
   
 
   document.querySelectorAll(".card").forEach(c => {
@@ -3215,6 +4207,12 @@ if (fa !== "all") {
     ok = false;
   }
 }
+    // ================= MOMENTUM SHIFT FILTER =================
+if (fm !== "all") {
+  const momentum = c.dataset.momentum || "none";
+
+  if (fm !== momentum) ok = false;
+}
 
   c.style.display = ok ? "" : "none";
 });
@@ -3237,6 +4235,7 @@ if (fa !== "all") {
            document.getElementById("filterRR").value = "all";
            document.getElementById("filterDefense").value = "all";
            document.getElementById("filterAttack").value = "all";
+           document.getElementById("filterMomentum").value = "all";
            
            
 
@@ -3339,6 +4338,7 @@ if (fa !== "all") {
 const id = `card-${scope}-${d.sym}`;
   let card = document.getElementById(id);
 
+
     const isNewCard = !card;
 
   // create only once
@@ -3395,6 +4395,11 @@ card.dataset.aiverdict = aiVerdict.verdict;
     card.dataset.volai = d.volAI?.meaning || "Neutral";
     card.dataset.volstructure = volumeStruct.name;
     card.dataset.defense = d.defenseFailure || "NONE";
+
+    card.dataset.momentum =
+  d.rsiMomentumShift
+    ? (d.rsiMomentumShift.bearish ? "bearish" : "bullish")
+    : "none";
     
 
 card.dataset.structureQuality =
@@ -3442,15 +4447,15 @@ card.dataset.attack = attackSide;
   
 
   // 🔔 SOUND ALERT — only on 24h volume breakout
-if (d.volumeBreakout) {
-  const now = Date.now();
+//if (d.volumeBreakout) {
+  //const now = Date.now();
 
    //prevent repeat spam per symbol
-  if (!volumeAlertCooldown[d.sym] || now - volumeAlertCooldown[d.sym] > ALERT_COOLDOWN) {
-    volumeAlert.play().catch(()=>{});
-    volumeAlertCooldown[d.sym] = now;
-  }
-}
+  //if (!volumeAlertCooldown[d.sym] || now - volumeAlertCooldown[d.sym] > ALERT_COOLDOWN) {
+    //volumeAlert.play().catch(()=>{});
+    //volumeAlertCooldown[d.sym] = now;
+  //}
+//}
 
 
     
@@ -3474,44 +4479,37 @@ const volumeStructClass =
     : "muted";
 
 
-/* ================= TOP 30 DIRECTIONAL ALERT ================= */
-const now = Date.now();
-const alertKey = `${d.sym}-${aiVerdict.tradeSide}`;
+/* ================= EXECUTION ALERT ================= */
+  //const now = Date.now();
+  //const alertKey = `${d.sym}-${aiVerdict.tradeSide}`;
 
-const isManual = card.dataset.manual === "true";
-const isFavGrid = el.id === "favGrid";
+  //const isManual = card.dataset.manual === "true";
+  //const isFavGrid = el.id === "favGrid";
 
-// Only defense regimes
-const isBullishDefense = d.bias === "Bullish Defense";
-const isBearishDefense = d.bias === "Bearish Defense";
+  //const isLongExecution =
+    //aiVerdict.tradeSide === "LONG" &&
+    //aiVerdict.executionZone === "ENTRY ZONE" &&
+    //el.id === "redGrid";     // 🔴 Top 30 Red
 
-// Location logic
-const inTopGreen = el.id === "greenGrid"; // gainers
-const inTopRed   = el.id === "redGrid";   // losers
+  //const isShortExecution =
+    //aiVerdict.tradeSide === "SHORT" &&
+    //aiVerdict.executionZone === "ENTRY ZONE" &&
+    //el.id === "greenGrid";   // 🟢 Top 30 Green
 
-// 🔔 SOUND CONDITIONS
-const shouldAlert =
-  (
-    isBearishDefense && inTopGreen   // sell-side defense on strength
-  ) ||
-  (
-    isBullishDefense && inTopRed     // buy-side defense on weakness
-  );
-
-if (
-  isNewCard &&
-  shouldAlert &&
-  !isManual &&
-  !isFavGrid
-) {
-  if (
-    !execAlertCooldown[alertKey] ||
-    now - execAlertCooldown[alertKey] > EXEC_ALERT_COOLDOWN
-  ) {
-    executionAlert.play().catch(() => {});
-    execAlertCooldown[alertKey] = now;
-  }
-}
+  //if (
+    //isNewCard &&
+    //!isManual &&
+    //!isFavGrid &&
+    //(isLongExecution || isShortExecution)
+  //) {
+    //if (
+      //!execAlertCooldown[alertKey] ||
+      //now - execAlertCooldown[alertKey] > EXEC_ALERT_COOLDOWN
+    //) {
+      //executionAlert.play().catch(()=>{});
+      //execAlertCooldown[alertKey] = now;
+    //}
+  //}
 
     const marketDomBias = d.marketDom?.bias || "Neutral";
 
@@ -3540,6 +4538,16 @@ const marketDomIcon =
     ? "bull"
     : "neutral";
 
+
+const biasSeries = compressBias15m(d.sym).slice(-96);
+
+flipAttempt = detectPolarityFlipAttempt(biasSeries);
+flipAttemptCount = countPolarityFlipAttempts(biasSeries);
+
+    
+    
+    
+
 card.innerHTML = `
   ${card.dataset.manual === "true"
   ? `<div class="close" onclick="closeManualSearch()">✖</div>`
@@ -3557,6 +4565,17 @@ card.innerHTML = `
   <div class="muted ${fundingInfo.cls}">
     💸 Funding Fee: ${fundingInfo.label}
   </div>
+
+  <div class="muted ${d.bull ? "bull" : "bear"}">
+    Dominant Volume: <b>${d.bull ? "BUYERS" : "SELLERS"}</b>
+  </div>
+
+  ${typeof d.ema200DistPct === "number" ? `
+  <div class="muted">
+    📏 EMA200 Distance:
+    <b>${d.ema200DistPct.toFixed(2)}%</b>
+  </div>
+` : ""}
 
 
   <div class="prob ${
@@ -3578,15 +4597,37 @@ card.innerHTML = `
   </div>
 ` : ""}
 
-${d.defenseFailure !== "NONE" ? `
-  <div class="muted ${
-    d.defenseFailure === "CRITICAL FAILURE"
-      ? "bear"
-      : "neutral"
-  }">
-    🛡 Defense Status: <b>${d.defenseFailure}</b>
-  </div>
-` : ""}
+
+${(d.defenseFailure && d.defenseFailure !== "NONE") || d.trendStructureRisk
+  ? (() => {
+      let out = "";
+
+      /* 🛡 Defense Status */
+      if (d.defenseFailure && d.defenseFailure !== "NONE") {
+        out += `
+          <div class="muted ${
+            d.defenseFailure === "CRITICAL FAILURE"
+              ? "bear"
+              : "neutral"
+          }">
+            🛡 <b>Entry Risk:</b> ${d.defenseFailure}
+          </div>
+        `;
+      }
+
+      /* 📐 Trend Structure / Continuation Risk */
+      if (d.trendStructureRisk) {
+        out += `
+          <div class="structure-risk ${d.trendStructureRisk.cls}">
+            📐 <b>Trend Structure:</b> ${d.trendStructureRisk.label}
+          </div>
+        `;
+      }
+
+      return out;
+    })()
+  : ""} 
+  
 
 <div class="muted ${rsiShiftClass}">
   🧭 24h RSI Momentum Shift (15m):
@@ -3602,6 +4643,30 @@ ${d.defenseFailure !== "NONE" ? `
     }
   </b>
 </div>
+
+
+${d.intradayRSIDiv ? (() => {
+  const triggerTimePH = getPHTriggerTime(d.intradayRSIDiv.age);
+
+  return `
+    <div class="muted">
+      📍 Trigger Index:
+      <b>${d.intradayRSIDiv.triggerIndex}</b>
+    </div>
+
+    <div class="muted">
+      ⏱ Age:
+      <b>${d.intradayRSIDiv.age} candles ago</b>
+    </div>
+
+    ${triggerTimePH ? `
+      <div class="muted">
+        🕒 Trigger Time (PH):
+        <b>${triggerTimePH}</b>
+      </div>
+    ` : ""}
+  `;
+})() : ""}
 
 
   <div class="muted ${
@@ -3628,6 +4693,85 @@ ${d.structure === "none" && d.volumeStructure?.name !== "none" ? `
     ⏳ Volume pressure detected — waiting for structure confirmation
   </div>
 ` : ""}
+
+${d.structureIntent ? (() => {
+  let out = "";
+
+  /* ================= STRUCTURE ZONE ================= */
+  if (d.resistanceZone) {
+    out += `
+      <div class="muted">
+        📐 <b>Structure Zone:</b>
+        ${d.resistanceZone.low.toFixed(4)} – ${d.resistanceZone.high.toFixed(4)}
+      </div>
+    `;
+  }
+
+  /* ================= STRUCTURE STRENGTH ================= */
+  out += `
+    <div class="muted">
+      Strength:
+      ${"●".repeat(d.structureScore)}
+      ${"○".repeat(5 - d.structureScore)}
+      <span class="muted">(${d.structureScore}/5)</span>
+    </div>
+  `;
+
+  /* ================= STRUCTURE REACTION ================= */
+  out += `
+    <div class="muted ${
+      d.resistanceReaction === "DEFENDED"
+        ? "bull"
+        : d.resistanceReaction === "WEAKENING"
+        ? "neutral"
+        : ""
+    }">
+      🧱 <b>Reaction:</b> ${d.resistanceReaction}
+    </div>
+  `;
+
+  /* ================= PRESSURE ================= */
+  out += `
+    <div class="muted ${
+      d.pressure === "BUY"
+        ? "bull"
+        : d.pressure === "SELL"
+        ? "bear"
+        : "neutral"
+    }">
+      🧭 <b>Pressure:</b> ${d.pressure}
+    </div>
+  `;
+
+  /* ================= STRUCTURE INTENT ================= */
+  out += `
+    <div class="${
+      d.structureScore >= 4
+        ? "bull"
+        : d.structureScore >= 2
+        ? "neutral"
+        : "muted"
+    }">
+      🧠 <b>Structure Intent:</b> ${d.structureIntent}
+    </div>
+  `;
+
+  /* ================= CONFIDENCE ================= */
+  out += `
+    <div class="muted">
+      Confidence:
+      ${
+        d.structureScore >= 4
+          ? "HIGH"
+          : d.structureScore >= 2
+          ? "MEDIUM"
+          : "LOW"
+      }
+    </div>
+  `;
+
+  return out;
+})() : ""}
 
 
 <div class="muted ${aiVerdict.verdictClass}">
@@ -3675,14 +4819,31 @@ ${d.structure === "none" && d.volumeStructure?.name !== "none" ? `
 
   ${d.breakIntent ? (() => {
   const bi = formatBreakIntent(d.breakIntent);
-  return `
+  let out = `
     <div class="muted ${bi.cls}">
       ${bi.icon} <b>Break Intent:</b> ${bi.text}
     </div>
   `;
+
+  if (d.strongZoneDefended) {
+    out += `
+      <div class="muted" style="color:#22c55e;font-weight:600">
+        🛡 Strong Zone Defended (Post-Momentum)
+      </div>
+    `;
+  }
+
+  return out;
 })() : ""}
 
-  <hr style="opacity:.15">
+${(d.rsiMomentumShift && d.momentumCollapseDone) ? `
+  <div class="muted">
+    🧭 Prior Momentum Shift:
+    ${d.rsiMomentumShift.bearish ? "Bearish" : "Bullish"} (Resolved)
+  </div>
+` : ""}
+
+  
 
   <!-- ================= STRUCTURE ================= -->
   <div class="muted"><b>📈 Market Structure & Trend</b></div>
@@ -3701,9 +4862,6 @@ ${d.structure === "none" && d.volumeStructure?.name !== "none" ? `
   (Net ${d.marketDom?.net ?? "—"}%)
 </div>
 
-<div class="muted ${d.bull ? "bull" : "bear"}">
-    Dominant Volume: <b>${d.bull ? "BUYERS" : "SELLERS"}</b>
-  </div>
 
   <div class="muted ${
     d.mainTrend === "bullish" ? "bull" :
@@ -3829,7 +4987,67 @@ ${d.volumeBreakout ? `
   🌊 Symbol Behavior:
   <b class="behavior-${behavior}">${behavior}</b>
 </div>
+
+
+      <div class="bias-chart-wrap">
+  <canvas class="bias-chart" width="320" height="160"></canvas>
+
+  ${flipAttempt ? `
+<div class="muted flip-attempt">
+  ⚠ Polarity Flip Attempt<br>
+  <b>
+    ${formatTime(flipAttempt.timeFrom)} ${flipAttempt.from}
+    →
+    ${formatTime(flipAttempt.timeTo)} ${flipAttempt.to}
+  </b>
+</div>
+` : ""}
+
+${flipAttemptCount > 0 ? `
+<div class="muted">
+  🔁 Polarity Flip Attempts (24h):
+  <b>${flipAttemptCount}</b>
+</div>
+` : ""}
+</div>
+
+  <button class="secondary"
+  onclick="download24hBias('${d.sym}')">
+  ⬇ 24h Bias
+</button>
 `;
+
+/* ================= BIAS CHART RENDER ================= */
+const canvas = card.querySelector(".bias-chart");
+if (!canvas) return;
+
+async function processBiasAndFlip() {
+  const series = compressBias15m(d.sym).slice(-96);
+  const flipAttempt = detectPolarityFlipAttempt(series);
+
+  if (flipAttempt) {
+    registerFlipAttempt(d.sym, flipAttempt, d.mainTrend);
+    logFlipAttempt(d.sym, flipAttempt);
+    playFlipSound(d.sym, flipAttempt);
+    renderFlipPanel();
+
+    // 🔥 allow browser repaint during scanning
+    await new Promise(r => setTimeout(r, 0));
+  }
+
+  if (series.length >= 2) {
+    drawBiasChart(canvas, series);
+  } else if (series.length === 1) {
+    drawSingleBiasPoint(canvas, series[0]);
+  }
+}
+
+/* Seed if needed, then process */
+if (!BIAS_HISTORY[d.sym] || BIAS_HISTORY[d.sym].length < 96) {
+  seedBiasFrom15mHistory(d.sym).then(processBiasAndFlip);
+} else {
+  processBiasAndFlip();
+}
 
 
     if (!skipFilter) {
@@ -4271,7 +5489,8 @@ async function runSearch(){
   "filterExecution",
   "filterRR",
     "filterDefense",
-    "filterAttack"
+    "filterAttack",
+    "filterMomentum"
 ].forEach(id=>{
   document.getElementById(id)?.addEventListener("change", applyFilters);
 });
@@ -4346,36 +5565,27 @@ scrollTopBtn.addEventListener("click", () => {
 
   if (!green || !red) return;
 
-  // Heavy scan mode
   if (limit > 30) {
+    // only one side allowed — DO NOT change checked state
     if (green.checked && !red.checked) {
-      red.checked = false;
       red.disabled = true;
       green.disabled = false;
     }
     else if (red.checked && !green.checked) {
-      green.checked = false;
       green.disabled = true;
       red.disabled = false;
     }
-    else if (green.checked && red.checked) {
-      // both checked → force only one
-      red.checked = false;
-      green.disabled = false;
-      red.disabled = true;
-    }
     else {
-      // none checked → allow both
+      // both checked OR both unchecked → allow choice
       green.disabled = false;
       red.disabled = false;
     }
-  }
-  else {
-    // Normal mode (30/30)
+  } else {
+    // normal mode
     green.disabled = false;
     red.disabled = false;
   }
-  }
+}
 
   document.getElementById("scanGreen")
   ?.addEventListener("change", enforceScanLimitRules);
@@ -4387,6 +5597,14 @@ document.getElementById("scanLimit")
   ?.addEventListener("change", enforceScanLimitRules);
 
   window.addEventListener("load", enforceScanLimitRules);
+
+  document.addEventListener("click", () => {
+  executionAlert.play().then(() => executionAlert.pause());
+}, { once: true });
+  
+  document.addEventListener("click", () => {
+  flipSound.play().then(() => flipSound.pause()).catch(() => {});
+}, { once: true });
 </script>
 </body>
 </html>
