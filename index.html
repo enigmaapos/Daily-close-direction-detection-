@@ -5069,17 +5069,16 @@ ${flipAttemptCount > 0 ? `
 
 /* ================= BIAS CHART RENDER ================= */
 const canvas = card.querySelector(".bias-chart");
-if (!canvas) return;
+if (canvas) {
+  await renderBiasChart(d.sym, canvas, htf.htfTrend);
+}
 
-// 1️⃣ Chart (visual only)
-await renderBiasChart(d.sym, canvas, htf.htfTrend);
-
-// 2️⃣ Register flip events (NO chart logic)
+// 4️⃣ Register flip event (GLOBAL panel)
 if (flipAttempt) {
   registerFlipAttempt(d.sym, flipAttempt, d.mainTrend);
 }
 
-// 3️⃣ Render global flip panel
+// 5️⃣ Render flip panel ONCE
 renderFlipPanel();
 
   
