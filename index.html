@@ -1011,7 +1011,16 @@ function logFlipAttempt(sym, flip) {
     `[FLIP ATTEMPT] ${sym} ${tFrom} ${flip.from} → ${tTo} ${flip.to}`
   );
   }
-  
+
+  /* ================= TIME FORMAT (BINANCE / LOCAL) ================= */
+function formatTime(ts) {
+  // Binance shows LOCAL time (PH = UTC+8)
+  return new Date(ts).toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false
+  });
+        }
 
     /* ================= 4H HTF CACHE ================= */
 const HTF_CACHE = {};
@@ -4754,21 +4763,21 @@ ${d.volumeBreakout ? `
   <b class="behavior-${behavior}">${behavior}</b>
 </div>
 
-      <div class="bias-chart-wrap">
-  <canvas class="bias-chart" width="320" height="160"></canvas>
-</div>
-
 ${flipAttempt ? `
 <div class="muted">
   ⚠ Polarity Flip Attempt<br>
   <b>
-    ${new Date(flipAttempt.timeFrom).toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"})}
+    ${formatTime(flipAttempt.timeFrom)}
     ${flipAttempt.from} →
-    ${new Date(flipAttempt.timeTo).toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"})}
+    ${formatTime(flipAttempt.timeTo)}
     ${flipAttempt.to}
   </b>
 </div>
 ` : ""}
+
+      <div class="bias-chart-wrap">
+  <canvas class="bias-chart" width="320" height="160"></canvas>
+</div>
 `;
 
 /* ================= BIAS CHART RENDER ================= */
