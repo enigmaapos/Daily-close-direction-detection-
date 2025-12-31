@@ -4922,7 +4922,8 @@ else {
   if (flipAttempt) {
   registerFlipAttempt(d.sym, flipAttempt);
   logFlipAttempt(d.sym, flipAttempt);
-  }
+  renderFlipPanel(); // 🔥 THIS WAS MISSING
+}
 
   // 🔴 ONLY log flip attempts
   logFlipAttempt(d.sym, flipAttempt);
