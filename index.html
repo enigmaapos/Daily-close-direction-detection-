@@ -4808,7 +4808,10 @@ ${d.volumeBreakout ? `
   <b class="behavior-${behavior}">${behavior}</b>
 </div>
 
-${flipAttempt ? `
+
+      <div class="bias-chart-wrap">
+  <canvas class="bias-chart" width="320" height="160"></canvas>
+  ${flipAttempt ? `
 <div class="muted">
   ⚠ Polarity Flip Attempt<br>
   <b>
@@ -4820,15 +4823,12 @@ ${flipAttempt ? `
 </div>
 ` : ""}
 
-${d.flipAttemptCount > 0 ? `
+${flipAttemptCount > 0 ? `
 <div class="muted">
   🔁 Polarity Flip Attempts (24h):
-  <b>${d.flipAttemptCount}</b>
+  <b>${flipAttemptCount}</b>
 </div>
 ` : ""}
-
-      <div class="bias-chart-wrap">
-  <canvas class="bias-chart" width="320" height="160"></canvas>
 </div>
 
   <button class="secondary"
