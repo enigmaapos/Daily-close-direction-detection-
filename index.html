@@ -954,7 +954,7 @@ function drawSingleBiasPoint(canvas, point) {
   );
   }
 
-  function computeHistoricalBias(k, idx, all) {
+  function computeHistoricalBias(k, idx, all, htfTrend) {
   const close = +k[4];
   const open  = +k[1];
   const high  = +k[2];
@@ -966,38 +966,50 @@ function drawSingleBiasPoint(canvas, point) {
   const isBull = close > open;
   const isBear = close < open;
 
-  // momentum proxy
-  const momentum =
-    range > 0 ? body / range : 0;
+  const momentum = range > 0 ? body / range : 0;
 
-  // trend proxy using previous closes
   const prev = idx > 0 ? +all[idx - 1][4] : close;
-  const trendUp = close > prev;
-  const trendDown = close < prev;
+  const microUp   = close > prev;
+  const microDown = close < prev;
 
-  // ---- Bias classification ----
-  if (trendUp && isBull && momentum > 0.6) {
-    return "Bullish Continuation";
-  }
+  /* ================= BULLISH HTF ================= */
+  if (htfTrend === "bullish") {
 
-  if (trendUp && isBear) {
-    return "Bull Trap Risk";
-  }
+    // strong bullish continuation
+    if (microUp && isBull && momentum > 0.6) {
+      return "Bullish Continuation";
+    }
 
-  if (!trendUp && !trendDown) {
+    // bearish candle inside bullish trend = pullback / trap
+    if (microDown && isBear) {
+      return momentum > 0.6
+        ? "Bull Trap Risk"
+        : "Neutral";
+    }
+
     return "Neutral";
   }
 
-  if (trendDown && isBear && momentum > 0.6) {
-    return "Bearish Continuation";
-  }
+  /* ================= BEARISH HTF ================= */
+  if (htfTrend === "bearish") {
 
-  if (trendDown && isBull) {
-    return "Bear Trap Risk";
+    // strong bearish continuation
+    if (microDown && isBear && momentum > 0.6) {
+      return "Bearish Continuation";
+    }
+
+    // bullish candle inside bearish trend = pullback / trap
+    if (microUp && isBull) {
+      return momentum > 0.6
+        ? "Bear Trap Risk"
+        : "Neutral";
+    }
+
+    return "Neutral";
   }
 
   return "Neutral";
-  }
+}
 
   async function seedBiasFrom15mHistory(sym) {
   const klines = await fetch15mHistory(sym);
@@ -1006,7 +1018,7 @@ function drawSingleBiasPoint(canvas, point) {
   BIAS_HISTORY[sym] = [];
 
   klines.forEach((k, i) => {
-    const bias = computeHistoricalBias(k, i, klines);
+    const bias = computeHistoricalBias(k, i, klines, htf.htfTrend);
     const y = BIAS_Y_MAP[bias] ?? 0;
 
     BIAS_HISTORY[sym].push({
