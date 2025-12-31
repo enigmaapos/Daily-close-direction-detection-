@@ -271,6 +271,19 @@ button.secondary{
   color: #facc15;
   font-size: 12px;
   }
+
+  #flipPanel {
+  margin: 12px 0;
+}
+
+.flip-card {
+  border: 1px solid #7c2d12;
+  background: #1c0f0a;
+}
+
+.flip-card b {
+  color: #fb7185;
+    }
 </style>
 </head>
 
@@ -4924,6 +4937,7 @@ else {
 
     if (!skipFilter) {
   applyFilters();
+      renderFlipPanel();
 }
   }
 
