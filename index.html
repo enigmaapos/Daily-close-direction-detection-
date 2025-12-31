@@ -4306,12 +4306,11 @@ const marketDomIcon =
     : "neutral";
 
 
-    // compute bias series
-const series = compressBias15m(d.sym).slice(-96);
+// 🔴 Compute bias series for UI
+const biasSeries = compressBias15m(d.sym).slice(-96);
 
-// detect flip attempt
-d.flipAttempt = detectPolarityFlipAttempt(series);
-
+// 🔴 Attach flip attempt directly to d
+flipAttempt = detectPolarityFlipAttempt(biasSeries);
     
     
 
@@ -4362,18 +4361,6 @@ card.innerHTML = `
     <br>
     <span class="muted">${d.directionalBias.reason}</span>
   </div>
-` : ""}
-
-${d.flipAttempt ? `
-<div class="muted">
-  ⚠ Polarity Flip Attempt<br>
-  <b>
-    ${new Date(d.flipAttempt.timeFrom).toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"})}
-    ${d.flipAttempt.from} →
-    ${new Date(d.flipAttempt.timeTo).toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"})}
-    ${d.flipAttempt.to}
-  </b>
-</div>
 ` : ""}
 
 
@@ -4770,6 +4757,18 @@ ${d.volumeBreakout ? `
       <div class="bias-chart-wrap">
   <canvas class="bias-chart" width="320" height="160"></canvas>
 </div>
+
+${flipAttempt ? `
+<div class="muted">
+  ⚠ Polarity Flip Attempt<br>
+  <b>
+    ${new Date(flipAttempt.timeFrom).toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"})}
+    ${flipAttempt.from} →
+    ${new Date(flipAttempt.timeTo).toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"})}
+    ${flipAttempt.to}
+  </b>
+</div>
+` : ""}
 `;
 
 /* ================= BIAS CHART RENDER ================= */
