@@ -937,6 +937,24 @@ function drawSingleBiasPoint(canvas, point) {
   });
   }
 
+  const DEBUG_BIAS_TIME = true;
+
+function biasTimeLog(sym, label, series) {
+  if (!DEBUG_BIAS_TIME || !series || series.length === 0) return;
+
+  console.group(`[${sym}] ${label}`);
+
+  series.forEach(p => {
+    const t = new Date(p.time || p.ts);
+    const hh = t.getHours().toString().padStart(2, "0");
+    const mm = t.getMinutes().toString().padStart(2, "0");
+
+    console.log(`${hh}:${mm} → ${p.y}`);
+  });
+
+  console.groupEnd();
+}
+
   
 
     /* ================= 4H HTF CACHE ================= */
@@ -4682,14 +4700,18 @@ ${d.volumeBreakout ? `
 </div>
 `;
 
-   /* ================= BIAS CHART RENDER ================= */
+/* ================= BIAS CHART RENDER ================= */
 const canvas = card.querySelector(".bias-chart");
 if (!canvas) return;
 
-/* ✅ Seed from 15m history if insufficient data */
+/* Seed from 15m history if insufficient data */
 if (!BIAS_HISTORY[d.sym] || BIAS_HISTORY[d.sym].length < 96) {
   seedBiasFrom15mHistory(d.sym).then(() => {
     const series = compressBias15m(d.sym).slice(-96);
+
+    if (DEBUG_BIAS_TIME) {
+      biasTimeLog(d.sym, "15M", series);
+    }
 
     if (series.length >= 2) {
       drawBiasChart(canvas, series);
@@ -4700,6 +4722,10 @@ if (!BIAS_HISTORY[d.sym] || BIAS_HISTORY[d.sym].length < 96) {
 }
 else {
   const series = compressBias15m(d.sym).slice(-96);
+
+  if (DEBUG_BIAS_TIME) {
+    biasTimeLog(d.sym, "15M", series);
+  }
 
   if (series.length >= 2) {
     drawBiasChart(canvas, series);
