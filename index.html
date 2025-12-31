@@ -4607,6 +4607,14 @@ const marketDomIcon =
     : d.intradayRSIDiv.bullish
     ? "bull"
     : "neutral";
+
+
+    const biasSeries = compressBias15m(d.sym).slice(-96);
+
+// UI-only flip info
+const flipAttempt = detectPolarityFlipAttempt(biasSeries);
+const flipAttemptCount = countPolarityFlipAttempts(biasSeries);
+    
   
     
 
@@ -5085,13 +5093,6 @@ if (canvas) {
   // 1️⃣ Chart = filtered by main trend
   await renderBiasChart(d.sym, canvas, d.mainTrend);
 }
-
-// 2️⃣ Flip detection = raw events
-const biasSeries = compressBias15m(d.sym).slice(-96);
-
-// UI-only flip info
-const flipAttempt = detectPolarityFlipAttempt(biasSeries);
-const flipAttemptCount = countPolarityFlipAttempts(biasSeries);
 
 if (flipAttempt) {
   registerFlipAttempt(d.sym, flipAttempt, d.mainTrend);
