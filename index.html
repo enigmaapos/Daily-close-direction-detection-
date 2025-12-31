@@ -3585,18 +3585,17 @@ const structureIntent = classifyStructureIntent({
 });
 
   /* ================= BIAS SNAPSHOT ================= */
-if (d.bias) {
+if (bias) {
   if (!BIAS_HISTORY[sym]) BIAS_HISTORY[sym] = [];
 
-  const y = BIAS_Y_MAP[d.bias] ?? 0;
+  const y = BIAS_Y_MAP[bias] ?? 0;
 
   BIAS_HISTORY[sym].push({
     ts: Date.now(),
-    bias: d.bias,
+    bias,
     y
   });
 
-  // keep last 24h only
   const DAY = 24 * 60 * 60 * 1000;
   BIAS_HISTORY[sym] = BIAS_HISTORY[sym].filter(
     p => Date.now() - p.ts <= DAY
