@@ -4338,14 +4338,14 @@ card.innerHTML = `
   </div>
 ` : ""}
 
-${flipAttempt ? `
+${d.flipAttempt ? `
 <div class="muted">
   ⚠ Polarity Flip Attempt<br>
   <b>
-    ${new Date(flipAttempt.timeFrom).toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"})}
-    ${flipAttempt.from} →
-    ${new Date(flipAttempt.timeTo).toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"})}
-    ${flipAttempt.to}
+    ${new Date(d.flipAttempt.timeFrom).toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"})}
+    ${d.flipAttempt.from} →
+    ${new Date(d.flipAttempt.timeTo).toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"})}
+    ${d.flipAttempt.to}
   </b>
 </div>
 ` : ""}
