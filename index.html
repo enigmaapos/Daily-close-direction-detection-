@@ -1136,7 +1136,7 @@ const FLIP_REGISTRY = {};
     .slice(0, 10);
 
   grid.innerHTML = flips.map(f => `
-    <div class="flip-card ${f.dir}">
+    <div class="flip-card ${f.trendDir}">
       <b>${f.sym}</b>
       <div class="muted">
         ${formatTime(f.timeFrom)} ${f.from}
