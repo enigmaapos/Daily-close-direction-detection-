@@ -5086,21 +5086,32 @@ ${flipAttemptCount > 0 ? `
 `;
 
 /* ================= BIAS CHART RENDER ================= */
+
+// 1️⃣ Chart = filtered by main trend (visual only)
 const canvas = card.querySelector(".bias-chart");
 if (canvas) {
-  // 1️⃣ Chart = filtered by main trend
   await renderBiasChart(d.sym, canvas, d.mainTrend);
+}
+
+// ensure history exists for flip logic
+if (!BIAS_HISTORY[d.sym] || BIAS_HISTORY[d.sym].length < 3) {
+  await seedBiasFrom15mHistory(d.sym, d.mainTrend);
 }
 
 // 2️⃣ Flip detection = raw events
 const series = compressBias15m(d.sym).slice(-96);
-  const flipAttempt = detectPolarityFlipAttempt(series);
+
+let flipAttempt = null;
+if (series.length >= 3) {
+  flipAttempt = detectPolarityFlipAttempt(series);
+}
 
 if (flipAttempt) {
   registerFlipAttempt(d.sym, flipAttempt, d.mainTrend);
   logFlipAttempt(d.sym, flipAttempt);
   playFlipSound(d.sym, flipAttempt);
 
+  // allow repaint
   await new Promise(r => setTimeout(r, 0));
 }
 
