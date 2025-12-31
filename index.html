@@ -1108,19 +1108,19 @@ function logFlipAttempt(sym, flip) {
   /* ================= FLIP REGISTRY ================= */
 const FLIP_REGISTRY = {};
 
-  function registerFlipAttempt(sym, flip) {
+  function registerFlipAttempt(sym, flip, mainTrend) {
   if (!flip) return;
 
-  const dir =
-    flip.from < 0 && flip.to > 0 ? "bull" :
-    flip.from > 0 && flip.to < 0 ? "bear" :
+  const trendDir =
+    mainTrend === "BULLISH" ? "bull" :
+    mainTrend === "BEARISH" ? "bear" :
     "neutral";
 
   FLIP_REGISTRY[sym] = {
     sym,
     from: flip.from,
     to: flip.to,
-    dir,               // 🔴 NEW
+    trendDir,          // 🔴 from MAIN TREND
     timeFrom: flip.timeFrom,
     timeTo: flip.timeTo,
     ts: flip.timeTo
