@@ -1011,7 +1011,7 @@ function drawSingleBiasPoint(canvas, point) {
   return "Neutral";
 }
 
-  async function seedBiasFrom15mHistory(sym) {
+  async function seedBiasFrom15mHistory(sym, htfTrend = "neutral") {
   const klines = await fetch15mHistory(sym);
   if (!klines || klines.length === 0) return;
 
@@ -1019,20 +1019,21 @@ function drawSingleBiasPoint(canvas, point) {
 
   klines.forEach((k, i) => {
     const bias = computeHistoricalBias(
-  k,
-  i,
-  klines,
-  htf?.htfTrend ?? mainTrend ?? "neutral"
-);
+      k,
+      i,
+      klines,
+      htfTrend
+    );
+
     const y = BIAS_Y_MAP[bias] ?? 0;
 
     BIAS_HISTORY[sym].push({
-      ts: k[0], // open time of 15m candle
+      ts: k[0], // 15m open time
       bias,
       y
     });
   });
-  }
+}
 
   const DEBUG_BIAS_TIME = true;
 
@@ -4131,6 +4132,10 @@ if (bias) {
     p => Date.now() - p.ts <= DAY
   );
 }
+
+  const htf = await getHTFContext(sym);
+
+await seedBiasFrom15mHistory(sym, htf.htfTrend);
 
   
 
