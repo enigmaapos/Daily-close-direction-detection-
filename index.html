@@ -4467,7 +4467,7 @@ if (fm !== "all") {
 }
   
 /* ================= RENDER ================= */
- async function renderCard(d, el, isFav=false, skipFilter=false){
+ function renderCard(d, el, isFav=false, skipFilter=false){
   const scope = el.id || "global";
 const id = `card-${scope}-${d.sym}`;
   let card = document.getElementById(id);
@@ -5177,26 +5177,22 @@ async function processChartBias(d, canvas) {
   await new Promise(r => setTimeout(r, 0));
 }
 
-                                 // Chart bias seed
+// Chart bias seed (non-blocking)
 if (!BIAS_HISTORY[d.sym] || BIAS_HISTORY[d.sym].length < 96) {
-  await seedBiasFrom15mHistory(d.sym);
+  seedBiasFrom15mHistory(d.sym);
 }
 
-// Raw bias seed
+// Raw bias seed (non-blocking)
 if (!RAW_BIAS_HISTORY[d.sym] || RAW_BIAS_HISTORY[d.sym].length < 96) {
-  await seedRawBiasFrom15mHistory(d.sym);
+  seedRawBiasFrom15mHistory(d.sym);
+      }
+
+             if (RAW_BIAS_HISTORY[d.sym] && RAW_BIAS_HISTORY[d.sym].length >= 3) {
+  processRawBiasAndFlip(d.sym, d.mainTrend)
+    .then(() => {
+      renderFlipPanel();
+    });
   }
-
-      const canvas = card.querySelector(".bias-chart");
-
-// 1️⃣ Chart (visual only)
-await processChartBias(d, canvas);
-
-// 2️⃣ RAW flip detection (events only)
-await processRawBiasAndFlip(d.sym, d.mainTrend);
-
-// 3️⃣ Aggregated flip panel (ONCE)
-renderFlipPanel();
 
 
     if (!skipFilter) {
