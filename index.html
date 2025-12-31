@@ -4915,40 +4915,31 @@ ${flipAttemptCount > 0 ? `
 const canvas = card.querySelector(".bias-chart");
 if (!canvas) return;
 
-/* Seed from 15m history if insufficient data */
-if (!BIAS_HISTORY[d.sym] || BIAS_HISTORY[d.sym].length < 96) {
-  seedBiasFrom15mHistory(d.sym).then(() => {
-    const series = compressBias15m(d.sym).slice(-96);
-    const flipAttempt = detectPolarityFlipAttempt(series);
-
-    // 🔴 ONLY log flip attempts
-    logFlipAttempt(d.sym, flipAttempt);
-
-    if (series.length >= 2) {
-      drawBiasChart(canvas, series);
-    } else if (series.length === 1) {
-      drawSingleBiasPoint(canvas, series[0]);
-    }
-  });
-}
-else {
+async function processBiasAndFlip() {
   const series = compressBias15m(d.sym).slice(-96);
   const flipAttempt = detectPolarityFlipAttempt(series);
 
   if (flipAttempt) {
-  registerFlipAttempt(d.sym, flipAttempt);
-  logFlipAttempt(d.sym, flipAttempt);
-  renderFlipPanel(); // 🔥 THIS WAS MISSING
-}
+    registerFlipAttempt(d.sym, flipAttempt);
+    logFlipAttempt(d.sym, flipAttempt);
+    renderFlipPanel();
 
-  // 🔴 ONLY log flip attempts
-  logFlipAttempt(d.sym, flipAttempt);
+    // 🔥 allow browser repaint during scanning
+    await new Promise(r => setTimeout(r, 0));
+  }
 
   if (series.length >= 2) {
     drawBiasChart(canvas, series);
   } else if (series.length === 1) {
     drawSingleBiasPoint(canvas, series[0]);
   }
+}
+
+/* Seed if needed, then process */
+if (!BIAS_HISTORY[d.sym] || BIAS_HISTORY[d.sym].length < 96) {
+  seedBiasFrom15mHistory(d.sym).then(processBiasAndFlip);
+} else {
+  processBiasAndFlip();
 }
 
 
