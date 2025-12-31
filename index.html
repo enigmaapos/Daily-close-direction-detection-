@@ -5076,17 +5076,16 @@ ${flipAttemptCount > 0 ? `
 const canvas = card.querySelector(".bias-chart");
 if (!canvas) return;
 
-// ================= RENDER BIAS + FLIPS =================
+async function renderBiasAndFlip(sym, canvas, htfTrend, mainTrend) {
+  // 1️⃣ Chart (historical, HTF-aware, visual only)
+  await renderBiasChart(sym, canvas, htfTrend);
 
-// 1️⃣ Chart (historical, HTF-aware, visual only)
-await renderBiasChart(d.sym, canvas, htf.htfTrend);
+  // 2️⃣ Flip detection (event-based, no UI coupling)
+  processFlipDetection(sym, mainTrend);
 
-// 2️⃣ Flip detection (event-based, NO chart logic)
-processFlipDetection(d.sym, d.mainTrend);
-
-// 3️⃣ Flip panel UI (aggregated, NO chart logic)
-renderFlipPanel();
-
+  // 3️⃣ Flip panel UI (aggregated, no chart logic)
+  renderFlipPanel();
+}
 
     if (!skipFilter) {
   applyFilters();
