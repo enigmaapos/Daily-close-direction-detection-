@@ -836,6 +836,20 @@ function drawBiasChart(canvas, points) {
   drawBiasXAxis(ctx, w, h, points, pad);
 }
 
+  async function renderBiasChart(sym, canvas, htfTrend) {
+  if (!BIAS_HISTORY[sym] || BIAS_HISTORY[sym].length < 96) {
+    await seedBiasFrom15mHistory(sym, htfTrend);
+  }
+
+  const series = compressBias15m(sym).slice(-96);
+
+  if (series.length >= 2) {
+    drawBiasChart(canvas, series);
+  } else if (series.length === 1) {
+    drawSingleBiasPoint(canvas, series[0]);
+  }
+  }
+
   /* ================= DRAW SINGLE BIAS POINT ================= */
 function drawSingleBiasPoint(canvas, point) {
   if (!canvas || !point) return;
@@ -1165,6 +1179,18 @@ const FLIP_REGISTRY = {};
   };
 }
 
+  function processFlipEvents(sym) {
+  const series = compressBias15m(sym).slice(-96);
+  const flip = detectPolarityFlipAttempt(series);
+
+  if (!flip) return;
+
+  registerFlipAttempt(sym, flip);
+  logFlipAttempt(sym, flip);
+  playFlipSound(sym, flip);
+  }
+
+  
     function renderFlipPanel() {
   const grid = document.getElementById("flipGrid");
   if (!grid) return;
@@ -1174,19 +1200,15 @@ const FLIP_REGISTRY = {};
     .slice(0, 10);
 
   grid.innerHTML = flips.map(f => `
-  <div 
-    class="flip-card ${f.trendDir}" 
-    data-sym="${f.sym}"
-    onclick="openFlipSymbol('${f.sym}')"
-  >
-    <b>${f.sym}</b>
-    <div class="muted">
-      ${formatTime(f.timeFrom)} ${f.from}
-      →
-      ${formatTime(f.timeTo)} ${f.to}
+    <div class="flip-card" onclick="openFlipSymbol('${f.sym}')">
+      <b>${f.sym}</b>
+      <div class="muted">
+        ${formatTime(f.timeFrom)} ${f.from}
+        →
+        ${formatTime(f.timeTo)} ${f.to}
+      </div>
     </div>
-  </div>
-`).join("");
+  `).join("");
 }
 
     async function openFlipSymbol(sym) {
@@ -4571,8 +4593,11 @@ const marketDomIcon =
 
 const biasSeries = compressBias15m(d.sym).slice(-96);
 
-flipAttempt = detectPolarityFlipAttempt(biasSeries);
-flipAttemptCount = countPolarityFlipAttempts(biasSeries);
+if (biasSeries.length >= 2) {
+  drawBiasChart(canvas, biasSeries);
+} else if (biasSeries.length === 1) {
+  drawSingleBiasPoint(canvas, biasSeries[0]);
+}
 
     
     
@@ -5051,33 +5076,16 @@ ${flipAttemptCount > 0 ? `
 const canvas = card.querySelector(".bias-chart");
 if (!canvas) return;
 
-async function processBiasAndFlip() {
-  const series = compressBias15m(d.sym).slice(-96);
-  const flipAttempt = detectPolarityFlipAttempt(series);
+// ================= RENDER BIAS + FLIPS =================
 
-  if (flipAttempt) {
-    registerFlipAttempt(d.sym, flipAttempt, d.mainTrend);
-    logFlipAttempt(d.sym, flipAttempt);
-    playFlipSound(d.sym, flipAttempt);
-    renderFlipPanel();
+// 1️⃣ Chart (historical, HTF-aware, visual only)
+await renderBiasChart(d.sym, canvas, htf.htfTrend);
 
-    // 🔥 allow browser repaint during scanning
-    await new Promise(r => setTimeout(r, 0));
-  }
+// 2️⃣ Flip detection (event-based, NO chart logic)
+processFlipDetection(d.sym, d.mainTrend);
 
-  if (series.length >= 2) {
-    drawBiasChart(canvas, series);
-  } else if (series.length === 1) {
-    drawSingleBiasPoint(canvas, series[0]);
-  }
-}
-
-/* Seed if needed, then process */
-if (!BIAS_HISTORY[d.sym] || BIAS_HISTORY[d.sym].length < 96) {
-  seedBiasFrom15mHistory(d.sym).then(processBiasAndFlip);
-} else {
-  processBiasAndFlip();
-}
+// 3️⃣ Flip panel UI (aggregated, NO chart logic)
+renderFlipPanel();
 
 
     if (!skipFilter) {
