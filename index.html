@@ -267,21 +267,27 @@ button.secondary{
   outline: 1px solid red;
   }
 
+/* ================= FLIP PANEL (COMPACT) ================= */
+
 #flipPanel {
   margin: 6px 0;
-  max-width: 480px;
 }
 
 #flipPanel h2 {
   font-size: 12px;
+  font-weight: 600;
   margin: 4px 0;
+  color: #facc15;
 }
 
+/* tight grid */
 #flipGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, 110px);
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
   gap: 4px;
 }
+
+/* ================= FLIP ITEM (VERY SMALL) ================= */
 
 .flip-card {
   padding: 4px 6px;
@@ -290,14 +296,21 @@ button.secondary{
   background: #1c0f0a;
   font-size: 10px;
   line-height: 1.2;
-  white-space: nowrap;
 }
 
+/* symbol */
 .flip-card b {
   display: block;
   font-size: 10px;
   font-weight: 600;
   color: #fb7185;
+  margin-bottom: 1px;
+}
+
+/* time + direction */
+.flip-card .muted {
+  font-size: 9px;
+  color: #9fb3cc;
 }
 </style>
 </head>
