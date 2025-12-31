@@ -5093,8 +5093,8 @@ if (canvas) {
 }
 
 // 2️⃣ Flip detection = raw events
-const biasSeries = compressBias15m(d.sym).slice(-96);
-const flipAttempt = detectPolarityFlipAttempt(biasSeries);
+const series = compressBias15m(d.sym).slice(-96);
+  const flipAttempt = detectPolarityFlipAttempt(series);
 
 if (flipAttempt) {
   registerFlipAttempt(d.sym, flipAttempt, d.mainTrend);
