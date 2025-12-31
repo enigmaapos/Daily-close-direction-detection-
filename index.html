@@ -4467,7 +4467,7 @@ if (fm !== "all") {
 }
   
 /* ================= RENDER ================= */
-  function renderCard(d, el, isFav=false, skipFilter=false){
+ async function renderCard(d, el, isFav=false, skipFilter=false){
   const scope = el.id || "global";
 const id = `card-${scope}-${d.sym}`;
   let card = document.getElementById(id);
@@ -4672,8 +4672,6 @@ const marketDomIcon =
     ? "bull"
     : "neutral";
 
-
-const rawSeries = compressRawBias15m(sym).slice(-96);
     
 flipAttempt = detectPolarityFlipAttempt(rawSeries);
 flipAttemptCount = countPolarityFlipAttempts(rawSeries);
