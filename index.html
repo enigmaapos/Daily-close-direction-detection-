@@ -526,6 +526,11 @@ button.secondary{
   <div id="marketNet" class="neutral">⚖ Net: —</div>
   </div>
 
+  <section id="flipPanel">
+  <h2>⚠ Polarity Flip Attempts</h2>
+  <div id="flipGrid" class="grid"></div>
+  </section>
+
 <h2>⭐ Favorites</h2>
 <div class="grid" id="favGrid"></div>
 
@@ -1037,6 +1042,42 @@ function logFlipAttempt(sym, flip) {
   );
   }
 
+  /* ================= FLIP REGISTRY ================= */
+const FLIP_REGISTRY = {};
+
+  function registerFlipAttempt(sym, flip) {
+  if (!flip) return;
+
+  FLIP_REGISTRY[sym] = {
+    sym,
+    from: flip.from,
+    to: flip.to,
+    timeFrom: flip.timeFrom,
+    timeTo: flip.timeTo,
+    ts: flip.timeTo
+  };
+  }
+
+    function renderFlipPanel() {
+  const grid = document.getElementById("flipGrid");
+  if (!grid) return;
+
+  const flips = Object.values(FLIP_REGISTRY)
+    .sort((a, b) => b.ts - a.ts); // latest first
+
+  grid.innerHTML = flips.map(f => `
+    <div class="card flip-card">
+      <b>${f.sym}</b>
+      <div class="muted">
+        ${formatTime(f.timeFrom)} ${f.from}
+        →
+        ${formatTime(f.timeTo)} ${f.to}
+      </div>
+    </div>
+  `).join("");
+  }
+  
+
 
   /* ================= TIME FORMAT (BINANCE / LOCAL) ================= */
 function formatTime(ts) {
@@ -1069,6 +1110,7 @@ function formatTime(ts) {
   URL.revokeObjectURL(url);
   }
 
+  
     /* ================= 4H HTF CACHE ================= */
 const HTF_CACHE = {};
 const HTF_TTL = 15 * 60 * 1000; // 15 minutes
@@ -4366,6 +4408,7 @@ const biasSeries = compressBias15m(d.sym).slice(-96);
 
 flipAttempt = detectPolarityFlipAttempt(biasSeries);
 flipAttemptCount = countPolarityFlipAttempts(biasSeries);
+
     
     
     
@@ -4862,6 +4905,11 @@ if (!BIAS_HISTORY[d.sym] || BIAS_HISTORY[d.sym].length < 96) {
 else {
   const series = compressBias15m(d.sym).slice(-96);
   const flipAttempt = detectPolarityFlipAttempt(series);
+
+  if (flipAttempt) {
+  registerFlipAttempt(d.sym, flipAttempt);
+  logFlipAttempt(d.sym, flipAttempt);
+  }
 
   // 🔴 ONLY log flip attempts
   logFlipAttempt(d.sym, flipAttempt);
