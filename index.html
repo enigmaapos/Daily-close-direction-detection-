@@ -1180,6 +1180,32 @@ function formatTime(ts) {
   URL.revokeObjectURL(url);
   }
 
+  /* ================= FLIP SOUND ================= */
+const flipSound = new Audio("flip.mp3"); // <-- put file in same folder
+flipSound.volume = 0.6;
+
+/* prevent duplicate sound */
+const LAST_FLIP_SOUND_TS = {};
+
+  function playFlipSound(sym, flip) {
+  if (!flip) return;
+
+  const lastTs = LAST_FLIP_SOUND_TS[sym] || 0;
+
+  // only play if newer flip
+  if (flip.timeTo > lastTs) {
+    LAST_FLIP_SOUND_TS[sym] = flip.timeTo;
+
+    flipSound
+      .play()
+      .catch(() => {
+        // browser blocked autoplay – ignore safely
+      });
+  }
+  }
+
+  
+
   
     /* ================= 4H HTF CACHE ================= */
 const HTF_CACHE = {};
@@ -4415,36 +4441,36 @@ const volumeStructClass =
 
 
 /* ================= EXECUTION ALERT ================= */
-  const now = Date.now();
-  const alertKey = `${d.sym}-${aiVerdict.tradeSide}`;
+  //const now = Date.now();
+  //const alertKey = `${d.sym}-${aiVerdict.tradeSide}`;
 
-  const isManual = card.dataset.manual === "true";
-  const isFavGrid = el.id === "favGrid";
+  //const isManual = card.dataset.manual === "true";
+  //const isFavGrid = el.id === "favGrid";
 
-  const isLongExecution =
-    aiVerdict.tradeSide === "LONG" &&
-    aiVerdict.executionZone === "ENTRY ZONE" &&
-    el.id === "redGrid";     // 🔴 Top 30 Red
+  //const isLongExecution =
+    //aiVerdict.tradeSide === "LONG" &&
+    //aiVerdict.executionZone === "ENTRY ZONE" &&
+    //el.id === "redGrid";     // 🔴 Top 30 Red
 
-  const isShortExecution =
-    aiVerdict.tradeSide === "SHORT" &&
-    aiVerdict.executionZone === "ENTRY ZONE" &&
-    el.id === "greenGrid";   // 🟢 Top 30 Green
+  //const isShortExecution =
+    //aiVerdict.tradeSide === "SHORT" &&
+    //aiVerdict.executionZone === "ENTRY ZONE" &&
+    //el.id === "greenGrid";   // 🟢 Top 30 Green
 
-  if (
-    isNewCard &&
-    !isManual &&
-    !isFavGrid &&
-    (isLongExecution || isShortExecution)
-  ) {
-    if (
-      !execAlertCooldown[alertKey] ||
-      now - execAlertCooldown[alertKey] > EXEC_ALERT_COOLDOWN
-    ) {
-      executionAlert.play().catch(()=>{});
-      execAlertCooldown[alertKey] = now;
-    }
-  }
+  //if (
+    //isNewCard &&
+    //!isManual &&
+    //!isFavGrid &&
+    //(isLongExecution || isShortExecution)
+  //) {
+    //if (
+      //!execAlertCooldown[alertKey] ||
+      //now - execAlertCooldown[alertKey] > EXEC_ALERT_COOLDOWN
+    //) {
+      //executionAlert.play().catch(()=>{});
+      //execAlertCooldown[alertKey] = now;
+    //}
+  //}
 
     const marketDomBias = d.marketDom?.bias || "Neutral";
 
@@ -4963,6 +4989,7 @@ async function processBiasAndFlip() {
   if (flipAttempt) {
     registerFlipAttempt(d.sym, flipAttempt, d.mainTrend);
     logFlipAttempt(d.sym, flipAttempt);
+    playFlipSound(d.sym, flipAttempt);
     renderFlipPanel();
 
     // 🔥 allow browser repaint during scanning
@@ -5534,6 +5561,10 @@ document.getElementById("scanLimit")
 
   document.addEventListener("click", () => {
   executionAlert.play().then(() => executionAlert.pause());
+}, { once: true });
+  
+  document.addEventListener("click", () => {
+  flipSound.play().then(() => flipSound.pause()).catch(() => {});
 }, { once: true });
 </script>
 </body>
