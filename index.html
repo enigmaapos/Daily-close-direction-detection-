@@ -836,33 +836,6 @@ function drawBiasChart(canvas, points) {
   drawBiasXAxis(ctx, w, h, points, pad);
 }
 
-  function filterBiasByMainTrend(points, mainTrend) {
-  if (!mainTrend || mainTrend === "neutral") return points;
-
-  return points.filter(p => {
-    if (mainTrend === "bullish") return p.y >= 0;
-    if (mainTrend === "bearish") return p.y <= 0;
-    return true;
-  });
-  }
-
-  async function renderBiasChart(sym, canvas, mainTrend) {
-  if (!BIAS_HISTORY[sym] || BIAS_HISTORY[sym].length < 96) {
-    await seedBiasFrom15mHistory(sym, mainTrend);
-  }
-
-  let series = compressBias15m(sym).slice(-96);
-
-  // 🔥 FILTER HERE
-  series = filterBiasByMainTrend(series, mainTrend);
-
-  if (series.length >= 2) {
-    drawBiasChart(canvas, series);
-  } else if (series.length === 1) {
-    drawSingleBiasPoint(canvas, series[0]);
-  }
-}
-
   /* ================= DRAW SINGLE BIAS POINT ================= */
 function drawSingleBiasPoint(canvas, point) {
   if (!canvas || !point) return;
@@ -981,13 +954,14 @@ function drawSingleBiasPoint(canvas, point) {
   );
   }
 
-  function computeHistoricalBias(k, idx, all, htfTrend) {
+  
+function computeHistoricalBias(k, idx, all, htfTrend = "neutral") {
   const close = +k[4];
   const open  = +k[1];
   const high  = +k[2];
   const low   = +k[3];
 
-  const body = Math.abs(close - open);
+  const body  = Math.abs(close - open);
   const range = high - low;
 
   const isBull = close > open;
@@ -999,7 +973,8 @@ function drawSingleBiasPoint(canvas, point) {
   const microUp   = close > prev;
   const microDown = close < prev;
 
-  /* ================= BULLISH HTF ================= */
+  /* ================= HTF-AWARE LOGIC ================= */
+
   if (htfTrend === "bullish") {
 
     if (microUp && isBull && momentum > 0.6) {
@@ -1015,7 +990,6 @@ function drawSingleBiasPoint(canvas, point) {
     return "Neutral";
   }
 
-  /* ================= BEARISH HTF ================= */
   if (htfTrend === "bearish") {
 
     if (microDown && isBear && momentum > 0.6) {
@@ -1031,23 +1005,28 @@ function drawSingleBiasPoint(canvas, point) {
     return "Neutral";
   }
 
-  /* ================= NO TREND / RANGE ================= */
-  // htfTrend === "neutral" or undefined
-  {
-    // strong bullish probe
-    if (microUp && isBull && momentum > 0.6) {
-      return "Bull Trap Risk"; // probe, not continuation
-    }
+  /* ================= NO HTF / FALLBACK ================= */
 
-    // strong bearish probe
-    if (microDown && isBear && momentum > 0.6) {
-      return "Bear Trap Risk"; // probe, not continuation
-    }
-
-    // everything else
-    return "Neutral";
+  // original behavior (unchanged)
+  if (microUp && isBull && momentum > 0.6) {
+    return "Bullish Continuation";
   }
-    }
+
+  if (microUp && isBear) {
+    return "Bull Trap Risk";
+  }
+
+  if (microDown && isBear && momentum > 0.6) {
+    return "Bearish Continuation";
+  }
+
+  if (microDown && isBull) {
+    return "Bear Trap Risk";
+  }
+
+  return "Neutral";
+}
+
 
   async function seedBiasFrom15mHistory(sym, htfTrend = "neutral") {
   const klines = await fetch15mHistory(sym);
@@ -1192,18 +1171,6 @@ const FLIP_REGISTRY = {};
   };
 }
 
-  function processFlipEvents(sym) {
-  const series = compressBias15m(sym).slice(-96);
-  const flip = detectPolarityFlipAttempt(series);
-
-  if (!flip) return;
-
-  registerFlipAttempt(sym, flip);
-  logFlipAttempt(sym, flip);
-  playFlipSound(sym, flip);
-  }
-
-  
     function renderFlipPanel() {
   const grid = document.getElementById("flipGrid");
   if (!grid) return;
@@ -1213,21 +1180,20 @@ const FLIP_REGISTRY = {};
     .slice(0, 10);
 
   grid.innerHTML = flips.map(f => `
-    <div 
-      class="flip-card ${f.trendDir}" 
-      data-sym="${f.sym}"
-      onclick="openFlipSymbol('${f.sym}')"
-    >
-      <b>${f.sym}</b>
-      <div class="muted">
-        ${formatTime(f.timeFrom)} ${f.from}
-        →
-        ${formatTime(f.timeTo)} ${f.to}
-      </div>
+  <div 
+    class="flip-card ${f.trendDir}" 
+    data-sym="${f.sym}"
+    onclick="openFlipSymbol('${f.sym}')"
+  >
+    <b>${f.sym}</b>
+    <div class="muted">
+      ${formatTime(f.timeFrom)} ${f.from}
+      →
+      ${formatTime(f.timeTo)} ${f.to}
     </div>
-  `).join("");
+  </div>
+`).join("");
 }
-  
 
     async function openFlipSymbol(sym) {
   // set as active manual symbol
@@ -4403,7 +4369,7 @@ if (fm !== "all") {
 }
   
 /* ================= RENDER ================= */
-  async function renderCard(d, el, isFav=false, skipFilter=false) {
+  function renderCard(d, el, isFav=false, skipFilter=false){
   const scope = el.id || "global";
 const id = `card-${scope}-${d.sym}`;
   let card = document.getElementById(id);
@@ -4609,23 +4575,13 @@ const marketDomIcon =
     : "neutral";
 
 
-    /* ================= ENSURE HISTORY ================= */
-  if (!BIAS_HISTORY[d.sym] || BIAS_HISTORY[d.sym].length < 3) {
-    await seedBiasFrom15mHistory(d.sym, d.mainTrend);
-  }
+const biasSeries = compressBias15m(d.sym).slice(-96);
 
-  /* ================= COMPUTE SERIES ================= */
-  const biasSeries = compressBias15m(d.sym).slice(-96);
+flipAttempt = detectPolarityFlipAttempt(biasSeries);
+flipAttemptCount = countPolarityFlipAttempts(biasSeries);
 
-  const flipAttempt =
-    biasSeries.length >= 3
-      ? detectPolarityFlipAttempt(biasSeries)
-      : null;
-
-  const flipAttemptCount =
-    biasSeries.length >= 3
-      ? countPolarityFlipAttempts(biasSeries)
-      : 0;
+    
+    
     
 
 card.innerHTML = `
@@ -5097,24 +5053,37 @@ ${flipAttemptCount > 0 ? `
 </button>
 `;
 
- /* ================= CHART (VISUAL ONLY) ================= */
-  const canvas = card.querySelector(".bias-chart");
-  if (canvas) {
-    await renderBiasChart(d.sym, canvas, d.mainTrend);
-  }
+/* ================= BIAS CHART RENDER ================= */
+const canvas = card.querySelector(".bias-chart");
+if (!canvas) return;
 
-  /* ================= FLIP EVENT (ONCE) ================= */
+async function processBiasAndFlip() {
+  const series = compressBias15m(d.sym).slice(-96);
+  const flipAttempt = detectPolarityFlipAttempt(series);
+
   if (flipAttempt) {
     registerFlipAttempt(d.sym, flipAttempt, d.mainTrend);
     logFlipAttempt(d.sym, flipAttempt);
     playFlipSound(d.sym, flipAttempt);
+    renderFlipPanel();
 
-    // allow repaint
+    // 🔥 allow browser repaint during scanning
     await new Promise(r => setTimeout(r, 0));
   }
 
-  /* ================= FLIP PANEL ================= */
-  renderFlipPanel(); 
+  if (series.length >= 2) {
+    drawBiasChart(canvas, series);
+  } else if (series.length === 1) {
+    drawSingleBiasPoint(canvas, series[0]);
+  }
+}
+
+/* Seed if needed, then process */
+if (!BIAS_HISTORY[d.sym] || BIAS_HISTORY[d.sym].length < 96) {
+  seedBiasFrom15mHistory(d.sym).then(processBiasAndFlip);
+} else {
+  processBiasAndFlip();
+}
 
 
     if (!skipFilter) {
