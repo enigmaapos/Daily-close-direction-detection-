@@ -267,23 +267,48 @@ button.secondary{
   outline: 1px solid red;
   }
 
-  .flip-attempt {
-  color: #facc15;
-  font-size: 12px;
-  }
+  /* ================= FLIP PANEL ================= */
 
-  #flipPanel {
-  margin: 12px 0;
+#flipPanel {
+  margin: 8px 0;
 }
 
+#flipPanel h2 {
+  font-size: 13px;
+  font-weight: 600;
+  margin: 6px 0;
+  color: #facc15;
+}
+
+#flipGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 6px;
+}
+
+/* ================= FLIP CARD ================= */
+
 .flip-card {
+  padding: 6px 8px;
+  border-radius: 6px;
   border: 1px solid #7c2d12;
   background: #1c0f0a;
+  font-size: 11px;
+  line-height: 1.25;
 }
 
 .flip-card b {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
   color: #fb7185;
-    }
+  margin-bottom: 2px;
+}
+
+.flip-card .muted {
+  font-size: 10px;
+  color: #9fb3cc;
+}
 </style>
 </head>
 
