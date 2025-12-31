@@ -250,11 +250,21 @@ button.secondary{
 .behavior-CONSOLIDATION { color: #facc15; }
 .behavior-CHOPPY { color: #fb7185; }
 
-  .bias-chart {
-  margin-top: 8px;
-  background: #0b1220;
-  border: 1px solid #172033;
-  border-radius: 6px;
+.bias-chart {
+  display: block;
+  width: 100%;
+  margin-top: 10px;
+}
+  .bias-chart-wrap {
+  margin-top: 12px;
+  padding-top: 8px;
+  border-top: 1px solid #172033;
+    }
+  .card-header {
+  position: absolute;
+  }
+  .card {
+  outline: 1px solid red;
   }
 </style>
 </head>
@@ -4597,7 +4607,9 @@ ${d.volumeBreakout ? `
   <b class="behavior-${behavior}">${behavior}</b>
 </div>
 
-      <canvas class="bias-chart" width="320" height="160"></canvas>
+      <div class="bias-chart-wrap">
+  <canvas class="bias-chart" width="320" height="160"></canvas>
+</div>
 `;
 
     /* ================= BIAS CHART RENDER ================= */
