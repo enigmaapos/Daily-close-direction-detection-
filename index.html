@@ -990,6 +990,31 @@ function biasTimeLog(sym, label, series) {
   return null;
   }
 
+  function countPolarityFlipAttempts(series) {
+  if (!series || series.length < 3) return 0;
+
+  let count = 0;
+
+  for (let i = 1; i < series.length - 1; i++) {
+    const prev = series[i - 1];
+    const curr = series[i];
+    const next = series[i + 1];
+
+    const polarityFlip =
+      (prev.y > 0 && curr.y < 0) ||
+      (prev.y < 0 && curr.y > 0);
+
+    const hasNeutral =
+      prev.y === 0 || next.y === 0;
+
+    if (polarityFlip && hasNeutral) {
+      count++;
+    }
+  }
+
+  return count;
+  }
+
   const LAST_FLIP_LOG = {};
 
 function logFlipAttempt(sym, flip) {
@@ -4339,8 +4364,9 @@ const marketDomIcon =
 
 const biasSeries = compressBias15m(d.sym).slice(-96);
 
-d.flipAttempt = detectPolarityFlipAttempt(biasSeries);
-
+flipAttempt = detectPolarityFlipAttempt(biasSeries);
+flipAttemptCount = countPolarityFlipAttempts(biasSeries);
+    
     
     
 
@@ -4798,6 +4824,24 @@ ${flipAttempt ? `
 
       <div class="bias-chart-wrap">
   <canvas class="bias-chart" width="320" height="160"></canvas>
+
+  ${flipAttempt ? `
+<div class="muted flip-attempt">
+  ⚠ Polarity Flip Attempt<br>
+  <b>
+    ${formatTime(flipAttempt.timeFrom)} ${flipAttempt.from}
+    →
+    ${formatTime(flipAttempt.timeTo)} ${flipAttempt.to}
+  </b>
+</div>
+` : ""}
+
+${flipAttemptCount > 0 ? `
+<div class="muted">
+  🔁 Polarity Flip Attempts (24h):
+  <b>${flipAttemptCount}</b>
+</div>
+` : ""}
 </div>
 
   <button class="secondary"
