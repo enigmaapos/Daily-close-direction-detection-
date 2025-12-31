@@ -5145,10 +5145,10 @@ async function processBiasAndFlip() {
 
 /* Seed if needed, then process */
 if (!BIAS_HISTORY[d.sym] || BIAS_HISTORY[d.sym].length < 96) {
-  await seedRawBiasFrom15mHistory(d.sym);
+  seedRawBiasFrom15mHistory(d.sym).then(processBiasAndFlip);
+} else {
+  processBiasAndFlip();
 }
-
-processBiasAndFlip();
 
 
     if (!skipFilter) {
