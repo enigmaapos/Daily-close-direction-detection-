@@ -1022,6 +1022,27 @@ function formatTime(ts) {
   });
         }
 
+  function download24hBias(sym) {
+  const series = compressBias15m(sym).slice(-96);
+  if (!series.length) return;
+
+  let csv = "Time,Bias\n";
+
+  series.forEach(p => {
+    csv += `${formatTime(p.time)},${p.y}\n`;
+  });
+
+  const blob = new Blob([csv], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${sym}_24h_bias.csv`;
+  a.click();
+
+  URL.revokeObjectURL(url);
+  }
+
     /* ================= 4H HTF CACHE ================= */
 const HTF_CACHE = {};
 const HTF_TTL = 15 * 60 * 1000; // 15 minutes
@@ -4778,6 +4799,11 @@ ${flipAttempt ? `
       <div class="bias-chart-wrap">
   <canvas class="bias-chart" width="320" height="160"></canvas>
 </div>
+
+  <button class="secondary"
+  onclick="download24hBias('${d.sym}')">
+  ⬇ 24h Bias
+</button>
 `;
 
 /* ================= BIAS CHART RENDER ================= */
