@@ -1018,7 +1018,12 @@ function drawSingleBiasPoint(canvas, point) {
   BIAS_HISTORY[sym] = [];
 
   klines.forEach((k, i) => {
-    const bias = computeHistoricalBias(k, i, klines, htf.htfTrend);
+    const bias = computeHistoricalBias(
+  k,
+  i,
+  klines,
+  htf?.htfTrend ?? mainTrend ?? "neutral"
+);
     const y = BIAS_Y_MAP[bias] ?? 0;
 
     BIAS_HISTORY[sym].push({
