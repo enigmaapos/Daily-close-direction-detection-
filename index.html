@@ -3960,7 +3960,8 @@ moveStrength,directionalBias,setupScore,htf,htfTrend: htf.htfTrend,
   resistanceReaction,
   supportReaction,
   resistanceZone: nearestResistanceZone,
-  supportZone: nearestSupportZone};
+  supportZone: nearestSupportZone,flipAttempt,
+flipAttemptCount};
 }
 
 
@@ -4808,22 +4809,21 @@ ${d.volumeBreakout ? `
   <b class="behavior-${behavior}">${behavior}</b>
 </div>
 
-${flipAttempt ? `
-<div class="muted">
+${d.flipAttempt ? `
+<div class="muted flip-attempt">
   ⚠ Polarity Flip Attempt<br>
   <b>
-    ${formatTime(flipAttempt.timeFrom)}
-    ${flipAttempt.from} →
-    ${formatTime(flipAttempt.timeTo)}
-    ${flipAttempt.to}
+    ${formatTime(d.flipAttempt.timeFrom)} ${d.flipAttempt.from}
+    →
+    ${formatTime(d.flipAttempt.timeTo)} ${d.flipAttempt.to}
   </b>
 </div>
 ` : ""}
 
-${flipAttemptCount > 0 ? `
+${d.flipAttemptCount > 0 ? `
 <div class="muted">
   🔁 Polarity Flip Attempts (24h):
-  <b>${flipAttemptCount}</b>
+  <b>${d.flipAttemptCount}</b>
 </div>
 ` : ""}
 
