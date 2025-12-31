@@ -4590,16 +4590,6 @@ const marketDomIcon =
     ? "bull"
     : "neutral";
 
-
-const biasSeries = compressBias15m(d.sym).slice(-96);
-
-if (biasSeries.length >= 2) {
-  drawBiasChart(canvas, biasSeries);
-} else if (biasSeries.length === 1) {
-  drawSingleBiasPoint(canvas, biasSeries[0]);
-}
-
-    
     
     
 
