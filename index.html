@@ -4590,7 +4590,12 @@ const marketDomIcon =
     ? "bull"
     : "neutral";
 
-    
+    const biasSeries = compressBias15m(d.sym).slice(-96);
+
+// 2️⃣ Flip info (UI-only)
+const flipAttempt = detectPolarityFlipAttempt(biasSeries);
+const flipAttemptCount = countPolarityFlipAttempts(biasSeries);
+  
     
 
 card.innerHTML = `
@@ -5063,7 +5068,7 @@ ${flipAttemptCount > 0 ? `
 `;
 
 /* ================= BIAS CHART RENDER ================= */
-async function renderCard(d, grid, isFav = false) {
+
 
   const canvas = card.querySelector(".bias-chart");
   if (!canvas) return;
@@ -5076,7 +5081,7 @@ async function renderCard(d, grid, isFav = false) {
 
   // 3️⃣ Flip panel UI ONLY (aggregated)
   renderFlipPanel();
-}
+
 
     if (!skipFilter) {
   applyFilters();
