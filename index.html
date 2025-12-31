@@ -587,11 +587,12 @@ button.secondary{
   <div id="marketNet" class="neutral">⚖ Net: —</div>
   </div>
 
-
+<div class="flip-card ${f.dir}">
   <section id="flipPanel">
   <h2>⚠ Polarity Flip Attempts</h2>
   <div id="flipGrid"></div>
   </section>
+</div>
 
 <h2>⭐ Favorites</h2>
 <div class="grid" id="favGrid"></div>
@@ -1132,10 +1133,10 @@ const FLIP_REGISTRY = {};
 
   const flips = Object.values(FLIP_REGISTRY)
     .sort((a, b) => b.ts - a.ts)
-    .slice(0, 10); // top 10 newest
+    .slice(0, 10);
 
   grid.innerHTML = flips.map(f => `
-    <div class="flip-card">
+    <div class="flip-card ${f.dir}">
       <b>${f.sym}</b>
       <div class="muted">
         ${formatTime(f.timeFrom)} ${f.from}
