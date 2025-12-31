@@ -266,6 +266,11 @@ button.secondary{
   .card {
   outline: 1px solid red;
   }
+
+  .flip-attempt {
+  color: #facc15;
+  font-size: 12px;
+  }
 </style>
 </head>
 
@@ -955,6 +960,35 @@ function biasTimeLog(sym, label, series) {
   console.groupEnd();
 }
 
+  function detectPolarityFlipAttempt(series) {
+  if (!series || series.length < 3) return null;
+
+  for (let i = 1; i < series.length - 1; i++) {
+    const prev = series[i - 1];
+    const curr = series[i];
+    const next = series[i + 1];
+
+    // direct polarity jump
+    const polarityFlip =
+      (prev.y < 0 && curr.y > 0) ||
+      (prev.y > 0 && curr.y < 0);
+
+    // neutral participation
+    const hasNeutral =
+      prev.y === 0 || next.y === 0;
+
+    if (polarityFlip && hasNeutral) {
+      return {
+        from: prev.y,
+        to: curr.y,
+        timeFrom: prev.time,
+        timeTo: curr.time
+      };
+    }
+  }
+
+  return null;
+  }
   
 
     /* ================= 4H HTF CACHE ================= */
@@ -4304,6 +4338,18 @@ card.innerHTML = `
   </div>
 ` : ""}
 
+${flipAttempt ? `
+<div class="muted">
+  ⚠ Polarity Flip Attempt<br>
+  <b>
+    ${new Date(flipAttempt.timeFrom).toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"})}
+    ${flipAttempt.from} →
+    ${new Date(flipAttempt.timeTo).toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"})}
+    ${flipAttempt.to}
+  </b>
+</div>
+` : ""}
+
 
 ${(d.defenseFailure && d.defenseFailure !== "NONE") || d.trendStructureRisk
   ? (() => {
@@ -4722,6 +4768,7 @@ if (!BIAS_HISTORY[d.sym] || BIAS_HISTORY[d.sym].length < 96) {
 }
 else {
   const series = compressBias15m(d.sym).slice(-96);
+  const flipAttempt = detectPolarityFlipAttempt(series);
 
   if (DEBUG_BIAS_TIME) {
     biasTimeLog(d.sym, "15M", series);
