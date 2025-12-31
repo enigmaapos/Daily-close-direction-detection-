@@ -312,6 +312,26 @@ button.secondary{
   font-size: 9px;
   color: #9fb3cc;
 }
+
+  /* ================= FLIP DIRECTION COLORS ================= */
+
+.flip-card.bull {
+  border-color: #14532d;
+  background: #052e1a;
+}
+
+.flip-card.bull b {
+  color: #22c55e;
+}
+
+.flip-card.bear {
+  border-color: #7f1d1d;
+  background: #2a0f14;
+}
+
+.flip-card.bear b {
+  color: #fb7185;
+}
 </style>
 </head>
 
@@ -1090,15 +1110,21 @@ const FLIP_REGISTRY = {};
   function registerFlipAttempt(sym, flip) {
   if (!flip) return;
 
+  const dir =
+    flip.from < 0 && flip.to > 0 ? "bull" :
+    flip.from > 0 && flip.to < 0 ? "bear" :
+    "neutral";
+
   FLIP_REGISTRY[sym] = {
     sym,
     from: flip.from,
     to: flip.to,
+    dir,               // 🔴 NEW
     timeFrom: flip.timeFrom,
     timeTo: flip.timeTo,
     ts: flip.timeTo
   };
-  }
+}
 
     function renderFlipPanel() {
   const grid = document.getElementById("flipGrid");
