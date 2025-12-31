@@ -4961,7 +4961,7 @@ async function processBiasAndFlip() {
   const flipAttempt = detectPolarityFlipAttempt(series);
 
   if (flipAttempt) {
-    registerFlipAttempt(d.sym, flipAttempt);
+    registerFlipAttempt(d.sym, flipAttempt, d.mainTrend);
     logFlipAttempt(d.sym, flipAttempt);
     renderFlipPanel();
 
@@ -4986,8 +4986,6 @@ if (!BIAS_HISTORY[d.sym] || BIAS_HISTORY[d.sym].length < 96) {
 
     if (!skipFilter) {
   applyFilters();
-      registerFlipAttempt(d.sym, flipAttempt, d.mainTrend);
-renderFlipPanel();
 }
   }
 
