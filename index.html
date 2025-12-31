@@ -5119,6 +5119,9 @@ ${flipAttemptCount > 0 ? `
 `;
 
 /* ================= BIAS CHART RENDER ================= */
+    const canvas = card.querySelector(".bias-chart");
+if (!canvas) return;
+    
 async function processBiasAndFlip() {
   // 1️⃣ RAW bias → flip detection (NO trend filtering)
   const rawSeries = compressRawBias15m(d.sym).slice(-96);
