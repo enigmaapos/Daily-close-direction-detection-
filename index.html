@@ -4754,9 +4754,14 @@ if (!canvas) return;
 if (!BIAS_HISTORY[d.sym] || BIAS_HISTORY[d.sym].length < 96) {
   seedBiasFrom15mHistory(d.sym).then(() => {
     const series = compressBias15m(d.sym).slice(-96);
+    const flipAttempt = detectPolarityFlipAttempt(series);
 
     if (DEBUG_BIAS_TIME) {
       biasTimeLog(d.sym, "15M", series);
+    }
+
+    if (flipAttempt) {
+      card.dataset.flipAttempt = JSON.stringify(flipAttempt);
     }
 
     if (series.length >= 2) {
@@ -4772,6 +4777,10 @@ else {
 
   if (DEBUG_BIAS_TIME) {
     biasTimeLog(d.sym, "15M", series);
+  }
+
+  if (flipAttempt) {
+    card.dataset.flipAttempt = JSON.stringify(flipAttempt);
   }
 
   if (series.length >= 2) {
