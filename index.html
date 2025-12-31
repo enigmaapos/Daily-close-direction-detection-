@@ -4284,7 +4284,11 @@ const marketDomIcon =
     : "neutral";
 
 
-    
+    // compute bias series
+const series = compressBias15m(d.sym).slice(-96);
+
+// detect flip attempt
+d.flipAttempt = detectPolarityFlipAttempt(series);
 
     
     
