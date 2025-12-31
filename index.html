@@ -1105,10 +1105,11 @@ const FLIP_REGISTRY = {};
   if (!grid) return;
 
   const flips = Object.values(FLIP_REGISTRY)
-    .sort((a, b) => b.ts - a.ts); // latest first
+    .sort((a, b) => b.ts - a.ts)
+    .slice(0, 10); // top 10 newest
 
   grid.innerHTML = flips.map(f => `
-    <div class="card flip-card">
+    <div class="flip-card">
       <b>${f.sym}</b>
       <div class="muted">
         ${formatTime(f.timeFrom)} ${f.from}
@@ -1117,7 +1118,7 @@ const FLIP_REGISTRY = {};
       </div>
     </div>
   `).join("");
-  }
+}
   
 
 
