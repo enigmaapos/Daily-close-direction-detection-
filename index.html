@@ -4611,10 +4611,8 @@ const marketDomIcon =
 
     const biasSeries = compressBias15m(d.sym).slice(-96);
 
-// UI-only flip info
-const flipAttempt = detectPolarityFlipAttempt(biasSeries);
-const flipAttemptCount = countPolarityFlipAttempts(biasSeries);
-    
+flipAttempt = detectPolarityFlipAttempt(biasSeries);
+flipAttemptCount = countPolarityFlipAttempts(biasSeries);
   
     
 
@@ -5094,16 +5092,23 @@ if (canvas) {
   await renderBiasChart(d.sym, canvas, d.mainTrend);
 }
 
+// 2️⃣ Flip detection = raw events
+const biasSeries = compressBias15m(d.sym).slice(-96);
+const flipAttempt = detectPolarityFlipAttempt(biasSeries);
+
 if (flipAttempt) {
   registerFlipAttempt(d.sym, flipAttempt, d.mainTrend);
   logFlipAttempt(d.sym, flipAttempt);
   playFlipSound(d.sym, flipAttempt);
+
+  await new Promise(r => setTimeout(r, 0));
 }
 
 // 3️⃣ Flip panel = aggregated UI
 renderFlipPanel();
 
   
+    
 
 
     if (!skipFilter) {
