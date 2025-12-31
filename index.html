@@ -5119,10 +5119,8 @@ ${flipAttemptCount > 0 ? `
 `;
 
 /* ================= BIAS CHART RENDER ================= */
-const canvas = card.querySelector(".bias-chart");
-if (!canvas) return;
-
 async function processBiasAndFlip() {
+  // 1️⃣ RAW bias → flip detection (NO trend filtering)
   const rawSeries = compressRawBias15m(d.sym).slice(-96);
   const flipAttempt = detectPolarityFlipAttempt(rawSeries);
 
@@ -5130,25 +5128,29 @@ async function processBiasAndFlip() {
     registerFlipAttempt(d.sym, flipAttempt, d.mainTrend);
     logFlipAttempt(d.sym, flipAttempt);
     playFlipSound(d.sym, flipAttempt);
-    renderFlipPanel();
 
-    // 🔥 allow browser repaint during scanning
+    // allow repaint
     await new Promise(r => setTimeout(r, 0));
   }
 
-  if (series.length >= 2) {
-    drawBiasChart(canvas, series);
-  } else if (series.length === 1) {
-    drawSingleBiasPoint(canvas, series[0]);
+  // 2️⃣ TREND-FILTERED bias → chart ONLY
+  const chartSeries = compressBias15m(d.sym).slice(-96);
+
+  if (chartSeries.length >= 2) {
+    drawBiasChart(canvas, chartSeries);
+  } else if (chartSeries.length === 1) {
+    drawSingleBiasPoint(canvas, chartSeries[0]);
   }
+
+  // 3️⃣ Aggregated flip panel
+  renderFlipPanel();
 }
 
-/* Seed if needed, then process */
-if (!BIAS_HISTORY[d.sym] || BIAS_HISTORY[d.sym].length < 96) {
+    if (!BIAS_HISTORY[d.sym] || BIAS_HISTORY[d.sym].length < 96) {
   seedRawBiasFrom15mHistory(d.sym).then(processBiasAndFlip);
 } else {
   processBiasAndFlip();
-}
+  }
 
 
     if (!skipFilter) {
