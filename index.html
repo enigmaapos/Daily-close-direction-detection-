@@ -4133,10 +4133,8 @@ if (bias) {
   );
 }
 
-  const htf = await getHTFContext(sym);
 
-await seedBiasFrom15mHistory(sym, mainTrend ?? "neutral");
-  
+await seedBiasFrom15mHistory(sym, htf.htfTrend);
 
   
   
