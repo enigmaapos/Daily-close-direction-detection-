@@ -989,6 +989,28 @@ function biasTimeLog(sym, label, series) {
 
   return null;
   }
+
+  const LAST_FLIP_LOG = {};
+
+function logFlipAttempt(sym, flip) {
+  if (!flip) return;
+
+  const key = `${flip.timeFrom}-${flip.timeTo}`;
+  if (LAST_FLIP_LOG[sym] === key) return;
+
+  LAST_FLIP_LOG[sym] = key;
+
+  const tFrom = new Date(flip.timeFrom)
+    .toISOString()
+    .slice(11, 16);
+  const tTo = new Date(flip.timeTo)
+    .toISOString()
+    .slice(11, 16);
+
+  console.warn(
+    `[FLIP ATTEMPT] ${sym} ${tFrom} ${flip.from} → ${tTo} ${flip.to}`
+  );
+  }
   
 
     /* ================= 4H HTF CACHE ================= */
@@ -4760,13 +4782,8 @@ if (!BIAS_HISTORY[d.sym] || BIAS_HISTORY[d.sym].length < 96) {
     const series = compressBias15m(d.sym).slice(-96);
     const flipAttempt = detectPolarityFlipAttempt(series);
 
-    if (DEBUG_BIAS_TIME) {
-      biasTimeLog(d.sym, "15M", series);
-    }
-
-    if (flipAttempt) {
-      card.dataset.flipAttempt = JSON.stringify(flipAttempt);
-    }
+    // 🔴 ONLY log flip attempts
+    logFlipAttempt(d.sym, flipAttempt);
 
     if (series.length >= 2) {
       drawBiasChart(canvas, series);
@@ -4779,13 +4796,8 @@ else {
   const series = compressBias15m(d.sym).slice(-96);
   const flipAttempt = detectPolarityFlipAttempt(series);
 
-  if (DEBUG_BIAS_TIME) {
-    biasTimeLog(d.sym, "15M", series);
-  }
-
-  if (flipAttempt) {
-    card.dataset.flipAttempt = JSON.stringify(flipAttempt);
-  }
+  // 🔴 ONLY log flip attempts
+  logFlipAttempt(d.sym, flipAttempt);
 
   if (series.length >= 2) {
     drawBiasChart(canvas, series);
