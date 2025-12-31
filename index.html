@@ -4810,17 +4810,6 @@ ${d.volumeBreakout ? `
   <b class="behavior-${behavior}">${behavior}</b>
 </div>
 
-${flipAttempt ? `
-<div class="muted flip-attempt">
-  ⚠ Polarity Flip Attempt<br>
-  <b>
-    ${formatTime(flipAttempt.timeFrom)} ${flipAttempt.from}
-    →
-    ${formatTime(flipAttempt.timeTo)} ${flipAttempt.to}
-  </b>
-</div>
-` : ""}
-
 
       <div class="bias-chart-wrap">
   <canvas class="bias-chart" width="320" height="160"></canvas>
