@@ -4385,7 +4385,7 @@ if (fm !== "all") {
 }
   
 /* ================= RENDER ================= */
-  function renderCard(d, el, isFav=false, skipFilter=false){
+  async function renderCard(d, el, isFav=false, skipFilter=false) {
   const scope = el.id || "global";
 const id = `card-${scope}-${d.sym}`;
   let card = document.getElementById(id);
