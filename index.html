@@ -4808,10 +4808,7 @@ ${d.volumeBreakout ? `
   <b class="behavior-${behavior}">${behavior}</b>
 </div>
 
-      <div class="bias-chart-wrap">
-  <canvas class="bias-chart" width="320" height="160"></canvas>
-
-  ${flipAttempt ? `
+${flipAttempt ? `
 <div class="muted">
   ⚠ Polarity Flip Attempt<br>
   <b>
@@ -4829,6 +4826,9 @@ ${d.flipAttemptCount > 0 ? `
   <b>${d.flipAttemptCount}</b>
 </div>
 ` : ""}
+
+      <div class="bias-chart-wrap">
+  <canvas class="bias-chart" width="320" height="160"></canvas>
 </div>
 
   <button class="secondary"
