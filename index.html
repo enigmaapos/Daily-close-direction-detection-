@@ -3901,29 +3901,6 @@ const id = `card-${scope}-${d.sym}`;
 
                       const behavior = getSymbolBehavior(d);
 
-    /* ================= BIAS CHART RENDER ================= */
-const canvas = card.querySelector(".bias-chart");
-if (!canvas) return;
-
-/* 1️⃣ Seed bias history if empty */
-if (!BIAS_HISTORY[d.sym] || BIAS_HISTORY[d.sym].length === 0) {
-  BIAS_HISTORY[d.sym] = [{
-    ts: Date.now(),
-    bias: d.bias ?? "Neutral",
-    y: BIAS_Y_MAP[d.bias] ?? 0
-  }];
-}
-
-/* 2️⃣ Compress AFTER seeding */
-const series = compressBias15m(d.sym).slice(-96);
-
-/* 3️⃣ Draw based on number of points */
-if (series.length >= 2) {
-  drawBiasChart(canvas, series);
-} else if (series.length === 1) {
-  drawSingleBiasPoint(canvas, series[0]);
-}
-
   
   card.dataset.bias = d.bias;
 card.dataset.vol  = d.bull ? "bull" : "bear";
@@ -4533,6 +4510,29 @@ ${d.volumeBreakout ? `
 
       <canvas class="bias-chart" width="260" height="120"></canvas>
 `;
+
+    /* ================= BIAS CHART RENDER ================= */
+const canvas = card.querySelector(".bias-chart");
+if (!canvas) return;
+
+/* 1️⃣ Seed bias history if empty */
+if (!BIAS_HISTORY[d.sym] || BIAS_HISTORY[d.sym].length === 0) {
+  BIAS_HISTORY[d.sym] = [{
+    ts: Date.now(),
+    bias: d.bias ?? "Neutral",
+    y: BIAS_Y_MAP[d.bias] ?? 0
+  }];
+}
+
+/* 2️⃣ Compress AFTER seeding */
+const series = compressBias15m(d.sym).slice(-96);
+
+/* 3️⃣ Draw based on number of points */
+if (series.length >= 2) {
+  drawBiasChart(canvas, series);
+} else if (series.length === 1) {
+  drawSingleBiasPoint(canvas, series[0]);
+}
 
 
     if (!skipFilter) {
