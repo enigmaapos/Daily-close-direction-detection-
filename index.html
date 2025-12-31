@@ -868,6 +868,76 @@ function drawSingleBiasPoint(canvas, point) {
   });
 }
 
+  async function fetch15mHistory(sym) {
+  return fetchJSON(
+    `${API}/fapi/v1/klines?symbol=${sym}&interval=15m&limit=96`
+  );
+  }
+
+  function computeHistoricalBias(k, idx, all) {
+  const close = +k[4];
+  const open  = +k[1];
+  const high  = +k[2];
+  const low   = +k[3];
+
+  const body = Math.abs(close - open);
+  const range = high - low;
+
+  const isBull = close > open;
+  const isBear = close < open;
+
+  // momentum proxy
+  const momentum =
+    range > 0 ? body / range : 0;
+
+  // trend proxy using previous closes
+  const prev = idx > 0 ? +all[idx - 1][4] : close;
+  const trendUp = close > prev;
+  const trendDown = close < prev;
+
+  // ---- Bias classification ----
+  if (trendUp && isBull && momentum > 0.6) {
+    return "Bullish Continuation";
+  }
+
+  if (trendUp && isBear) {
+    return "Bull Trap Risk";
+  }
+
+  if (!trendUp && !trendDown) {
+    return "Neutral";
+  }
+
+  if (trendDown && isBear && momentum > 0.6) {
+    return "Bearish Continuation";
+  }
+
+  if (trendDown && isBull) {
+    return "Bear Trap Risk";
+  }
+
+  return "Neutral";
+  }
+
+  async function seedBiasFrom15mHistory(sym) {
+  const klines = await fetch15mHistory(sym);
+  if (!klines || klines.length === 0) return;
+
+  BIAS_HISTORY[sym] = [];
+
+  klines.forEach((k, i) => {
+    const bias = computeHistoricalBias(k, i, klines);
+    const y = BIAS_Y_MAP[bias] ?? 0;
+
+    BIAS_HISTORY[sym].push({
+      ts: k[0], // open time of 15m candle
+      bias,
+      y
+    });
+  });
+  }
+
+  
 
     /* ================= 4H HTF CACHE ================= */
 const HTF_CACHE = {};
@@ -4616,7 +4686,12 @@ ${d.volumeBreakout ? `
 const canvas = card.querySelector(".bias-chart");
 if (!canvas) return;
 
-/* 1️⃣ Seed bias history if empty */
+/* 1️⃣ Seed from 15m history ONCE (if empty) */
+if (!BIAS_HISTORY[d.sym]) {
+  await seedBiasFrom15mHistory(d.sym);
+}
+
+/* 2️⃣ Fallback ONLY if history truly failed */
 if (!BIAS_HISTORY[d.sym] || BIAS_HISTORY[d.sym].length === 0) {
   BIAS_HISTORY[d.sym] = [{
     ts: Date.now(),
@@ -4625,10 +4700,10 @@ if (!BIAS_HISTORY[d.sym] || BIAS_HISTORY[d.sym].length === 0) {
   }];
 }
 
-/* 2️⃣ Compress AFTER seeding */
+/* 3️⃣ Compress AFTER seeding */
 const series = compressBias15m(d.sym).slice(-96);
 
-/* 3️⃣ Draw based on number of points */
+/* 4️⃣ Draw */
 if (series.length >= 2) {
   drawBiasChart(canvas, series);
 } else if (series.length === 1) {
