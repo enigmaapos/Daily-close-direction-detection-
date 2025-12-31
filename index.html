@@ -619,6 +619,13 @@ scanLimit.addEventListener("change", () => {
   onScanControlChange();
 });
 
+  const BIAS_CHART_PADDING = {
+  left: 48,   // space for Y labels
+  right: 8,
+  top: 8,
+  bottom: 20 // space for X labels
+};
+
   /* ================= 15M BIAS COMPRESSION ================= */
 function compressBias15m(symbol) {
   const data = BIAS_HISTORY[symbol];
@@ -683,56 +690,61 @@ function drawBiasChart(canvas, points) {
   const ctx = canvas.getContext("2d");
   const w = canvas.width;
   const h = canvas.height;
+  const pad = BIAS_CHART_PADDING;
 
   ctx.clearRect(0, 0, w, h);
 
-  // axes
-  ctx.strokeStyle = "#334155";
-  ctx.beginPath();
-  ctx.moveTo(0, h / 2);
-  ctx.lineTo(w, h / 2); // zero line
-  ctx.stroke();
+  // Y axis + guides
+  drawBiasYAxis(ctx, w, h, pad);
 
   const minY = -3;
   const maxY =  3;
 
+  const plotW = w - pad.left - pad.right;
+  const plotH = h - pad.top - pad.bottom;
+
   const scaleY = y =>
-    h - ((y - minY) / (maxY - minY)) * h;
+    pad.top + plotH - ((y - minY) / (maxY - minY)) * plotH;
 
-  const stepX = w / (points.length - 1);
+  const stepX = plotW / (points.length - 1);
 
+  // zero line
+  ctx.strokeStyle = "#334155";
+  ctx.beginPath();
+  ctx.moveTo(pad.left, scaleY(0));
+  ctx.lineTo(w - pad.right, scaleY(0));
+  ctx.stroke();
+
+  // bias line
   ctx.lineWidth = 2;
+  ctx.strokeStyle = "#38bdf8";
   ctx.beginPath();
 
   points.forEach((p, i) => {
-    const x = i * stepX;
+    const x = pad.left + i * stepX;
     const y = scaleY(p.y);
-
-    if (i === 0) ctx.moveTo(x, y);
-    else ctx.lineTo(x, y);
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
   });
 
-  ctx.strokeStyle = "#38bdf8";
   ctx.stroke();
 
   // dots
   points.forEach((p, i) => {
-    const x = i * stepX;
+    const x = pad.left + i * stepX;
     const y = scaleY(p.y);
 
     ctx.beginPath();
     ctx.arc(x, y, 3, 0, Math.PI * 2);
-
     ctx.fillStyle =
       p.y > 0 ? "#22c55e" :
       p.y < 0 ? "#fb7185" :
       "#facc15";
-
     ctx.fill();
   });
 
-    drawBiasXAxis(ctx, w, h, points);
-  }
+  // X axis labels
+  drawBiasXAxis(ctx, w, h, points, pad);
+}
 
   /* ================= DRAW SINGLE BIAS POINT ================= */
 function drawSingleBiasPoint(canvas, point) {
@@ -741,26 +753,29 @@ function drawSingleBiasPoint(canvas, point) {
   const ctx = canvas.getContext("2d");
   const w = canvas.width;
   const h = canvas.height;
+  const pad = BIAS_CHART_PADDING;
 
   ctx.clearRect(0, 0, w, h);
 
-  // ✅ ADD THIS
-  drawBiasYAxis(ctx, w, h);
+  drawBiasYAxis(ctx, w, h, pad);
+
+  const minY = -3;
+  const maxY = 3;
+
+  const plotH = h - pad.top - pad.bottom;
+
+  const scaleY = y =>
+    pad.top + plotH - ((y - minY) / (maxY - minY)) * plotH;
+
+  const x = pad.left + (w - pad.left - pad.right) / 2;
+  const y = scaleY(point.y);
 
   // zero line
   ctx.strokeStyle = "#334155";
   ctx.beginPath();
-  ctx.moveTo(0, h / 2);
-  ctx.lineTo(w, h / 2);
+  ctx.moveTo(pad.left, scaleY(0));
+  ctx.lineTo(w - pad.right, scaleY(0));
   ctx.stroke();
-
-  const minY = -3;
-  const maxY = 3;
-  const scaleY = y =>
-    h - ((y - minY) / (maxY - minY)) * h;
-
-  const x = w / 2;
-  const y = scaleY(point.y);
 
   ctx.beginPath();
   ctx.arc(x, y, 5, 0, Math.PI * 2);
@@ -771,7 +786,7 @@ function drawSingleBiasPoint(canvas, point) {
   ctx.fill();
 }
 
-  function drawBiasYAxis(ctx, w, h) {
+  function drawBiasYAxis(ctx, w, h, pad) {
   const levels = [
     { y: +3, label: "Bull Cont." },
     { y: +2, label: "Bull Def." },
@@ -785,36 +800,41 @@ function drawSingleBiasPoint(canvas, point) {
   const minY = -3;
   const maxY =  3;
 
+  const plotH = h - pad.top - pad.bottom;
+
   const scaleY = y =>
-    h - ((y - minY) / (maxY - minY)) * h;
+    pad.top + plotH - ((y - minY) / (maxY - minY)) * plotH;
 
   ctx.font = "10px Inter, system-ui";
   ctx.fillStyle = "#9fb3cc";
-  ctx.textAlign = "left";
+  ctx.textAlign = "right";
   ctx.textBaseline = "middle";
 
   levels.forEach(l => {
     const py = scaleY(l.y);
 
-    // guide line (very light)
+    // guide line
     ctx.strokeStyle = "#172033";
     ctx.beginPath();
-    ctx.moveTo(0, py);
-    ctx.lineTo(w, py);
+    ctx.moveTo(pad.left, py);
+    ctx.lineTo(w - pad.right, py);
     ctx.stroke();
 
     // label
-    ctx.fillText(l.label, 4, py);
+    ctx.fillText(l.label, pad.left - 6, py);
   });
-  }
+}
 
-  function drawBiasXAxis(ctx, w, h, points) {
+  function drawBiasXAxis(ctx, w, h, points, pad) {
   if (!points || points.length === 0) return;
 
   ctx.font = "10px Inter, system-ui";
   ctx.fillStyle = "#9fb3cc";
   ctx.textAlign = "center";
   ctx.textBaseline = "top";
+
+  const plotW = w - pad.left - pad.right;
+  const plotY = h - pad.bottom;
 
   const indices = [
     0,
@@ -826,7 +846,7 @@ function drawSingleBiasPoint(canvas, point) {
     const p = points[i];
     if (!p) return;
 
-    const x = (i / (points.length - 1)) * w;
+    const x = pad.left + (i / (points.length - 1)) * plotW;
     const t = new Date(p.time);
 
     const label = t.toLocaleTimeString([], {
@@ -834,9 +854,9 @@ function drawSingleBiasPoint(canvas, point) {
       minute: "2-digit"
     });
 
-    ctx.fillText(label, x, h - 12);
+    ctx.fillText(label, x, plotY + 4);
   });
-  }
+}
 
 
     /* ================= 4H HTF CACHE ================= */
@@ -4577,7 +4597,7 @@ ${d.volumeBreakout ? `
   <b class="behavior-${behavior}">${behavior}</b>
 </div>
 
-      <canvas class="bias-chart" width="260" height="120"></canvas>
+      <canvas class="bias-chart" width="320" height="160"></canvas>
 `;
 
     /* ================= BIAS CHART RENDER ================= */
