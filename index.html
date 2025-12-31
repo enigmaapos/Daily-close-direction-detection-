@@ -249,6 +249,13 @@ button.secondary{
   .behavior-SMOOTH { color: #22c55e; }
 .behavior-CONSOLIDATION { color: #facc15; }
 .behavior-CHOPPY { color: #fb7185; }
+
+  .bias-chart {
+  margin-top: 8px;
+  background: #0b1220;
+  border: 1px solid #172033;
+  border-radius: 6px;
+  }
 </style>
 </head>
 
@@ -516,6 +523,8 @@ button.secondary{
 <h2>🔴 Top Losers — Bull Trap Risk (Buy on Weakness)</h2>
 <div class="grid" id="redGrid"></div>
 
+  <canvas class="bias-chart" width="260" height="120"></canvas>
+
   <button id="scrollTopBtn" title="Back to top">⬆</button>
 
 <script>
@@ -609,6 +618,119 @@ scanLimit.addEventListener("change", () => {
   localStorage.setItem("scanLimit", scanLimit.value);
   onScanControlChange();
 });
+
+  /* ================= 15M BIAS COMPRESSION ================= */
+function compressBias15m(symbol) {
+  const data = BIAS_HISTORY[symbol];
+  if (!data || data.length === 0) return [];
+
+  const buckets = {};
+
+  for (const p of data) {
+    const key = Math.floor(p.ts / (15 * 60 * 1000));
+    if (!buckets[key]) buckets[key] = [];
+    buckets[key].push(p);
+  }
+
+  return Object.entries(buckets)
+    .sort((a, b) => a[0] - b[0])
+    .map(([k, arr]) => {
+      const freq = {};
+      arr.forEach(p => {
+        freq[p.bias] = (freq[p.bias] || 0) + 1;
+      });
+
+      // dominant bias
+      let dominant = "Neutral";
+      let max = 0;
+
+      for (const b in freq) {
+        if (freq[b] > max) {
+          max = freq[b];
+          dominant = b;
+        }
+      }
+
+      return {
+        time: Number(k) * 15 * 60 * 1000,
+        bias: dominant,
+        y: BIAS_Y_MAP[dominant] ?? 0
+      };
+    });
+}
+
+  /* ================= BIAS → Y AXIS MAP ================= */
+const BIAS_Y_MAP = {
+  "Bullish Continuation":  +3,
+  "Bullish Defense":       +2,
+  "Bull Trap Risk":        +1,
+
+  "Neutral":                0,
+
+  "Bear Trap Risk":        -1,
+  "Bearish Defense":       -2,
+  "Bearish Continuation":  -3
+};
+
+  /* ================= BIAS HISTORY ================= */
+// symbol → [{ ts, bias, y }]
+const BIAS_HISTORY = {};
+
+  /* ================= DRAW BIAS TREND ================= */
+function drawBiasChart(canvas, points) {
+  if (!canvas || points.length < 2) return;
+
+  const ctx = canvas.getContext("2d");
+  const w = canvas.width;
+  const h = canvas.height;
+
+  ctx.clearRect(0, 0, w, h);
+
+  // axes
+  ctx.strokeStyle = "#334155";
+  ctx.beginPath();
+  ctx.moveTo(0, h / 2);
+  ctx.lineTo(w, h / 2); // zero line
+  ctx.stroke();
+
+  const minY = -3;
+  const maxY =  3;
+
+  const scaleY = y =>
+    h - ((y - minY) / (maxY - minY)) * h;
+
+  const stepX = w / (points.length - 1);
+
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+
+  points.forEach((p, i) => {
+    const x = i * stepX;
+    const y = scaleY(p.y);
+
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  });
+
+  ctx.strokeStyle = "#38bdf8";
+  ctx.stroke();
+
+  // dots
+  points.forEach((p, i) => {
+    const x = i * stepX;
+    const y = scaleY(p.y);
+
+    ctx.beginPath();
+    ctx.arc(x, y, 3, 0, Math.PI * 2);
+
+    ctx.fillStyle =
+      p.y > 0 ? "#22c55e" :
+      p.y < 0 ? "#fb7185" :
+      "#facc15";
+
+    ctx.fill();
+  });
+  }
 
 
     /* ================= 4H HTF CACHE ================= */
@@ -3462,6 +3584,25 @@ const structureIntent = classifyStructureIntent({
   score: structureScore
 });
 
+  /* ================= BIAS SNAPSHOT ================= */
+if (d.bias) {
+  if (!BIAS_HISTORY[sym]) BIAS_HISTORY[sym] = [];
+
+  const y = BIAS_Y_MAP[d.bias] ?? 0;
+
+  BIAS_HISTORY[sym].push({
+    ts: Date.now(),
+    bias: d.bias,
+    y
+  });
+
+  // keep last 24h only
+  const DAY = 24 * 60 * 60 * 1000;
+  BIAS_HISTORY[sym] = BIAS_HISTORY[sym].filter(
+    p => Date.now() - p.ts <= DAY
+  );
+}
+
   
 
   
@@ -3723,6 +3864,13 @@ const id = `card-${scope}-${d.sym}`;
 };
 
                       const behavior = getSymbolBehavior(d);
+
+    /* ================= BIAS CHART RENDER ================= */
+const canvas = card.querySelector(".bias-chart");
+if (canvas) {
+  const series = compressBias15m(d.sym).slice(-96); // last 24h
+  drawBiasChart(canvas, series);
+  }
 
   
   card.dataset.bias = d.bias;
