@@ -4672,7 +4672,8 @@ const marketDomIcon =
     ? "bull"
     : "neutral";
 
-    
+const rawSeries = compressRawBias15m(sym).slice(-96);
+   
 flipAttempt = detectPolarityFlipAttempt(rawSeries);
 flipAttemptCount = countPolarityFlipAttempts(rawSeries);
 
