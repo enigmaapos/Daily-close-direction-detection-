@@ -1012,30 +1012,6 @@ function logFlipAttempt(sym, flip) {
   );
   }
 
-  function countPolarityFlipAttempts(series) {
-  if (!series || series.length < 3) return 0;
-
-  let count = 0;
-
-  for (let i = 1; i < series.length - 1; i++) {
-    const prev = series[i - 1];
-    const curr = series[i];
-    const next = series[i + 1];
-
-    const polarityFlip =
-      (prev.y > 0 && curr.y < 0) ||
-      (prev.y < 0 && curr.y > 0);
-
-    const hasNeutral =
-      prev.y === 0 || next.y === 0;
-
-    if (polarityFlip && hasNeutral) {
-      count++;
-    }
-  }
-
-  return count;
-  }
 
   /* ================= TIME FORMAT (BINANCE / LOCAL) ================= */
 function formatTime(ts) {
@@ -3960,8 +3936,7 @@ moveStrength,directionalBias,setupScore,htf,htfTrend: htf.htfTrend,
   resistanceReaction,
   supportReaction,
   resistanceZone: nearestResistanceZone,
-  supportZone: nearestSupportZone,flipAttempt,
-flipAttemptCount};
+  supportZone: nearestSupportZone};
 }
 
 
@@ -4365,7 +4340,7 @@ const marketDomIcon =
 const biasSeries = compressBias15m(d.sym).slice(-96);
 
 d.flipAttempt = detectPolarityFlipAttempt(biasSeries);
-d.flipAttemptCount = countPolarityFlipAttempts(biasSeries);
+
     
     
 
@@ -4809,21 +4784,14 @@ ${d.volumeBreakout ? `
   <b class="behavior-${behavior}">${behavior}</b>
 </div>
 
-${d.flipAttempt ? `
+${flipAttempt ? `
 <div class="muted flip-attempt">
   ⚠ Polarity Flip Attempt<br>
   <b>
-    ${formatTime(d.flipAttempt.timeFrom)} ${d.flipAttempt.from}
+    ${formatTime(flipAttempt.timeFrom)} ${flipAttempt.from}
     →
-    ${formatTime(d.flipAttempt.timeTo)} ${d.flipAttempt.to}
+    ${formatTime(flipAttempt.timeTo)} ${flipAttempt.to}
   </b>
-</div>
-` : ""}
-
-${d.flipAttemptCount > 0 ? `
-<div class="muted">
-  🔁 Polarity Flip Attempts (24h):
-  <b>${d.flipAttemptCount}</b>
 </div>
 ` : ""}
 
