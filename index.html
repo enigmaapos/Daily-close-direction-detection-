@@ -744,6 +744,9 @@ function drawSingleBiasPoint(canvas, point) {
 
   ctx.clearRect(0, 0, w, h);
 
+  // ✅ ADD THIS
+  drawBiasYAxis(ctx, w, h);
+
   // zero line
   ctx.strokeStyle = "#334155";
   ctx.beginPath();
@@ -752,22 +755,19 @@ function drawSingleBiasPoint(canvas, point) {
   ctx.stroke();
 
   const minY = -3;
-  const maxY =  3;
-
+  const maxY = 3;
   const scaleY = y =>
     h - ((y - minY) / (maxY - minY)) * h;
 
-  const y = scaleY(point.y);
   const x = w / 2;
+  const y = scaleY(point.y);
 
   ctx.beginPath();
   ctx.arc(x, y, 5, 0, Math.PI * 2);
-
   ctx.fillStyle =
     point.y > 0 ? "#22c55e" :
     point.y < 0 ? "#fb7185" :
     "#facc15";
-
   ctx.fill();
 }
 
@@ -836,63 +836,6 @@ function drawSingleBiasPoint(canvas, point) {
 
     ctx.fillText(label, x, h - 12);
   });
-  }
-
-  function drawBiasChart(canvas, points) {
-  if (!canvas || points.length < 2) return;
-
-  const ctx = canvas.getContext("2d");
-  const w = canvas.width;
-  const h = canvas.height;
-
-  ctx.clearRect(0, 0, w, h);
-
-  // Y axis + horizontal guides
-  drawBiasYAxis(ctx, w, h);
-
-  // zero line (stronger)
-  ctx.strokeStyle = "#334155";
-  ctx.beginPath();
-  ctx.moveTo(0, h / 2);
-  ctx.lineTo(w, h / 2);
-  ctx.stroke();
-
-  const minY = -3;
-  const maxY =  3;
-  const scaleY = y =>
-    h - ((y - minY) / (maxY - minY)) * h;
-
-  const stepX = w / (points.length - 1);
-
-  // bias line
-  ctx.lineWidth = 2;
-  ctx.strokeStyle = "#38bdf8";
-  ctx.beginPath();
-
-  points.forEach((p, i) => {
-    const x = i * stepX;
-    const y = scaleY(p.y);
-    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-  });
-
-  ctx.stroke();
-
-  // dots
-  points.forEach((p, i) => {
-    const x = i * stepX;
-    const y = scaleY(p.y);
-
-    ctx.beginPath();
-    ctx.arc(x, y, 3, 0, Math.PI * 2);
-    ctx.fillStyle =
-      p.y > 0 ? "#22c55e" :
-      p.y < 0 ? "#fb7185" :
-      "#facc15";
-    ctx.fill();
-  });
-
-  // X axis labels (time)
-  drawBiasXAxis(ctx, w, h, points);
   }
 
 
