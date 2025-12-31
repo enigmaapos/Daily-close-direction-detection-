@@ -4609,11 +4609,23 @@ const marketDomIcon =
     : "neutral";
 
 
-    const biasSeries = compressBias15m(d.sym).slice(-96);
+    /* ================= ENSURE HISTORY ================= */
+  if (!BIAS_HISTORY[d.sym] || BIAS_HISTORY[d.sym].length < 3) {
+    await seedBiasFrom15mHistory(d.sym, d.mainTrend);
+  }
 
-flipAttempt = detectPolarityFlipAttempt(biasSeries);
-flipAttemptCount = countPolarityFlipAttempts(biasSeries);
-  
+  /* ================= COMPUTE SERIES ================= */
+  const biasSeries = compressBias15m(d.sym).slice(-96);
+
+  const flipAttempt =
+    biasSeries.length >= 3
+      ? detectPolarityFlipAttempt(biasSeries)
+      : null;
+
+  const flipAttemptCount =
+    biasSeries.length >= 3
+      ? countPolarityFlipAttempts(biasSeries)
+      : 0;
     
 
 card.innerHTML = `
@@ -5085,41 +5097,24 @@ ${flipAttemptCount > 0 ? `
 </button>
 `;
 
-/* ================= BIAS CHART RENDER ================= */
+ /* ================= CHART (VISUAL ONLY) ================= */
+  const canvas = card.querySelector(".bias-chart");
+  if (canvas) {
+    await renderBiasChart(d.sym, canvas, d.mainTrend);
+  }
 
-// 1️⃣ Chart = filtered by main trend (visual only)
-const canvas = card.querySelector(".bias-chart");
-if (canvas) {
-  await renderBiasChart(d.sym, canvas, d.mainTrend);
-}
+  /* ================= FLIP EVENT (ONCE) ================= */
+  if (flipAttempt) {
+    registerFlipAttempt(d.sym, flipAttempt, d.mainTrend);
+    logFlipAttempt(d.sym, flipAttempt);
+    playFlipSound(d.sym, flipAttempt);
 
-// ensure history exists for flip logic
-if (!BIAS_HISTORY[d.sym] || BIAS_HISTORY[d.sym].length < 3) {
-  await seedBiasFrom15mHistory(d.sym, d.mainTrend);
-}
+    // allow repaint
+    await new Promise(r => setTimeout(r, 0));
+  }
 
-// 2️⃣ Flip detection = raw events
-const series = compressBias15m(d.sym).slice(-96);
-
-let flipAttempt = null;
-if (series.length >= 3) {
-  flipAttempt = detectPolarityFlipAttempt(series);
-}
-
-if (flipAttempt) {
-  registerFlipAttempt(d.sym, flipAttempt, d.mainTrend);
-  logFlipAttempt(d.sym, flipAttempt);
-  playFlipSound(d.sym, flipAttempt);
-
-  // allow repaint
-  await new Promise(r => setTimeout(r, 0));
-}
-
-// 3️⃣ Flip panel = aggregated UI
-renderFlipPanel();
-
-  
-    
+  /* ================= FLIP PANEL ================= */
+  renderFlipPanel(); 
 
 
     if (!skipFilter) {
