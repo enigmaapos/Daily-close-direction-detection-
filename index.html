@@ -730,6 +730,8 @@ function drawBiasChart(canvas, points) {
 
     ctx.fill();
   });
+
+    drawBiasXAxis(ctx, w, h, points);
   }
 
   /* ================= DRAW SINGLE BIAS POINT ================= */
@@ -768,6 +770,130 @@ function drawSingleBiasPoint(canvas, point) {
 
   ctx.fill();
 }
+
+  function drawBiasYAxis(ctx, w, h) {
+  const levels = [
+    { y: +3, label: "Bull Cont." },
+    { y: +2, label: "Bull Def." },
+    { y: +1, label: "Bull" },
+    { y:  0, label: "Neutral" },
+    { y: -1, label: "Bear" },
+    { y: -2, label: "Bear Def." },
+    { y: -3, label: "Bear Cont." }
+  ];
+
+  const minY = -3;
+  const maxY =  3;
+
+  const scaleY = y =>
+    h - ((y - minY) / (maxY - minY)) * h;
+
+  ctx.font = "10px Inter, system-ui";
+  ctx.fillStyle = "#9fb3cc";
+  ctx.textAlign = "left";
+  ctx.textBaseline = "middle";
+
+  levels.forEach(l => {
+    const py = scaleY(l.y);
+
+    // guide line (very light)
+    ctx.strokeStyle = "#172033";
+    ctx.beginPath();
+    ctx.moveTo(0, py);
+    ctx.lineTo(w, py);
+    ctx.stroke();
+
+    // label
+    ctx.fillText(l.label, 4, py);
+  });
+  }
+
+  function drawBiasXAxis(ctx, w, h, points) {
+  if (!points || points.length === 0) return;
+
+  ctx.font = "10px Inter, system-ui";
+  ctx.fillStyle = "#9fb3cc";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "top";
+
+  const indices = [
+    0,
+    Math.floor(points.length / 2),
+    points.length - 1
+  ];
+
+  indices.forEach(i => {
+    const p = points[i];
+    if (!p) return;
+
+    const x = (i / (points.length - 1)) * w;
+    const t = new Date(p.time);
+
+    const label = t.toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit"
+    });
+
+    ctx.fillText(label, x, h - 12);
+  });
+  }
+
+  function drawBiasChart(canvas, points) {
+  if (!canvas || points.length < 2) return;
+
+  const ctx = canvas.getContext("2d");
+  const w = canvas.width;
+  const h = canvas.height;
+
+  ctx.clearRect(0, 0, w, h);
+
+  // Y axis + horizontal guides
+  drawBiasYAxis(ctx, w, h);
+
+  // zero line (stronger)
+  ctx.strokeStyle = "#334155";
+  ctx.beginPath();
+  ctx.moveTo(0, h / 2);
+  ctx.lineTo(w, h / 2);
+  ctx.stroke();
+
+  const minY = -3;
+  const maxY =  3;
+  const scaleY = y =>
+    h - ((y - minY) / (maxY - minY)) * h;
+
+  const stepX = w / (points.length - 1);
+
+  // bias line
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = "#38bdf8";
+  ctx.beginPath();
+
+  points.forEach((p, i) => {
+    const x = i * stepX;
+    const y = scaleY(p.y);
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
+
+  ctx.stroke();
+
+  // dots
+  points.forEach((p, i) => {
+    const x = i * stepX;
+    const y = scaleY(p.y);
+
+    ctx.beginPath();
+    ctx.arc(x, y, 3, 0, Math.PI * 2);
+    ctx.fillStyle =
+      p.y > 0 ? "#22c55e" :
+      p.y < 0 ? "#fb7185" :
+      "#facc15";
+    ctx.fill();
+  });
+
+  // X axis labels (time)
+  drawBiasXAxis(ctx, w, h, points);
+  }
 
 
     /* ================= 4H HTF CACHE ================= */
