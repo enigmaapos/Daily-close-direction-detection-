@@ -4153,6 +4153,27 @@ if (
   prob -= 2;
 }
 
+        // === after bias histories updated ===
+const interpAcc = computeBiasAccumulation(
+  BIAS_HISTORY[sym]?.slice(-96)
+);
+
+const rawAcc = computeBiasAccumulation(
+  RAW_BIAS_HISTORY[sym]?.slice(-96)
+);
+
+let marketPhase = "NEUTRAL";
+
+if (interpAcc > 0 && rawAcc < 0) {
+  marketPhase = "EARLY DISTRIBUTION";
+}
+
+  const marketPhaseInfo = formatMarketPhase(
+  marketPhase,
+  interpAcc,
+  rawAcc
+);
+
   if (marketPhase === "EARLY DISTRIBUTION") {
   prob -= 8;   // suppress late longs
   }
@@ -4234,26 +4255,7 @@ const structureIntent = classifyStructureIntent({
   score: structureScore
 });
 
-      // === after bias histories updated ===
-const interpAcc = computeBiasAccumulation(
-  BIAS_HISTORY[sym]?.slice(-96)
-);
 
-const rawAcc = computeBiasAccumulation(
-  RAW_BIAS_HISTORY[sym]?.slice(-96)
-);
-
-let marketPhase = "NEUTRAL";
-
-if (interpAcc > 0 && rawAcc < 0) {
-  marketPhase = "EARLY DISTRIBUTION";
-}
-
-  const marketPhaseInfo = formatMarketPhase(
-  marketPhase,
-  interpAcc,
-  rawAcc
-);
 
   /* ================= BIAS SNAPSHOT ================= */
 if (bias) {
