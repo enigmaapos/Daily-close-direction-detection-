@@ -695,6 +695,26 @@ const ALERT_COOLDOWN = 60 * 1000; // 1 minute per symbol
 const EXEC_ALERT_COOLDOWN = 2 * 60 * 1000; // 2 minutes
 const execAlertCooldown = {};
 
+  let AUDIO_UNLOCKED = false;
+
+function unlockAudio() {
+  if (AUDIO_UNLOCKED) return;
+
+  flipSound
+    .play()
+    .then(() => {
+      flipSound.pause();
+      flipSound.currentTime = 0;
+      AUDIO_UNLOCKED = true;
+      console.log("🔊 Audio unlocked");
+    })
+    .catch(() => {});
+}
+
+// any user interaction
+document.addEventListener("click", unlockAudio, { once: true });
+document.addEventListener("keydown", unlockAudio, { once: true });
+
   
   
 
@@ -1328,8 +1348,9 @@ function formatTime(ts) {
 
   URL.revokeObjectURL(url);
   }
+  
 
-  /* ================= FLIP SOUND ================= */
+    /* ================= FLIP SOUND ================= */
 const flipSound = new Audio("flip.mp3"); // <-- put file in same folder
 flipSound.volume = 0.6;
 
@@ -1351,7 +1372,8 @@ const LAST_FLIP_SOUND_TS = {};
         // browser blocked autoplay – ignore safely
       });
   }
-  }
+        }
+  
 
   function computeBiasAccumulation(series) {
   if (!series || !series.length) return 0;
