@@ -4162,6 +4162,9 @@ if (
   prob -= 2;
 }
 
+  if (marketPhase === "EARLY DISTRIBUTION") {
+  prob -= 8;   // suppress late longs
+  }
   
 
 prob = Math.max(40, Math.min(prob, 95));
