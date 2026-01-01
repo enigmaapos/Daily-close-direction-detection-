@@ -4234,6 +4234,27 @@ const structureIntent = classifyStructureIntent({
   score: structureScore
 });
 
+      // === after bias histories updated ===
+const interpAcc = computeBiasAccumulation(
+  BIAS_HISTORY[sym]?.slice(-96)
+);
+
+const rawAcc = computeBiasAccumulation(
+  RAW_BIAS_HISTORY[sym]?.slice(-96)
+);
+
+let marketPhase = "NEUTRAL";
+
+if (interpAcc > 0 && rawAcc < 0) {
+  marketPhase = "EARLY DISTRIBUTION";
+}
+
+  const marketPhaseInfo = formatMarketPhase(
+  marketPhase,
+  interpAcc,
+  rawAcc
+);
+
   /* ================= BIAS SNAPSHOT ================= */
 if (bias) {
   if (!BIAS_HISTORY[sym]) BIAS_HISTORY[sym] = [];
@@ -4255,26 +4276,7 @@ if (bias) {
 
 await seedBiasFrom15mHistory(sym, htf.htfTrend);
 
-    // === after bias histories updated ===
-const interpAcc = computeBiasAccumulation(
-  BIAS_HISTORY[sym]?.slice(-96)
-);
 
-const rawAcc = computeBiasAccumulation(
-  RAW_BIAS_HISTORY[sym]?.slice(-96)
-);
-
-let marketPhase = "NEUTRAL";
-
-if (interpAcc > 0 && rawAcc < 0) {
-  marketPhase = "EARLY DISTRIBUTION";
-}
-
-  const marketPhaseInfo = formatMarketPhase(
-  marketPhase,
-  interpAcc,
-  rawAcc
-);
 
   const setupScore = calculateSetupScore({
   structure,
