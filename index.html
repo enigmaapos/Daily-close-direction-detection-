@@ -3638,6 +3638,9 @@ const bearishBreakAccepted =
   !rsi50State?.consistentlyAbove50 &&
   !rsi15Rising;
 
+  
+
+  
 let bias = "Neutral";
 let prob = 50;
 let structure = "none";
@@ -3901,6 +3904,27 @@ prob = Math.max(40, Math.min(prob, 95));
 };
 
 
+  // === after bias histories updated ===
+const interpAcc = computeBiasAccumulation(
+  BIAS_HISTORY[sym]?.slice(-96)
+);
+
+const rawAcc = computeBiasAccumulation(
+  RAW_BIAS_HISTORY[sym]?.slice(-96)
+);
+
+let marketPhase = "NEUTRAL";
+
+if (interpAcc > 0 && rawAcc < 0) {
+  marketPhase = "EARLY DISTRIBUTION";
+}
+
+  const marketPhaseInfo = formatMarketPhase(
+  marketPhase,
+  interpAcc,
+  rawAcc
+);
+
 
 
 /* ================= BREAK INTENT ================= */
@@ -4138,6 +4162,10 @@ if (
   prob -= 2;
 }
 
+  if (marketPhase === "EARLY DISTRIBUTION") {
+  prob -= 8;   // suppress late longs
+  }
+
 prob = Math.max(40, Math.min(prob, 95));
 
 prob = applyHTFProbabilityAdjustment({
@@ -4267,7 +4295,9 @@ moveStrength,directionalBias,setupScore,htf,htfTrend: htf.htfTrend,
   resistanceReaction,
   supportReaction,
   resistanceZone: nearestResistanceZone,
-  supportZone: nearestSupportZone};
+  supportZone: nearestSupportZone,marketPhase,
+  interpBiasAcc: interpAcc,
+  rawBiasAcc: rawAcc,marketPhase: marketPhaseInfo};
 }
 
 
@@ -4414,6 +4444,49 @@ if (fm !== "all") {
 
   symbolSearch.value = "";
 }
+
+  function formatMarketPhase(phase, interpAcc, rawAcc) {
+  let cls = "neutral";
+  let reason = "No clear edge detected.";
+
+  if (phase === "EARLY DISTRIBUTION") {
+    cls = "bear";
+    reason =
+      "Structure remains intact, but bearish pressure is building beneath. Buyers are being absorbed.";
+  }
+
+  else if (phase === "EARLY ACCUMULATION") {
+    cls = "bull";
+    reason =
+      "Bearish structure persists, but buying pressure is quietly increasing. Potential base forming.";
+  }
+
+  else if (phase === "CONTINUATION UP") {
+    cls = "bull";
+    reason =
+      "Structure and pressure are aligned. Bullish continuation is supported.";
+  }
+
+  else if (phase === "CONTINUATION DOWN") {
+    cls = "bear";
+    reason =
+      "Structure and pressure are aligned. Bearish continuation is active.";
+  }
+
+  else if (phase === "NEUTRAL") {
+    cls = "neutral";
+    reason =
+      "Conflicting signals detected. Market lacks directional conviction.";
+  }
+
+  return {
+    phase,
+    cls,
+    reason,
+    interpAcc,
+    rawAcc
+  };
+  }
 
   function formatBreakIntent(intent) {
   if (!intent) return null;
@@ -5019,9 +5092,25 @@ ${(d.rsiMomentumShift && d.momentumCollapseDone) ? `
   </div>
 ` : ""}
 
-<div class="muted neutral" title="Context only. Describes the likely market phase, not a trade signal.">
-  ⚠ Market Phase: <b>${d.volAI.futureOutcome}</b>
+<div class="muted neutral"
+     title="Volume-based context only. Describes the likely near-term behavior, not a trade signal.">
+  🔮 Volume Implication: <b>${d.volAI.futureOutcome}</b>
 </div>
+
+  ${d.marketPhase ? `
+  <div class="muted ${d.marketPhase.cls}">
+    ⚠ Market Phase: <b>${d.marketPhase.phase}</b>
+    <br>
+    <span class="muted">
+      ${d.marketPhase.reason}
+    </span>
+    <br>
+    <span class="muted">
+      Bias Acc: ${d.marketPhase.interpAcc}
+      · RAW: ${d.marketPhase.rawAcc}
+    </span>
+  </div>
+` : ""}
 
 
     <div class="muted neutral">
