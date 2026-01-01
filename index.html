@@ -3338,44 +3338,57 @@ return {
   };
 }
 
-  function calculateSetupScore(d) {
+  
+function calculateSetupScore(d) {
   let score = 0;
 
-  /* ================= STRUCTURE (max 2.5) ================= */
-  if (
-    d.structure === "support holding (confirmed)" ||
-    d.structure === "resistance failed (confirmed)"
-  ) score += 2.5;
-  else if (d.structure.includes("accepted")) score += 2.0;
-  else if (d.structure.includes("weak")) score += 1.0;
+  /* ================= STRUCTURE QUALITY (max 3.0) ================= */
+  if (d.structure.includes("accepted")) {
+    score += 3.0;
+  } else if (d.structure.includes("confirmed")) {
+    score += 2.5;
+  } else if (d.structure.includes("weak")) {
+    score += 1.0;
+  }
 
-  /* ================= VOLUME ALIGNMENT (max 2.0) ================= */
-  if (d.volumeAlign === "confirmed") score += 2.0;
-  else if (d.volumeAlign === "neutral") score += 1.0;
-
-  /* ================= RSI QUALITY (max 1.5) ================= */
+  /* ================= STRUCTURE REACTION (max 2.0) ================= */
   if (
+    d.structureReaction === "DEFENDED" ||
+    d.structureReaction === "ACCEPTED"
+  ) {
+    score += 2.0;
+  } else if (d.structureReaction === "WEAKENING") {
+    score += 1.0;
+  }
+
+  /* ================= VOLUME CONTEXT (max 1.5) ================= */
+  if (
+    d.volAI &&
+    !d.volAI.meaning.includes("climax") &&
+    !d.volAI.meaning.includes("Distribution")
+  ) {
+    score += 1.5;
+  } else if (d.volAI?.meaning === "Neutral") {
+    score += 1.0;
+  }
+
+  /* ================= RSI BALANCE (max 1.5) ================= */
+  if (
+    d.rsi15 >= 48 && d.rsi15 <= 62 &&
     d.dailyRSI &&
-    d.dailyRSI.value >= 50 &&
-    d.dailyRSI.value <= 60 &&
-    d.rsi15 >= 50 &&
-    d.rsi15 <= 60
+    d.dailyRSI.value >= 45 &&
+    d.dailyRSI.value <= 60
   ) {
     score += 1.5;
   } else if (d.rsi15 >= 45 && d.rsi15 <= 65) {
     score += 1.0;
   }
 
-  /* ================= MARKET DOMINANCE (max 2.0) ================= */
-  if (d.marketDom) {
-    if (
-      (d.bias.includes("Bullish") && d.marketDom.net > 100) ||
-      (d.bias.includes("Bearish") && d.marketDom.net < -100)
-    ) {
-      score += 2.0;
-    } else if (Math.abs(d.marketDom.net) > 30) {
-      score += 1.0;
-    }
+  /* ================= MARKET PARTICIPATION (max 1.0) ================= */
+  if (d.marketDom && Math.abs(d.marketDom.net) > 30) {
+    score += 1.0;
+  } else if (d.marketDom && Math.abs(d.marketDom.net) > 10) {
+    score += 0.5;
   }
 
   /* ================= TIMING / EXTENSION (max 1.0) ================= */
@@ -3385,28 +3398,31 @@ return {
     score += 0.5;
   }
 
-  /* ================= PENALTIES ================= */
+  /* ================= PENALTIES (SOFT ONLY) ================= */
   if (d.defenseFailure === "EARLY WARNING") score -= 0.5;
-  if (d.defenseFailure === "CRITICAL FAILURE") score -= 2.0;
+  if (d.defenseFailure === "CRITICAL FAILURE") score -= 1.5;
 
-  if (d.volAI?.meaning?.includes("climax")) score -= 0.5;
-  if (d.volAI?.meaning?.includes("Distribution")) score -= 0.5;
+  if (d.marketPhase?.phase === "EARLY DISTRIBUTION") score -= 1.0;
+  if (d.marketPhase?.phase === "EARLY ACCUMULATION") score += 0.5;
 
   /* ================= CLAMP ================= */
   score = Math.max(0, Math.min(score, 10));
 
   return +score.toFixed(1);
-  }
+}
+
 
   
-
-  function getSetupGradeLabel(score) {
-  if (score >= 9.5) return "ELITE / INSTITUTIONAL";
+function getSetupGradeLabel(score) {
+  if (score >= 9.5) return "INSTITUTIONAL GRADE";
   if (score >= 8.5) return "HIGH QUALITY";
-  if (score >= 7.5) return "GOOD";
+  if (score >= 7.5) return "CLEAN";
   if (score >= 6.5) return "AVERAGE";
   return "LOW QUALITY";
-}
+  }
+  
+
+  
 
 function getSetupGradeClass(score) {
   if (score >= 9.5) return "grade-elite";
