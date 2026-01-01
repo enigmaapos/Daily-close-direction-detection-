@@ -4295,9 +4295,7 @@ moveStrength,directionalBias,setupScore,htf,htfTrend: htf.htfTrend,
   resistanceReaction,
   supportReaction,
   resistanceZone: nearestResistanceZone,
-  supportZone: nearestSupportZone,marketPhase,
-  interpBiasAcc: interpAcc,
-  rawBiasAcc: rawAcc,marketPhase: marketPhaseInfo};
+  supportZone: nearestSupportZone,marketPhase: marketPhaseInfo};
 }
 
 
@@ -5099,12 +5097,8 @@ ${(d.rsiMomentumShift && d.momentumCollapseDone) ? `
 
   ${d.marketPhase ? `
   <div class="muted ${d.marketPhase.cls}">
-    ⚠ Market Phase: <b>${d.marketPhase.phase}</b>
-    <br>
-    <span class="muted">
-      ${d.marketPhase.reason}
-    </span>
-    <br>
+    ⚠ Market Phase: <b>${d.marketPhase.phase}</b><br>
+    <span class="muted">${d.marketPhase.reason}</span><br>
     <span class="muted">
       Bias Acc: ${d.marketPhase.interpAcc}
       · RAW: ${d.marketPhase.rawAcc}
