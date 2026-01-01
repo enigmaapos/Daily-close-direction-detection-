@@ -3339,45 +3339,23 @@ return {
 }
 
   
-function calculateSetupScore(d) {
+
+  function calculateSetupScore(d) {
   let score = 0;
 
   /* ================= STRUCTURE QUALITY (max 3.0) ================= */
-  if (d.structure.includes("accepted")) {
-    score += 3.0;
-  } else if (d.structure.includes("confirmed")) {
-    score += 2.5;
-  } else if (d.structure.includes("weak")) {
-    score += 1.0;
-  }
+  if (d.structure.includes("accepted")) score += 3.0;
+  else if (d.structure.includes("confirmed")) score += 2.5;
+  else if (d.structure.includes("weak")) score += 1.0;
 
   /* ================= STRUCTURE REACTION (max 2.0) ================= */
-  if (
-    d.structureReaction === "DEFENDED" ||
-    d.structureReaction === "ACCEPTED"
-  ) {
-    score += 2.0;
-  } else if (d.structureReaction === "WEAKENING") {
-    score += 1.0;
-  }
-
-  /* ================= VOLUME CONTEXT (max 1.5) ================= */
-  if (
-    d.volAI &&
-    !d.volAI.meaning.includes("climax") &&
-    !d.volAI.meaning.includes("Distribution")
-  ) {
-    score += 1.5;
-  } else if (d.volAI?.meaning === "Neutral") {
-    score += 1.0;
-  }
+  if (d.structureReaction === "DEFENDED") score += 2.0;
+  else if (d.structureReaction === "WEAKENING") score += 1.0;
 
   /* ================= RSI BALANCE (max 1.5) ================= */
   if (
     d.rsi15 >= 48 && d.rsi15 <= 62 &&
-    d.dailyRSI &&
-    d.dailyRSI.value >= 45 &&
-    d.dailyRSI.value <= 60
+    d.dailyRSI?.value >= 45 && d.dailyRSI?.value <= 60
   ) {
     score += 1.5;
   } else if (d.rsi15 >= 45 && d.rsi15 <= 65) {
@@ -3385,31 +3363,45 @@ function calculateSetupScore(d) {
   }
 
   /* ================= MARKET PARTICIPATION (max 1.0) ================= */
-  if (d.marketDom && Math.abs(d.marketDom.net) > 30) {
-    score += 1.0;
-  } else if (d.marketDom && Math.abs(d.marketDom.net) > 10) {
+  if (d.marketDom && Math.abs(d.marketDom.net) > 100) score += 1.0;
+  else if (d.marketDom && Math.abs(d.marketDom.net) > 30) score += 0.5;
+
+  /* ================= BIAS ACCUMULATION (max 1.0) ================= */
+  if (d.biasAcc > 40 && d.marketPhase?.phase === "NEUTRAL") {
+    score += 1.0; // sustained pressure
+  } else if (d.biasAcc > 20) {
     score += 0.5;
   }
 
   /* ================= TIMING / EXTENSION (max 1.0) ================= */
-  if (d.changeState === "NORMAL" || d.changeState === "MODERATE") {
+  if (
+    d.changeState === "NORMAL" ||
+    d.changeState === "MODERATE"
+  ) {
     score += 1.0;
-  } else if (d.changeState === "HIGH") {
-    score += 0.5;
+  } else if (
+    d.changeState === "HIGH" &&
+    d.aiVerdict?.verdict.includes("WAIT")
+  ) {
+    score += 0.5; // acceptable pullback setup
   }
 
-  /* ================= PENALTIES (SOFT ONLY) ================= */
+  /* ================= SOFT PENALTIES ================= */
   if (d.defenseFailure === "EARLY WARNING") score -= 0.5;
   if (d.defenseFailure === "CRITICAL FAILURE") score -= 1.5;
 
-  if (d.marketPhase?.phase === "EARLY DISTRIBUTION") score -= 1.0;
-  if (d.marketPhase?.phase === "EARLY ACCUMULATION") score += 0.5;
+  // Climax is NOT always bad if structure is defended
+  if (
+    d.volAI?.meaning?.includes("climax") &&
+    !d.structure.includes("holding")
+  ) {
+    score -= 0.5;
+  }
 
   /* ================= CLAMP ================= */
   score = Math.max(0, Math.min(score, 10));
-
   return +score.toFixed(1);
-}
+    }
 
 
   
