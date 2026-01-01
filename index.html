@@ -3554,6 +3554,9 @@ if (ema200Last != null && price != null && ema200Last !== 0) {
   ema200DistPct = ((price - ema200Last) / ema200Last) * 100;
 }
 
+      const ema70Arr = ema70;              // reuse existing array
+const ema70Last = ema70Arr.at(-1);   // scalar
+
   let ema70DistPct = null;
 if (ema70Last != null && price != null && ema70Last !== 0) {
   ema70DistPct = ((price - ema70Last) / ema70Last) * 100;
