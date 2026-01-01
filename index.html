@@ -4714,17 +4714,6 @@ card.innerHTML = `
     ${d.bias} — ${d.prob}%
   </div>
 
-  <div class="bias-accumulation">
-  <div>
-    🧠 Bias Accumulation:
-    <b id="biasAcc-${d.sym}">—</b>
-  </div>
-  <div class="muted">
-    RAW:
-    <span id="rawBiasAcc-${d.sym}">—</span>
-  </div>
-</div>
-
   ${d.directionalBias ? `
   <div class="muted ${
     d.directionalBias.bias.includes("Bullish") ? "bull" :
@@ -5148,6 +5137,17 @@ ${flipAttemptCount > 0 ? `
 
 
       <div class="bias-chart-wrap">
+      <div class="bias-accumulation">
+  <div>
+    🧠 Bias Accumulation:
+    <b id="biasAcc-${d.sym}">—</b>
+  </div>
+  <div class="muted">
+    RAW:
+    <span id="rawBiasAcc-${d.sym}">—</span>
+  </div>
+</div>
+
   <canvas class="bias-chart" width="320" height="160"></canvas>
 </div>
 
