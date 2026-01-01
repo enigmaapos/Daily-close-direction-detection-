@@ -5307,6 +5307,9 @@ if (rawEl) {
     await seedBiasFrom15mHistory(d.sym, d.mainTrend);
   }
 
+  // 🔥 allow browser to repaint before heavy UI work
+  await new Promise(r => setTimeout(r, 0));
+
   await processBiasAndFlip();
 })();
 
