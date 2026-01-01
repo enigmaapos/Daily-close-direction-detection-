@@ -3340,80 +3340,53 @@ return {
 
   
 
-  function calculateSetupScore(d) {
+  
+function calculateSetupScore(d) {
   let score = 0;
 
-  /* ================= STRUCTURE QUALITY (max 3.0) ================= */
-  if (typeof d.structure === "string") {
-    if (d.structure.includes("accepted")) score += 3.0;
-    else if (d.structure.includes("confirmed")) score += 2.5;
-    else if (d.structure.includes("weak")) score += 1.0;
-  }
+  /* STRUCTURE QUALITY (max 3.0) */
+  if (d.structure.includes("accepted")) score += 3.0;
+  else if (d.structure.includes("confirmed")) score += 2.5;
+  else if (d.structure.includes("weak")) score += 1.0;
 
-  /* ================= STRUCTURE REACTION (max 2.0) ================= */
+  /* STRUCTURE REACTION (max 2.0) */
   if (d.structureReaction === "DEFENDED") score += 2.0;
   else if (d.structureReaction === "WEAKENING") score += 1.0;
 
-  /* ================= RSI BALANCE (max 1.5) ================= */
+  /* RSI BALANCE (max 1.5) */
   if (
-    typeof d.rsi15 === "number" &&
     d.rsi15 >= 48 && d.rsi15 <= 62 &&
     d.dailyRSI?.value >= 45 && d.dailyRSI?.value <= 60
-  ) {
-    score += 1.5;
-  } else if (
-    typeof d.rsi15 === "number" &&
-    d.rsi15 >= 45 && d.rsi15 <= 65
-  ) {
-    score += 1.0;
-  }
+  ) score += 1.5;
+  else if (d.rsi15 >= 45 && d.rsi15 <= 65) score += 1.0;
 
-  /* ================= MARKET PARTICIPATION (max 1.0) ================= */
-  if (d.marketDom?.net != null) {
-    if (Math.abs(d.marketDom.net) > 100) score += 1.0;
-    else if (Math.abs(d.marketDom.net) > 30) score += 0.5;
-  }
+  /* MARKET PARTICIPATION (max 1.0) */
+  if (d.marketDom && Math.abs(d.marketDom.net) > 100) score += 1.0;
+  else if (d.marketDom && Math.abs(d.marketDom.net) > 30) score += 0.5;
 
-  /* ================= BIAS ACCUMULATION (max 1.0) ================= */
-  if (typeof d.biasAcc === "number") {
-    if (d.biasAcc > 40 && d.marketPhase?.phase === "NEUTRAL") {
-      score += 1.0;                 // sustained pressure, not late yet
-    } else if (d.biasAcc > 20) {
-      score += 0.5;
-    }
-  }
+  /* BIAS ACCUMULATION (max 1.0) */
+  if (d.biasAcc > 40 && d.marketPhase?.phase === "NEUTRAL") score += 1.0;
+  else if (d.biasAcc > 20) score += 0.5;
 
-  /* ================= TIMING / EXTENSION (max 1.0) ================= */
-  if (d.changeState === "NORMAL" || d.changeState === "MODERATE") {
-    score += 1.0;
-  } else if (
+  /* TIMING / EXTENSION (max 1.0) */
+  if (["NORMAL","MODERATE"].includes(d.changeState)) score += 1.0;
+  else if (
     d.changeState === "HIGH" &&
-    d.aiVerdict?.verdict?.includes("WAIT")
-  ) {
-    score += 0.5; // acceptable pullback / retest setup
-  }
+    d.aiVerdict?.verdict.includes("WAIT")
+  ) score += 0.5;
 
-  /* ================= SOFT PENALTIES ================= */
+  /* SOFT PENALTIES */
   if (d.defenseFailure === "EARLY WARNING") score -= 0.5;
   if (d.defenseFailure === "CRITICAL FAILURE") score -= 1.5;
 
-  // Volume climax penalty ONLY if structure is NOT holding
   if (
-    d.volAI?.meaning?.toLowerCase().includes("climax") &&
-    !d.structure?.includes("holding")
-  ) {
-    score -= 0.5;
-  }
+    d.volAI?.meaning?.includes("climax") &&
+    !d.structure.includes("holding")
+  ) score -= 0.5;
 
-  /* ================= MARKET PHASE ADJUSTMENT ================= */
-  if (d.marketPhase?.phase === "EARLY DISTRIBUTION") {
-    score -= 1.0;
-  }
-
-  /* ================= CLAMP ================= */
-  score = Math.max(0, Math.min(score, 10));
-  return +score.toFixed(1);
-  }
+  return Math.max(0, Math.min(+score.toFixed(1), 10));
+}
+  
 
 
   
@@ -3943,27 +3916,6 @@ prob = Math.max(40, Math.min(prob, 95));
 };
 
 
-  // === after bias histories updated ===
-const interpAcc = computeBiasAccumulation(
-  BIAS_HISTORY[sym]?.slice(-96)
-);
-
-const rawAcc = computeBiasAccumulation(
-  RAW_BIAS_HISTORY[sym]?.slice(-96)
-);
-
-let marketPhase = "NEUTRAL";
-
-if (interpAcc > 0 && rawAcc < 0) {
-  marketPhase = "EARLY DISTRIBUTION";
-}
-
-  const marketPhaseInfo = formatMarketPhase(
-  marketPhase,
-  interpAcc,
-  rawAcc
-);
-
 
 
 /* ================= BREAK INTENT ================= */
@@ -4217,19 +4169,6 @@ prob = applyHTFProbabilityAdjustment({
   htfStructure: htf.htfStructure
 });
 
-  const setupScore = calculateSetupScore({
-  structure,
-  structureReaction,     // 🔴 REQUIRED
-  rsi15,
-  dailyRSI,
-  marketDom: GLOBAL_MARKET_DOM,
-  biasAcc: interpAcc,    // 🔴 REQUIRED
-  marketPhase,           // 🔴 REQUIRED (object, not string)
-  changeState,
-  defenseFailure,
-  volAI,
-  aiVerdict              // 🔴 REQUIRED for timing context
-});
 
   const directionalBias = getDirectionalBias({
   structure,
@@ -4316,6 +4255,42 @@ if (bias) {
 
 await seedBiasFrom15mHistory(sym, htf.htfTrend);
 
+    // === after bias histories updated ===
+const interpAcc = computeBiasAccumulation(
+  BIAS_HISTORY[sym]?.slice(-96)
+);
+
+const rawAcc = computeBiasAccumulation(
+  RAW_BIAS_HISTORY[sym]?.slice(-96)
+);
+
+let marketPhase = "NEUTRAL";
+
+if (interpAcc > 0 && rawAcc < 0) {
+  marketPhase = "EARLY DISTRIBUTION";
+}
+
+  const marketPhaseInfo = formatMarketPhase(
+  marketPhase,
+  interpAcc,
+  rawAcc
+);
+
+  const setupScore = calculateSetupScore({
+  structure,
+  structureReaction: resistanceReaction || supportReaction,
+  volumeAlign,
+  dailyRSI,
+  rsi15,
+  bias,
+  marketDom: GLOBAL_MARKET_DOM,
+  changeState,
+  defenseFailure,
+  volAI,
+  biasAcc,
+  marketPhase: marketPhaseInfo,
+  aiVerdict
+});
   
   
 
