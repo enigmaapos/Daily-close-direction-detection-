@@ -4779,6 +4779,15 @@ card.innerHTML = `
     : `<div class="star" onclick="addFav('${d.sym}')">⭐</div>`
 }
 
+${d.setupScore ? `
+  <div class="setup-score">
+    ⭐ <b>Setup Quality:</b> ${d.setupScore} / 10
+    <div class="setup-grade ${getSetupGradeClass(d.setupScore)}">
+      🏷 ${getSetupGradeLabel(d.setupScore)}
+    </div>
+  </div>
+` : ""}
+
   <b>${d.sym}</b>
   <div class="muted">Price: ${d.price.toFixed(4)}</div>
   <div class="muted ${d.change >= 0 ? "bull" : "bear"}">
@@ -5066,18 +5075,6 @@ ${(d.rsiMomentumShift && d.momentumCollapseDone) ? `
   </div>
 ` : ""}
 
-  
-
-  <!-- ================= STRUCTURE ================= -->
-  <div class="muted"><b>📈 Market Structure & Trend</b></div>
-  ${d.setupScore ? `
-  <div class="setup-score">
-    ⭐ <b>Setup Quality:</b> ${d.setupScore} / 10
-    <div class="setup-grade ${getSetupGradeClass(d.setupScore)}">
-      🏷 ${getSetupGradeLabel(d.setupScore)}
-    </div>
-  </div>
-` : ""}
 
     <div class="muted ${marketDomClass}">
   ${marketDomIcon} Market Dominance:
