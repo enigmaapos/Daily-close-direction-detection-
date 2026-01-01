@@ -3344,9 +3344,11 @@ return {
   let score = 0;
 
   /* ================= STRUCTURE QUALITY (max 3.0) ================= */
-  if (d.structure.includes("accepted")) score += 3.0;
-  else if (d.structure.includes("confirmed")) score += 2.5;
-  else if (d.structure.includes("weak")) score += 1.0;
+  if (typeof d.structure === "string") {
+    if (d.structure.includes("accepted")) score += 3.0;
+    else if (d.structure.includes("confirmed")) score += 2.5;
+    else if (d.structure.includes("weak")) score += 1.0;
+  }
 
   /* ================= STRUCTURE REACTION (max 2.0) ================= */
   if (d.structureReaction === "DEFENDED") score += 2.0;
@@ -3354,67 +3356,74 @@ return {
 
   /* ================= RSI BALANCE (max 1.5) ================= */
   if (
+    typeof d.rsi15 === "number" &&
     d.rsi15 >= 48 && d.rsi15 <= 62 &&
     d.dailyRSI?.value >= 45 && d.dailyRSI?.value <= 60
   ) {
     score += 1.5;
-  } else if (d.rsi15 >= 45 && d.rsi15 <= 65) {
+  } else if (
+    typeof d.rsi15 === "number" &&
+    d.rsi15 >= 45 && d.rsi15 <= 65
+  ) {
     score += 1.0;
   }
 
   /* ================= MARKET PARTICIPATION (max 1.0) ================= */
-  if (d.marketDom && Math.abs(d.marketDom.net) > 100) score += 1.0;
-  else if (d.marketDom && Math.abs(d.marketDom.net) > 30) score += 0.5;
+  if (d.marketDom?.net != null) {
+    if (Math.abs(d.marketDom.net) > 100) score += 1.0;
+    else if (Math.abs(d.marketDom.net) > 30) score += 0.5;
+  }
 
   /* ================= BIAS ACCUMULATION (max 1.0) ================= */
-  if (d.biasAcc > 40 && d.marketPhase?.phase === "NEUTRAL") {
-    score += 1.0; // sustained pressure
-  } else if (d.biasAcc > 20) {
-    score += 0.5;
+  if (typeof d.biasAcc === "number") {
+    if (d.biasAcc > 40 && d.marketPhase?.phase === "NEUTRAL") {
+      score += 1.0;                 // sustained pressure, not late yet
+    } else if (d.biasAcc > 20) {
+      score += 0.5;
+    }
   }
 
   /* ================= TIMING / EXTENSION (max 1.0) ================= */
-  if (
-    d.changeState === "NORMAL" ||
-    d.changeState === "MODERATE"
-  ) {
+  if (d.changeState === "NORMAL" || d.changeState === "MODERATE") {
     score += 1.0;
   } else if (
     d.changeState === "HIGH" &&
-    d.aiVerdict?.verdict.includes("WAIT")
+    d.aiVerdict?.verdict?.includes("WAIT")
   ) {
-    score += 0.5; // acceptable pullback setup
+    score += 0.5; // acceptable pullback / retest setup
   }
 
   /* ================= SOFT PENALTIES ================= */
   if (d.defenseFailure === "EARLY WARNING") score -= 0.5;
   if (d.defenseFailure === "CRITICAL FAILURE") score -= 1.5;
 
-  // Climax is NOT always bad if structure is defended
+  // Volume climax penalty ONLY if structure is NOT holding
   if (
-    d.volAI?.meaning?.includes("climax") &&
-    !d.structure.includes("holding")
+    d.volAI?.meaning?.toLowerCase().includes("climax") &&
+    !d.structure?.includes("holding")
   ) {
     score -= 0.5;
+  }
+
+  /* ================= MARKET PHASE ADJUSTMENT ================= */
+  if (d.marketPhase?.phase === "EARLY DISTRIBUTION") {
+    score -= 1.0;
   }
 
   /* ================= CLAMP ================= */
   score = Math.max(0, Math.min(score, 10));
   return +score.toFixed(1);
-    }
+  }
 
 
   
 function getSetupGradeLabel(score) {
-  if (score >= 9.5) return "INSTITUTIONAL GRADE";
-  if (score >= 8.5) return "HIGH QUALITY";
-  if (score >= 7.5) return "CLEAN";
-  if (score >= 6.5) return "AVERAGE";
-  return "LOW QUALITY";
-  }
-  
-
-  
+  if (score >= 9.5) return "INSTITUTIONAL STRUCTURE";
+  if (score >= 8.5) return "HIGH STRUCTURE QUALITY";
+  if (score >= 7.5) return "CLEAN STRUCTURE";
+  if (score >= 6.5) return "MIXED STRUCTURE";
+  return "FRAGMENTED STRUCTURE";
+}
 
 function getSetupGradeClass(score) {
   if (score >= 9.5) return "grade-elite";
@@ -3422,7 +3431,7 @@ function getSetupGradeClass(score) {
   if (score >= 7.5) return "grade-good";
   if (score >= 6.5) return "grade-average";
   return "grade-low";
-  }
+}
 
 
   function applyHTFProbabilityAdjustment(d) {
@@ -4210,14 +4219,16 @@ prob = applyHTFProbabilityAdjustment({
 
   const setupScore = calculateSetupScore({
   structure,
-  volumeAlign,
-  dailyRSI,
+  structureReaction,     // 🔴 REQUIRED
   rsi15,
-  bias,
+  dailyRSI,
   marketDom: GLOBAL_MARKET_DOM,
+  biasAcc: interpAcc,    // 🔴 REQUIRED
+  marketPhase,           // 🔴 REQUIRED (object, not string)
   changeState,
   defenseFailure,
-  volAI
+  volAI,
+  aiVerdict              // 🔴 REQUIRED for timing context
 });
 
   const directionalBias = getDirectionalBias({
