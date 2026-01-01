@@ -3553,6 +3553,11 @@ let ema200DistPct = null;
 if (ema200Last != null && price != null && ema200Last !== 0) {
   ema200DistPct = ((price - ema200Last) / ema200Last) * 100;
 }
+
+  let ema70DistPct = null;
+if (ema70Last != null && price != null && ema70Last !== 0) {
+  ema70DistPct = ((price - ema70Last) / ema70Last) * 100;
+}
   
 
   // 🧠 Market dominance side (logic-safe)
@@ -4317,7 +4322,7 @@ moveStrength,directionalBias,setupScore,htf,htfTrend: htf.htfTrend,
   htfStructure: htf.htfStructure,volumeContext,probability: prob,breakIntent,strongZoneDefended,momentumAttack,momentumCollapseDone,
   rsiMomentumShift: activeMomentum,
   rsiMomentumTriggerIndex: activeMomentum?.triggerIndex ?? null,
-  rsiMomentumAge,ema200DistPct: ema200DistPct,pressure,
+  rsiMomentumAge,ema200DistPct: ema200DistPct,ema70DistPct: ema70DistPct,pressure,
   structureIntent,
   structureScore,
   resistanceReaction,
@@ -4811,6 +4816,13 @@ ${d.setupScore ? `
   <div class="muted">
     📏 EMA200 Distance:
     <b>${d.ema200DistPct.toFixed(2)}%</b>
+  </div>
+` : ""}
+
+${typeof d.ema70DistPct === "number" ? `
+  <div class="muted">
+    📏 EMA70 Distance:
+    <b>${d.ema70DistPct.toFixed(2)}%</b>
   </div>
 ` : ""}
 
