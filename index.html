@@ -5090,10 +5090,6 @@ ${d.volumeBreakout ? `
   <b class="behavior-${behavior}">${behavior}</b>
 </div>
 
-
-      <div class="bias-chart-wrap">
-  <canvas class="bias-chart" width="320" height="160"></canvas>
-
   ${flipAttempt ? `
 <div class="muted flip-attempt">
   ⚠ Polarity Flip Attempt<br>
@@ -5111,12 +5107,18 @@ ${flipAttemptCount > 0 ? `
   <b>${flipAttemptCount}</b>
 </div>
 ` : ""}
+
+
+      <div class="bias-chart-wrap">
+  <canvas class="bias-chart" width="320" height="160"></canvas>
 </div>
 
+<div class="muted">
   <button class="secondary"
   onclick="download24hBias('${d.sym}')">
   ⬇ 24h Bias
 </button>
+</div>
 `;
 
 /* ================= BIAS CHART RENDER ================= */
