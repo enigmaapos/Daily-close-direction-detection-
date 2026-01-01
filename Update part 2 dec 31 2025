@@ -341,6 +341,20 @@ button.secondary{
   box-shadow: 0 0 10px rgba(56,189,248,0.4);
   transform: scale(1.02);
 }
+
+  .bias-accumulation {
+  margin-top: 6px;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.bias-accumulation b {
+  font-weight: 600;
+}
+
+.bias-accumulation .bull { color: var(--bull); }
+.bias-accumulation .bear { color: var(--bear); }
+.bias-accumulation .neutral { color: var(--neutral); }
 </style>
 </head>
 
@@ -755,6 +769,7 @@ function compressBias15m(symbol) {
       };
     });
 }
+  
 
   /* ================= BIAS → Y AXIS MAP ================= */
 const BIAS_Y_MAP = {
@@ -954,7 +969,8 @@ function drawSingleBiasPoint(canvas, point) {
   );
   }
 
-  function computeHistoricalBias(k, idx, all) {
+  
+function computeHistoricalBias(k, idx, all, htfTrend) {
   const close = +k[4];
   const open  = +k[1];
   const high  = +k[2];
@@ -966,56 +982,150 @@ function drawSingleBiasPoint(canvas, point) {
   const isBull = close > open;
   const isBear = close < open;
 
-  // momentum proxy
-  const momentum =
-    range > 0 ? body / range : 0;
+  const momentum = range > 0 ? body / range : 0;
 
-  // trend proxy using previous closes
   const prev = idx > 0 ? +all[idx - 1][4] : close;
-  const trendUp = close > prev;
-  const trendDown = close < prev;
+  const microUp   = close > prev;
+  const microDown = close < prev;
 
-  // ---- Bias classification ----
-  if (trendUp && isBull && momentum > 0.6) {
-    return "Bullish Continuation";
-  }
+  /* ================= BULLISH HTF ================= */
+  if (htfTrend === "bullish") {
 
-  if (trendUp && isBear) {
-    return "Bull Trap Risk";
-  }
+    // strong bullish continuation
+    if (microUp && isBull && momentum > 0.6) {
+      return "Bullish Continuation";
+    }
 
-  if (!trendUp && !trendDown) {
+    // bearish candle inside bullish trend = pullback / trap
+    if (microDown && isBear) {
+      return momentum > 0.6
+        ? "Bull Trap Risk"
+        : "Neutral";
+    }
+
     return "Neutral";
   }
 
-  if (trendDown && isBear && momentum > 0.6) {
-    return "Bearish Continuation";
-  }
+  /* ================= BEARISH HTF ================= */
+  if (htfTrend === "bearish") {
 
-  if (trendDown && isBull) {
-    return "Bear Trap Risk";
+    // strong bearish continuation
+    if (microDown && isBear && momentum > 0.6) {
+      return "Bearish Continuation";
+    }
+
+    // bullish candle inside bearish trend = pullback / trap
+    if (microUp && isBull) {
+      return momentum > 0.6
+        ? "Bear Trap Risk"
+        : "Neutral";
+    }
+
+    return "Neutral";
   }
 
   return "Neutral";
-  }
+}
+  
 
-  async function seedBiasFrom15mHistory(sym) {
+
+  async function seedBiasFrom15mHistory(sym, htfTrend = "neutral") {
   const klines = await fetch15mHistory(sym);
   if (!klines || klines.length === 0) return;
 
   BIAS_HISTORY[sym] = [];
 
   klines.forEach((k, i) => {
-    const bias = computeHistoricalBias(k, i, klines);
+    const bias = computeHistoricalBias(
+      k,
+      i,
+      klines,
+      htfTrend
+    );
+
     const y = BIAS_Y_MAP[bias] ?? 0;
 
     BIAS_HISTORY[sym].push({
-      ts: k[0], // open time of 15m candle
+      ts: k[0], // 15m open time
       bias,
       y
     });
   });
+}
+
+
+    const RAW_BIAS_HISTORY = {};
+  
+
+  function compressRawBias15m(sym) {
+  const data = RAW_BIAS_HISTORY[sym];
+  if (!data || data.length === 0) return [];
+
+  const buckets = {};
+
+  for (const p of data) {
+    const key = Math.floor(p.ts / (15 * 60 * 1000));
+    if (!buckets[key]) buckets[key] = [];
+    buckets[key].push(p);
   }
+
+  return Object.entries(buckets)
+    .sort((a, b) => a[0] - b[0])
+    .map(([k, arr]) => {
+      let sum = 0;
+      arr.forEach(p => sum += p.y);
+
+      return {
+        time: Number(k) * 15 * 60 * 1000,
+        y: Math.sign(sum) // -1, 0, +1
+      };
+    });
+  }
+  
+  
+  function computeRawBias(k, idx, all) {
+  const close = +k[4];
+  const open  = +k[1];
+  const high  = +k[2];
+  const low   = +k[3];
+
+  const body = Math.abs(close - open);
+  const range = high - low;
+
+  const isBull = close > open;
+  const isBear = close < open;
+
+  const momentum = range > 0 ? body / range : 0;
+
+  const prev = idx > 0 ? +all[idx - 1][4] : close;
+  const up   = close > prev;
+  const down = close < prev;
+
+  if (up && isBull && momentum > 0.6) return "Bullish Continuation";
+  if (up && isBear) return "Bull Trap Risk";
+  if (down && isBear && momentum > 0.6) return "Bearish Continuation";
+  if (down && isBull) return "Bear Trap Risk";
+
+  return "Neutral";
+  }
+
+        async function seedRawBiasFrom15mHistory(sym) {
+  const klines = await fetch15mHistory(sym);
+  if (!klines || klines.length === 0) return;
+
+  RAW_BIAS_HISTORY[sym] = [];
+
+  klines.forEach((k, i) => {
+    const rawBias = computeRawBias(k, i, klines);
+    const y = BIAS_Y_MAP[rawBias] ?? 0;
+
+    RAW_BIAS_HISTORY[sym].push({
+      ts: k[0],        // 15m open time
+      rawBias,
+      y
+    });
+  });
+        }
 
   const DEBUG_BIAS_TIME = true;
 
@@ -1241,6 +1351,19 @@ const LAST_FLIP_SOUND_TS = {};
         // browser blocked autoplay – ignore safely
       });
   }
+  }
+
+  function computeBiasAccumulation(series) {
+  if (!series || !series.length) return 0;
+  return series.reduce((sum, p) => sum + (p.y || 0), 0);
+          }
+
+  function formatBiasAccumulation(val) {
+  if (val >= 12) return { label: "Strong Bullish Pressure", cls: "bull" };
+  if (val >= 5)  return { label: "Mild Bullish Pressure", cls: "bull" };
+  if (val <= -12) return { label: "Strong Bearish Pressure", cls: "bear" };
+  if (val <= -5)  return { label: "Mild Bearish Pressure", cls: "bear" };
+  return { label: "Neutral / Absorbed", cls: "neutral" };
   }
 
   
@@ -3433,7 +3556,12 @@ const volAI = detect24hVolumeLocationAI(
   mappedK,
   mainTrend || "neutral",
   marketDomSide
-);
+) || {
+  meaning: "Neutral",
+  intent: "Neutral",
+  bias: "Neutral",
+  futureOutcome: "NEUTRAL (NO EDGE)"
+};
 
 
 const lastVol = v.at(-1);
@@ -4115,7 +4243,8 @@ if (bias) {
   );
 }
 
-  
+
+await seedBiasFrom15mHistory(sym, htf.htfTrend);
 
   
   
@@ -4539,10 +4668,10 @@ const marketDomIcon =
     : "neutral";
 
 
-const biasSeries = compressBias15m(d.sym).slice(-96);
+const rawSeries = compressRawBias15m(d.sym).slice(-96);
 
-flipAttempt = detectPolarityFlipAttempt(biasSeries);
-flipAttemptCount = countPolarityFlipAttempts(biasSeries);
+flipAttempt = detectPolarityFlipAttempt(rawSeries);
+flipAttemptCount = countPolarityFlipAttempts(rawSeries);
 
     
     
@@ -4988,10 +5117,6 @@ ${d.volumeBreakout ? `
   <b class="behavior-${behavior}">${behavior}</b>
 </div>
 
-
-      <div class="bias-chart-wrap">
-  <canvas class="bias-chart" width="320" height="160"></canvas>
-
   ${flipAttempt ? `
 <div class="muted flip-attempt">
   ⚠ Polarity Flip Attempt<br>
@@ -5009,12 +5134,29 @@ ${flipAttemptCount > 0 ? `
   <b>${flipAttemptCount}</b>
 </div>
 ` : ""}
+
+
+      <div class="bias-chart-wrap">
+      <div class="bias-accumulation">
+  <div>
+    🧠 Bias Accumulation:
+    <b id="biasAcc-${d.sym}">—</b>
+  </div>
+  <div class="muted">
+    RAW:
+    <span id="rawBiasAcc-${d.sym}">—</span>
+  </div>
 </div>
 
+  <canvas class="bias-chart" width="320" height="160"></canvas>
+</div>
+
+<div class="muted">
   <button class="secondary"
   onclick="download24hBias('${d.sym}')">
   ⬇ 24h Bias
 </button>
+</div>
 `;
 
 /* ================= BIAS CHART RENDER ================= */
@@ -5023,7 +5165,27 @@ if (!canvas) return;
 
 async function processBiasAndFlip() {
   const series = compressBias15m(d.sym).slice(-96);
-  const flipAttempt = detectPolarityFlipAttempt(series);
+  const rawSeries = compressRawBias15m(d.sym).slice(-96);
+  const flipAttempt = detectPolarityFlipAttempt(rawSeries);
+
+  const interpAcc = computeBiasAccumulation(series);
+const rawAcc = computeBiasAccumulation(rawSeries);
+
+const interpFmt = formatBiasAccumulation(interpAcc);
+const rawFmt = formatBiasAccumulation(rawAcc);
+
+const interpEl = document.getElementById(`biasAcc-${d.sym}`);
+const rawEl = document.getElementById(`rawBiasAcc-${d.sym}`);
+
+if (interpEl) {
+  interpEl.textContent = `${interpAcc} (${interpFmt.label})`;
+  interpEl.className = interpFmt.cls;
+}
+
+if (rawEl) {
+  rawEl.textContent = `${rawAcc}`;
+  rawEl.className = rawFmt.cls;
+}
 
   if (flipAttempt) {
     registerFlipAttempt(d.sym, flipAttempt, d.mainTrend);
@@ -5043,11 +5205,27 @@ async function processBiasAndFlip() {
 }
 
 /* Seed if needed, then process */
-if (!BIAS_HISTORY[d.sym] || BIAS_HISTORY[d.sym].length < 96) {
-  seedBiasFrom15mHistory(d.sym).then(processBiasAndFlip);
-} else {
-  processBiasAndFlip();
-}
+/* ================= ENSURE BOTH HISTORIES ================= */
+(async () => {
+  const needRaw =
+    !RAW_BIAS_HISTORY[d.sym] ||
+    RAW_BIAS_HISTORY[d.sym].length < 96;
+
+  const needInterp =
+    !BIAS_HISTORY[d.sym] ||
+    BIAS_HISTORY[d.sym].length < 96;
+
+  if (needRaw) {
+    await seedRawBiasFrom15mHistory(d.sym);
+  }
+
+  if (needInterp) {
+    await seedBiasFrom15mHistory(d.sym, d.mainTrend);
+  }
+
+  await processBiasAndFlip();
+})();
+
 
 
     if (!skipFilter) {
