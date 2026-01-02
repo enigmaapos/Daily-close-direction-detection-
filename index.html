@@ -4809,6 +4809,24 @@ ${d.setupScore ? `
     Dominant Volume: <b>${d.bull ? "BUYERS" : "SELLERS"}</b>
   </div>
 
+  ${d.volumeBreakout ? `
+  <div class="muted ${
+    d.volumeBreakoutType.includes("Bull") ? "bull" : "bear"
+  }">
+    🔥 ${d.volumeBreakoutType}
+    <br>
+    <span class="muted">
+      15m: ${d.lastVol.toLocaleString()}
+      &nbsp;›&nbsp;
+      24h High: ${d.domV.toLocaleString()}
+    </span>
+  </div>
+` : `
+  <div class="muted neutral">
+    📊 No 24h Volume Breakout
+  </div>
+`}
+
   ${typeof d.ema200DistPct === "number" ? `
   <div class="muted">
     📏 EMA200 Distance:
@@ -5214,23 +5232,6 @@ ${(d.rsiMomentumShift && d.momentumCollapseDone) ? `
     </div>
   ` : ""}
 
-${d.volumeBreakout ? `
-  <div class="muted ${
-    d.volumeBreakoutType.includes("Bull") ? "bull" : "bear"
-  }">
-    🔥 ${d.volumeBreakoutType}
-    <br>
-    <span class="muted">
-      15m: ${d.lastVol.toLocaleString()}
-      &nbsp;›&nbsp;
-      24h High: ${d.domV.toLocaleString()}
-    </span>
-  </div>
-` : `
-  <div class="muted neutral">
-    📊 No 24h Volume Breakout
-  </div>
-`}
 
 <div class="muted">
   🌍 Market Participation:
