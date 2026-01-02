@@ -4133,8 +4133,20 @@ const rawAcc = computeBiasAccumulation(
 
 let marketPhase = "NEUTRAL";
 
-if (interpAcc > 0 && rawAcc < 0) {
+// Continuations
+if (interpAcc > 0 && rawAcc > 0) {
+  marketPhase = "CONTINUATION UP";
+}
+else if (interpAcc < 0 && rawAcc < 0) {
+  marketPhase = "CONTINUATION DOWN";
+}
+
+// Early rotation phases
+else if (interpAcc > 0 && rawAcc < 0) {
   marketPhase = "EARLY DISTRIBUTION";
+}
+else if (interpAcc < 0 && rawAcc > 0) {
+  marketPhase = "EARLY ACCUMULATION";
 }
 
   const marketPhaseInfo = formatMarketPhase(
@@ -4148,9 +4160,21 @@ if (interpAcc > 0 && rawAcc < 0) {
     // after structureReaction, marketPhaseInfo, aiVerdict, bias accumulation
 const biasAcc = interpAcc; // normalized source
 
-  if (marketPhase === "EARLY DISTRIBUTION") {
-  prob -= 8;   // suppress late longs
-  }
+  if (marketPhase === "CONTINUATION UP" && tradeSide === "LONG") {
+  prob += 8;
+}
+
+if (marketPhase === "CONTINUATION DOWN" && tradeSide === "SHORT") {
+  prob += 8;
+}
+
+if (marketPhase === "EARLY DISTRIBUTION" && tradeSide === "LONG") {
+  prob -= 3;
+}
+
+if (marketPhase === "EARLY ACCUMULATION" && tradeSide === "SHORT") {
+  prob -= 3;
+}
   
 
 prob = Math.max(40, Math.min(prob, 95));
