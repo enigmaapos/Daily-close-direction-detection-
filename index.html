@@ -4134,18 +4134,18 @@ const rawAcc = computeBiasAccumulation(
 let marketPhase = "NEUTRAL";
 
 // Continuations
-if (interpAcc > 0 && rawAcc > 0) {
+if (interpAcc > 20 && rawAcc > 10) {
   marketPhase = "CONTINUATION UP";
 }
-else if (interpAcc < 0 && rawAcc < 0) {
+else if (interpAcc < -20 && rawAcc < -10) {
   marketPhase = "CONTINUATION DOWN";
 }
 
 // Early rotation phases
-else if (interpAcc > 0 && rawAcc < 0) {
+else if (interpAcc > 20 && rawAcc < -10) {
   marketPhase = "EARLY DISTRIBUTION";
 }
-else if (interpAcc < 0 && rawAcc > 0) {
+else if (interpAcc < -20 && rawAcc > 10) {
   marketPhase = "EARLY ACCUMULATION";
 }
 
