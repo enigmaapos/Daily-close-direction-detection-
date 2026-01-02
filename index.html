@@ -1377,11 +1377,9 @@ const LAST_FLIP_SOUND_TS = {};
 
   function computeBiasAccumulation(series) {
   if (!series || !series.length) return 0;
-  return series.reduce((sum, p, i) => {
-    const w = (i + 1) / series.length; // recent weighs more
-    return sum + (p.y || 0) * w;
-  }, 0);
-}
+  return series.reduce((sum, p) => sum + (p.y || 0), 0);
+          }
+
 
   function formatBiasAccumulation(val) {
   if (val >= 12) return { label: "Strong Bullish Pressure", cls: "bull" };
