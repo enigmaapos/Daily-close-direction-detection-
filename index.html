@@ -2481,85 +2481,103 @@ if (triggerIndex === null && (bearish || bullish)) {
     day: "numeric"
   });
   }
+
+      function buildIntentLabel(attacker, structureResult, volumeResult) {
+  let label = `${attacker} ATTACK → ${structureResult}`;
+
+  if (volumeResult) {
+    label += ` (${volumeResult})`;
+  }
+
+  return label;
+      }
+
+  function normalizeTrendStructure(structure) {
+  if (!structure) return null;
+
+  if (structure.includes("support holding")) return "SUPPORT HELD";
+  if (structure.includes("resistance holding")) return "RESISTANCE HELD";
+  if (structure.includes("support broken")) return "SUPPORT BROKEN";
+  if (structure.includes("resistance broken")) return "RESISTANCE BROKEN";
+
+  return null;
+}
+
+function normalizeVolumeStructure(volStruct) {
+  if (!volStruct) return null;
+
+  if (volStruct.includes("defended")) return "DEFENSE STRONG";
+  if (volStruct.includes("weak")) return "DEFENSE WEAK";
+  if (volStruct.includes("accepted")) return "ACCEPTED";
+  if (volStruct.includes("failed")) return "NO ACCEPTANCE";
+
+  return null;
+}
   
 
 /* ================= BREAK INTENT CLASSIFIER ================= */
 function classifyBreakIntent(d) {
   const trend = d.mainTrend;
-  const bull = d.bull;
-  const structure = d.structure || "";
-  const volStruct = d.volumeStructure?.name || "";
+  const dominantBull = d.bull; // true = buyers dominant
   const momentum = d.rsiMomentumShift;
 
-  /* 🛡 STRONG DEFENSE (post-momentum OVERRIDE) */
-  if (d.strongZoneDefended && trend === "bullish") {
-    return "🛡 STRONG ZONE DEFENDED (BEAR ATTACK FAILED)";
+  const structureResult = normalizeTrendStructure(d.structure);
+  const volumeResult = normalizeVolumeStructure(d.volumeStructure?.name);
+
+  /* ================= STRONG ZONE OVERRIDE ================= */
+  if (d.strongZoneDefended) {
+    const attacker = trend === "bullish" ? "BEAR" : "BULL";
+    const structure =
+      trend === "bullish" ? "SUPPORT HELD" : "RESISTANCE HELD";
+
+    return buildIntentLabel(attacker, structure, "DEFENSE STRONG");
   }
 
-  if (d.strongZoneDefended && trend === "bearish") {
-    return "🛡 STRONG ZONE DEFENDED (BULL ATTACK FAILED)";
+  /* ================= DETERMINE ATTACKER ================= */
+
+  let attacker = null;
+
+  if (trend === "bullish" && dominantBull === false) {
+    attacker = "BEAR";
   }
 
-  /* ================= BULLISH ENVIRONMENT ================= */
-  // Only allow bullish logic if dominant volume is RED
-  if (trend === "bullish" && bull === false) {
+  if (trend === "bearish" && dominantBull === true) {
+    attacker = "BULL";
+  }
 
-    // 🐻 Bears attacking bullish structure but failing
-    if (
-      momentum?.bearish &&
-      structure.includes("support holding")
-    ) {
-      return "BEAR ATTACK → BULLISH STRUCTURE DEFENDED";
-    }
+  if (!attacker) {
+    return "NO CLEAR ATTACK";
+  }
 
-    // 🐂 Bulls attack & trap bears (no momentum ever)
-    if (
-      momentum == null  &&
-      volStruct.includes("resistance failed")
-    ) {
-      return "BULL ATTACK → BEAR DEFENSE → BULLS STALLED AT RESISTANCE";
-    }
+  /* ================= INTENT CLASSIFICATION ================= */
 
-    // 🐂 Bulls attempting without structural permission
-    if (
-      momentum == null  &&
-      volStruct.includes("resistance weak")
-    ) {
-      return "BULL ATTACK → BEAR DEFENSE WEAK → BREAKOUT SETUP FORMING";
+  // Momentum-led attack
+  if (momentum?.bullish || momentum?.bearish) {
+    if (structureResult) {
+      return buildIntentLabel(attacker, structureResult, volumeResult);
     }
   }
 
-  /* ================= BEARISH ENVIRONMENT ================= */
-  // Only allow bearish logic if dominant volume is GREEN
-  if (trend === "bearish" && bull === true) {
-
-    // 🐂 Bulls attacking bearish structure but failing
-    if (
-      momentum?.bullish &&
-      structure.includes("resistance holding")
-    ) {
-      return "BULL ATTACK → BEARISH STRUCTURE DEFENDED";
+  // Volume-led probing (no momentum)
+  if (momentum == null && volumeResult) {
+    if (structureResult) {
+      return buildIntentLabel(attacker, structureResult, volumeResult);
     }
 
-    // 🐻 Bears attack & trap bulls (no momentum ever)
-    if (
-      momentum == null  &&
-      volStruct.includes("support failed")
-    ) {
-      return "BEAR ATTACK → BULL DEFENSE → SELLERS STALLED AT SUPPORT";
-    }
+    // Volume without structure
+    return buildIntentLabel(attacker, "STRUCTURE UNCONFIRMED", volumeResult);
+  }
 
-    // 🐻 Bears attempting without structural permission
-    if (
-      momentum == null  &&
-      volStruct.includes("support weak")
-    ) {
-      return "BEAR ATTACK → BULL DEFENSE WEAK → BREAKDOWN SETUP FORMING";
-    }
+  // Structure without volume
+  if (structureResult) {
+    return buildIntentLabel(attacker, structureResult, null);
   }
 
   return "NO CLEAR ATTACK";
-}
+      }
+    
+
+    
 
   /* ================= STRUCTURE HELPERS ================= */
 
@@ -4466,46 +4484,75 @@ if (fm !== "all") {
   function formatBreakIntent(intent) {
   if (!intent) return null;
 
-  // 🛡 Highest priority — outcome
-  if (intent.includes("STRUCTURE DEFENDED")) {
+  const text = intent;
+
+  /* ================= STRONG DEFENSE ================= */
+  if (
+    text.includes("SUPPORT HELD") &&
+    text.includes("DEFENSE STRONG")
+  ) {
     return {
       icon: "🛡",
       cls: "bull",
-      text: intent
+      text
     };
   }
 
-  // ⚠ Volume-led / warning
-  if (intent.includes("VOLUME-LED")) {
+  if (
+    text.includes("RESISTANCE HELD") &&
+    text.includes("DEFENSE STRONG")
+  ) {
+    return {
+      icon: "🛡",
+      cls: "bear",
+      text
+    };
+  }
+
+  /* ================= ACCEPTED BREAK ================= */
+  if (text.includes("BROKEN") && text.includes("ACCEPTED")) {
+    return {
+      icon: "⚡",
+      cls: text.includes("BULL ATTACK") ? "bull" : "bear",
+      text
+    };
+  }
+
+  /* ================= WEAK / NO ACCEPTANCE ================= */
+  if (
+    text.includes("WEAK") ||
+    text.includes("NO ACCEPTANCE") ||
+    text.includes("UNCONFIRMED")
+  ) {
     return {
       icon: "⚠️",
       cls: "neutral",
-      text: intent
+      text
     };
   }
 
-  // 🐂 Bull attack
-  if (intent.includes("BULL ATTACK")) {
+  /* ================= ATTACK DIRECTION ================= */
+  if (text.includes("BULL ATTACK")) {
     return {
       icon: "🐂",
       cls: "bull",
-      text: intent
+      text
     };
   }
 
-  // 🐻 Bear attack
-  if (intent.includes("BEAR ATTACK")) {
+  if (text.includes("BEAR ATTACK")) {
     return {
       icon: "🐻",
       cls: "bear",
-      text: intent
+      text
     };
   }
 
+  /* ================= FALLBACK ================= */
   return {
     icon: "🧠",
     cls: "neutral",
-    text: intent
+    text
   };
 }
   
