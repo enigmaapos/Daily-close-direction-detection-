@@ -5033,6 +5033,22 @@ ${d.structureIntent ? (() => {
 })() : ""}
 
 
+      <div class="bias-chart-wrap">
+      <div class="bias-accumulation">
+  <div>
+    🧠 Bias Accumulation:
+    <b id="biasAcc-${d.sym}">—</b>
+  </div>
+  <div class="muted">
+    RAW:
+    <span id="rawBiasAcc-${d.sym}">—</span>
+  </div>
+</div>
+
+  <canvas class="bias-chart" width="320" height="160"></canvas>
+</div>
+
+
 <div class="muted ${aiVerdict.verdictClass}">
     🧠 AI Verdict: <b>${aiVerdict.verdict}</b>
   </div>
@@ -5247,21 +5263,6 @@ ${flipAttemptCount > 0 ? `
 </div>
 ` : ""}
 
-
-      <div class="bias-chart-wrap">
-      <div class="bias-accumulation">
-  <div>
-    🧠 Bias Accumulation:
-    <b id="biasAcc-${d.sym}">—</b>
-  </div>
-  <div class="muted">
-    RAW:
-    <span id="rawBiasAcc-${d.sym}">—</span>
-  </div>
-</div>
-
-  <canvas class="bias-chart" width="320" height="160"></canvas>
-</div>
 
 <div class="muted">
   <button class="secondary"
