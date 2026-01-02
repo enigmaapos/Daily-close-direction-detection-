@@ -4934,6 +4934,14 @@ ${d.structure === "none" && d.volumeStructure?.name !== "none" ? `
   </div>
 ` : ""}
 
+  ${d.breakIntent ? (() => {
+  const bi = formatBreakIntent(d.breakIntent);
+  let out = `
+    <div class="muted ${bi.cls}">
+      ${bi.icon} <b>Break Intent:</b> ${bi.text}
+    </div>
+  `;
+
 ${d.structureIntent ? (() => {
   let out = "";
 
@@ -5056,14 +5064,6 @@ ${d.structureIntent ? (() => {
   <div class="muted ${execClass}">
     🧭 Execution Zone: <b>${executionZone}</b>
   </div>
-
-  ${d.breakIntent ? (() => {
-  const bi = formatBreakIntent(d.breakIntent);
-  let out = `
-    <div class="muted ${bi.cls}">
-      ${bi.icon} <b>Break Intent:</b> ${bi.text}
-    </div>
-  `;
 
   if (d.strongZoneDefended) {
     out += `
