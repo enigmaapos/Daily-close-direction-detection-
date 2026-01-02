@@ -4799,6 +4799,12 @@ ${d.setupScore ? `
     💸 Funding Fee: ${fundingInfo.label}
   </div>
 
+  <div class="muted ${marketDomClass}">
+  ${marketDomIcon} Market Dominance:
+  <b>${d.marketDom?.bias || "—"}</b>
+  (Net ${d.marketDom?.net ?? "—"}%)
+</div>
+
   <div class="muted ${d.bull ? "bull" : "bear"}">
     Dominant Volume: <b>${d.bull ? "BUYERS" : "SELLERS"}</b>
   </div>
@@ -5110,13 +5116,6 @@ ${(d.rsiMomentumShift && d.momentumCollapseDone) ? `
     ${d.rsiMomentumShift.bearish ? "Bearish" : "Bullish"} (Resolved)
   </div>
 ` : ""}
-
-
-    <div class="muted ${marketDomClass}">
-  ${marketDomIcon} Market Dominance:
-  <b>${d.marketDom?.bias || "—"}</b>
-  (Net ${d.marketDom?.net ?? "—"}%)
-</div>
 
 
   <div class="muted ${
