@@ -4314,7 +4314,7 @@ moveStrength,directionalBias,setupScore,htf,htfTrend: htf.htfTrend,
   resistanceReaction,
   supportReaction,
   resistanceZone: nearestResistanceZone,
-  supportZone: nearestSupportZone,marketPhase: marketPhaseInfo,biasAcc,interpAcc,rawAcc};
+  supportZone: nearestSupportZone,marketPhase: marketPhaseInfo,biasAcc};
 }
 
 
@@ -4466,17 +4466,17 @@ if (fm !== "all") {
   let cls = "neutral";
   let reason = "No clear edge detected.";
 
-  if (phase === "EARLY DISTRIBUTION") {
-    cls = "bear";
-    reason =
-      "Structure remains intact, but bearish pressure is building beneath. Buyers are being absorbed.";
-  }
+    if (phase === "EARLY DISTRIBUTION") {
+  cls = "neutral";
+  reason =
+    "Bullish bias with short-term sell pressure. Pullback or absorption phase.";
+}
 
-  else if (phase === "EARLY ACCUMULATION") {
-    cls = "bull";
-    reason =
-      "Bearish structure persists, but buying pressure is quietly increasing. Potential base forming.";
-  }
+else if (phase === "EARLY ACCUMULATION") {
+  cls = "neutral";
+  reason =
+    "Bearish bias with short-term buy pressure. Base or rebound attempt.";
+}
 
   else if (phase === "CONTINUATION UP") {
     cls = "bull";
@@ -4792,6 +4792,14 @@ const rawSeries = compressRawBias15m(d.sym).slice(-96);
 flipAttempt = detectPolarityFlipAttempt(rawSeries);
 flipAttemptCount = countPolarityFlipAttempts(rawSeries);
 
+
+    const phaseIcon =
+  d.marketPhase.phase === "CONTINUATION UP" ? "📈" :
+  d.marketPhase.phase === "CONTINUATION DOWN" ? "📉" :
+  d.marketPhase.phase === "EARLY DISTRIBUTION" ? "↩️" :
+  d.marketPhase.phase === "EARLY ACCUMULATION" ? "↪️" :
+  "⏸️";
+
     
     
     
@@ -5082,7 +5090,7 @@ ${d.structureIntent ? (() => {
 
 ${d.marketPhase ? `
   <div class="muted ${d.marketPhase.cls}">
-    ⚠ Market Phase: <b>${d.marketPhase.phase}</b><br>
+    ${phaseIcon} Market Phase: <b>${d.marketPhase.phase}</b><br>
     <span class="muted">${d.marketPhase.reason}</span><br>
     <span class="muted">
       Bias Acc: ${d.marketPhase.interpAcc}
