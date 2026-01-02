@@ -4934,13 +4934,24 @@ ${d.structure === "none" && d.volumeStructure?.name !== "none" ? `
   </div>
 ` : ""}
 
-  ${d.breakIntent ? (() => {
+    ${d.breakIntent ? (() => {
   const bi = formatBreakIntent(d.breakIntent);
   let out = `
     <div class="muted ${bi.cls}">
       ${bi.icon} <b>Break Intent:</b> ${bi.text}
     </div>
   `;
+
+  if (d.strongZoneDefended) {
+    out += `
+      <div class="muted" style="color:#22c55e;font-weight:600">
+        🛡 Strong Zone Defended (Post-Momentum)
+      </div>
+    `;
+  }
+
+  return out;
+})() : ""}
 
 ${d.structureIntent ? (() => {
   let out = "";
@@ -5065,16 +5076,6 @@ ${d.structureIntent ? (() => {
     🧭 Execution Zone: <b>${executionZone}</b>
   </div>
 
-  if (d.strongZoneDefended) {
-    out += `
-      <div class="muted" style="color:#22c55e;font-weight:600">
-        🛡 Strong Zone Defended (Post-Momentum)
-      </div>
-    `;
-  }
-
-  return out;
-})() : ""}
 
 ${(d.rsiMomentumShift && d.momentumCollapseDone) ? `
   <div class="muted">
