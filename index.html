@@ -5032,6 +5032,17 @@ ${d.structureIntent ? (() => {
   return out;
 })() : ""}
 
+${d.marketPhase ? `
+  <div class="muted ${d.marketPhase.cls}">
+    ⚠ Market Phase: <b>${d.marketPhase.phase}</b><br>
+    <span class="muted">${d.marketPhase.reason}</span><br>
+    <span class="muted">
+      Bias Acc: ${d.marketPhase.interpAcc}
+      · RAW: ${d.marketPhase.rawAcc}
+    </span>
+  </div>
+` : ""}
+
 
       <div class="bias-chart-wrap">
       <div class="bias-accumulation">
@@ -5139,17 +5150,6 @@ ${(d.rsiMomentumShift && d.momentumCollapseDone) ? `
      title="Volume-based context only. Describes the likely near-term behavior, not a trade signal.">
   🔮 Volume Implication: <b>${d.volAI.futureOutcome}</b>
 </div>
-
-  ${d.marketPhase ? `
-  <div class="muted ${d.marketPhase.cls}">
-    ⚠ Market Phase: <b>${d.marketPhase.phase}</b><br>
-    <span class="muted">${d.marketPhase.reason}</span><br>
-    <span class="muted">
-      Bias Acc: ${d.marketPhase.interpAcc}
-      · RAW: ${d.marketPhase.rawAcc}
-    </span>
-  </div>
-` : ""}
 
 
     <div class="muted neutral">
