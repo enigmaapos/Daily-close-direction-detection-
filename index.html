@@ -559,11 +559,8 @@ button.secondary{
     <select id="filterBiasAccumulation">
   <option value="all">All Bias Pressure</option>
   <option value="strong-bull">Strong Bullish Pressure</option>
-  <option value="mild-bull">Mild Bullish Pressure</option>
-  <option value="neutral">Neutral / Absorbed</option>
-  <option value="mild-bear">Mild Bearish Pressure</option>
   <option value="strong-bear">Strong Bearish Pressure</option>
-    </select>
+</select>
 
     <select id="filterMomentum">
   <option value="all">All Momentum</option>
@@ -4663,8 +4660,10 @@ const id = `card-${scope}-${d.sym}`;
 
 
         // ===== Bias Accumulation (24h) =====
-const biasAccVal = d.biasAccumulation; // number
-const biasAccState = getBiasAccumulationState(biasAccVal);
+let biasAccFilter = "none";
+
+if (biasAccState === "strong-bull") biasAccFilter = "strong-bull";
+else if (biasAccState === "strong-bear") biasAccFilter = "strong-bear";
     
 
   
@@ -4685,7 +4684,7 @@ card.dataset.aiverdict = aiVerdict.verdict;
     card.dataset.volai = d.volAI?.meaning || "Neutral";
     card.dataset.volstructure = volumeStruct.name;
     card.dataset.defense = d.defenseFailure || "NONE";
-    card.dataset.biasAccumulation = biasAccState;
+    card.dataset.biasAccumulation = biasAccFilter;
 
 
 
