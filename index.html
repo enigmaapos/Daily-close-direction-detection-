@@ -556,6 +556,15 @@ button.secondary{
   <option value="NONE">No Attack</option>
   </select>
 
+    <select id="filterBiasAccumulation">
+  <option value="all">All Bias Pressure</option>
+  <option value="strong-bull">Strong Bullish Pressure</option>
+  <option value="mild-bull">Mild Bullish Pressure</option>
+  <option value="neutral">Neutral / Absorbed</option>
+  <option value="mild-bear">Mild Bearish Pressure</option>
+  <option value="strong-bear">Strong Bearish Pressure</option>
+    </select>
+
     <select id="filterMomentum">
   <option value="all">All Momentum</option>
   <option value="none">No Momentum Shift</option>
@@ -1387,6 +1396,14 @@ const LAST_FLIP_SOUND_TS = {};
   if (val <= -12) return { label: "Strong Bearish Pressure", cls: "bear" };
   if (val <= -5)  return { label: "Mild Bearish Pressure", cls: "bear" };
   return { label: "Neutral / Absorbed", cls: "neutral" };
+  }
+
+  function getBiasAccumulationState(val) {
+  if (val >= 12) return "strong-bull";
+  if (val >= 5)  return "mild-bull";
+  if (val <= -12) return "strong-bear";
+  if (val <= -5)  return "mild-bear";
+  return "neutral";
   }
 
   
@@ -4329,6 +4346,8 @@ function applyFilters(){
   const df = document.getElementById("filterDefense")?.value || "all";
   const fa = document.getElementById("filterAttack")?.value || "all";
   const fm = document.getElementById("filterMomentum")?.value || "all";
+  const filterBiasAcc =
+  document.getElementById("filterBiasAccumulation")?.value || "all";
   
 
   document.querySelectorAll(".card").forEach(c => {
@@ -4352,6 +4371,13 @@ function applyFilters(){
   if(ts !== "all" && c.dataset.tradeside !== ts) ok = false;
   if(ez !== "all" && c.dataset.execution !== ez) ok = false;
     if (vai !== "all" && c.dataset.volai !== vai) ok = false;
+    if (
+  filterBiasAcc !== "all" &&
+  card.dataset.biasAccumulation !== filterBiasAcc
+) {
+  card.style.display = "none";
+  return;
+    }
     
     
 // ================= RR PRESENCE FILTER =================
@@ -4408,6 +4434,7 @@ if (fm !== "all") {
            document.getElementById("filterDefense").value = "all";
            document.getElementById("filterAttack").value = "all";
            document.getElementById("filterMomentum").value = "all";
+           document.getElementById("filterBiasAccumulation").value = "all";
            
            
 
@@ -4621,6 +4648,8 @@ const id = `card-${scope}-${d.sym}`;
 
                       const behavior = getSymbolBehavior(d);
 
+    const biasAccState = getBiasAccumulationState(d.biasAccumulation);
+
   
   card.dataset.bias = d.bias;
 card.dataset.vol  = d.bull ? "bull" : "bear";
@@ -4639,6 +4668,7 @@ card.dataset.aiverdict = aiVerdict.verdict;
     card.dataset.volai = d.volAI?.meaning || "Neutral";
     card.dataset.volstructure = volumeStruct.name;
     card.dataset.defense = d.defenseFailure || "NONE";
+    card.dataset.biasAccumulation = biasAccState;
 
     card.dataset.momentum =
   d.rsiMomentumShift
@@ -5812,7 +5842,8 @@ async function runSearch(){
   "filterRR",
     "filterDefense",
     "filterAttack",
-    "filterMomentum"
+    "filterMomentum",
+    "filterBiasAccumulation"
 ].forEach(id=>{
   document.getElementById(id)?.addEventListener("change", applyFilters);
 });
