@@ -4179,10 +4179,23 @@ else if (interpAcc < -20 && rawAcc > 10) {
 
     // after structureReaction, marketPhaseInfo, aiVerdict, bias accumulation
 const biasAcc = interpAcc; // normalized source
+  const biasAccState = getBiasAccumulationState(biasAcc);
 
   
 
+if (marketPhase === "CONTINUATION UP" && tradeSide === "LONG") {
+  prob += 8;
+}
+
+if (marketPhase === "CONTINUATION DOWN" && tradeSide === "SHORT") {
+  prob += 8;
+}
+
 if (marketPhase === "EARLY DISTRIBUTION" && tradeSide === "LONG") {
+  prob -= 3;
+}
+
+if (marketPhase === "EARLY ACCUMULATION" && tradeSide === "SHORT") {
   prob -= 3;
 }
 
@@ -4652,6 +4665,19 @@ const id = `card-${scope}-${d.sym}`;
         // ===== Bias Accumulation (24h) =====
 const biasAccVal = d.biasAccumulation; // number
 const biasAccState = getBiasAccumulationState(biasAccVal);
+    const biasAccFmt = formatBiasAccumulation(biasAcc);
+
+const biasAccEl = card.querySelector(`#biasAcc-${d.sym}`);
+const rawBiasAccEl = card.querySelector(`#rawBiasAcc-${d.sym}`);
+
+if (biasAccEl) {
+  biasAccEl.textContent = biasAccFmt.label;
+  biasAccEl.className = biasAccFmt.cls;
+}
+
+if (rawBiasAccEl) {
+  rawBiasAccEl.textContent = rawAcc;
+  }
 
   
   card.dataset.bias = d.bias;
