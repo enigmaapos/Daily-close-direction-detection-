@@ -4664,8 +4664,8 @@ const biasAccState = getBiasAccumulationState(biasAccVal);
         // ===== Bias Accumulation (24h) =====
 let biasAccFilter = "none";
 
-if (biasAccState === "strong-bull") biasAccFilter = "strong-bull";
-else if (biasAccState === "strong-bear") biasAccFilter = "strong-bear";
+if (biasAccState === "strong-bull") biasAcc = "strong-bull";
+else if (biasAccState === "strong-bear") biasAcc = "strong-bear";
     
 
   
@@ -4686,7 +4686,7 @@ card.dataset.aiverdict = aiVerdict.verdict;
     card.dataset.volai = d.volAI?.meaning || "Neutral";
     card.dataset.volstructure = volumeStruct.name;
     card.dataset.defense = d.defenseFailure || "NONE";
-    card.dataset.biasAccumulation = biasAccFilter;
+    card.dataset.biasAccumulation = biasAcc;
 
 
 
