@@ -4357,72 +4357,70 @@ function applyFilters(){
   const fa = document.getElementById("filterAttack")?.value || "all";
   const fm = document.getElementById("filterMomentum")?.value || "all";
   const filterBiasAcc =
-  document.getElementById("filterBiasAccumulation")?.value || "all";
-  
+    document.getElementById("filterBiasAccumulation")?.value || "all";
 
   document.querySelectorAll(".card").forEach(c => {
 
-  // ✅ SKIP MANUAL RESULTS
-  if (c.dataset.manual === "true") {
-    c.style.display = "";
-    return;
-  }
-
-  let ok = true;
-
-  if(b !== "all" && c.dataset.bias !== b) ok = false;
-  if(v !== "all" && c.dataset.vol !== v) ok = false;
-  if(p > 0 && +c.dataset.prob < p) ok = false;
-  if(r !== "all" && c.dataset.dailyrsi !== r) ok = false;
-  if(s !== "all" && c.dataset.structureType !== s) ok = false;
-  if(sq !== "all" && c.dataset.structureQuality !== sq) ok = false;
-  if(vb !== "all" && c.dataset.volbreak !== vb) ok = false;
-  if(av !== "all" && c.dataset.aiverdict !== av) ok = false;
-  if(ts !== "all" && c.dataset.tradeside !== ts) ok = false;
-  if(ez !== "all" && c.dataset.execution !== ez) ok = false;
-    if (vai !== "all" && c.dataset.volai !== vai) ok = false;
-    if (
-  filterBiasAcc !== "all" &&
-  card.dataset.biasAccumulation !== filterBiasAcc
-) {
-  card.style.display = "none";
-  return;
+    // ✅ SKIP MANUAL RESULTS
+    if (c.dataset.manual === "true") {
+      c.style.display = "";
+      return;
     }
-    
-    
-// ================= RR PRESENCE FILTER =================
-if (rrFilter === "present") {
-  if (!c.dataset.rr) ok = false;
-}
+
+    let ok = true;
+
+    if (b !== "all" && c.dataset.bias !== b) ok = false;
+    if (v !== "all" && c.dataset.vol !== v) ok = false;
+    if (p > 0 && +c.dataset.prob < p) ok = false;
+    if (r !== "all" && c.dataset.dailyrsi !== r) ok = false;
+    if (s !== "all" && c.dataset.structureType !== s) ok = false;
+    if (sq !== "all" && c.dataset.structureQuality !== sq) ok = false;
+    if (vb !== "all" && c.dataset.volbreak !== vb) ok = false;
+    if (av !== "all" && c.dataset.aiverdict !== av) ok = false;
+    if (ts !== "all" && c.dataset.tradeside !== ts) ok = false;
+    if (ez !== "all" && c.dataset.execution !== ez) ok = false;
+    if (vai !== "all" && c.dataset.volai !== vai) ok = false;
+
+    // ✅ Bias Accumulation filter (FIXED)
+    if (
+      filterBiasAcc !== "all" &&
+      c.dataset.biasAccumulation !== filterBiasAcc
+    ) {
+      ok = false;
+    }
+
+    // ================= RR PRESENCE FILTER =================
+    if (rrFilter === "present") {
+      if (!c.dataset.rr) ok = false;
+    }
 
     // ================= DEFENSE STATUS FILTER =================
-if (df !== "all") {
-  const defense = c.dataset.defense || "NONE";
+    if (df !== "all") {
+      const defense = c.dataset.defense || "NONE";
 
-  if (df === "ACTIVE") {
-    if (defense !== "NONE") ok = false;
-  } 
-  else if (defense !== df) {
-    ok = false;
-  }
-}
+      if (df === "ACTIVE") {
+        if (defense !== "NONE") ok = false;
+      } else if (defense !== df) {
+        ok = false;
+      }
+    }
 
     // ================= ATTACK INTENT FILTER =================
-if (fa !== "all") {
-  if ((c.dataset.attack || "NONE") !== fa) {
-    ok = false;
-  }
-}
+    if (fa !== "all") {
+      if ((c.dataset.attack || "NONE") !== fa) {
+        ok = false;
+      }
+    }
+
     // ================= MOMENTUM SHIFT FILTER =================
-if (fm !== "all") {
-  const momentum = c.dataset.momentum || "none";
+    if (fm !== "all") {
+      const momentum = c.dataset.momentum || "none";
+      if (fm !== momentum) ok = false;
+    }
 
-  if (fm !== momentum) ok = false;
-}
-
-  c.style.display = ok ? "" : "none";
-});
-}
+    c.style.display = ok ? "" : "none";
+  });
+    }
 
 
   
