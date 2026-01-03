@@ -556,12 +556,7 @@ button.secondary{
   <option value="NONE">No Attack</option>
   </select>
 
-    <select id="filterBiasAccumulation">
-  <option value="all">All Bias Pressure</option>
-  <option value="strong-bull">Strong Bullish Pressure</option>
-  <option value="strong-bear">Strong Bearish Pressure</option>
-</select>
-
+    
     <select id="filterMomentum">
   <option value="all">All Momentum</option>
   <option value="none">No Momentum Shift</option>
@@ -4347,9 +4342,7 @@ function applyFilters(){
   const df = document.getElementById("filterDefense")?.value || "all";
   const fa = document.getElementById("filterAttack")?.value || "all";
   const fm = document.getElementById("filterMomentum")?.value || "all";
-  const filterBiasAcc =
-    document.getElementById("filterBiasAccumulation")?.value || "all";
-
+  
   document.querySelectorAll(".card").forEach(c => {
 
     // ✅ SKIP MANUAL RESULTS
@@ -4372,13 +4365,7 @@ function applyFilters(){
     if (ez !== "all" && c.dataset.execution !== ez) ok = false;
     if (vai !== "all" && c.dataset.volai !== vai) ok = false;
 
-    // ✅ Bias Accumulation filter (FIXED)
-    if (
-      filterBiasAcc !== "all" &&
-      c.dataset.biasAccumulation !== filterBiasAcc
-    ) {
-      ok = false;
-    }
+    
 
     // ================= RR PRESENCE FILTER =================
     if (rrFilter === "present") {
@@ -4433,7 +4420,7 @@ function applyFilters(){
            document.getElementById("filterDefense").value = "all";
            document.getElementById("filterAttack").value = "all";
            document.getElementById("filterMomentum").value = "all";
-           document.getElementById("filterBiasAccumulation").value = "all";
+           
            
            
 
@@ -4665,9 +4652,7 @@ card.dataset.aiverdict = aiVerdict.verdict;
     card.dataset.volai = d.volAI?.meaning || "Neutral";
     card.dataset.volstructure = volumeStruct.name;
     card.dataset.defense = d.defenseFailure || "NONE";
-    // attach for filtering
-card.dataset.biasAccumulation = d.biasAcc;
-
+    
 
     card.dataset.momentum =
   d.rsiMomentumShift
@@ -5841,8 +5826,7 @@ async function runSearch(){
   "filterRR",
     "filterDefense",
     "filterAttack",
-    "filterMomentum",
-    "filterBiasAccumulation"
+    "filterMomentum"
 ].forEach(id=>{
   document.getElementById(id)?.addEventListener("change", applyFilters);
 });
