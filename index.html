@@ -1395,14 +1395,7 @@ const LAST_FLIP_SOUND_TS = {};
   return { label: "Neutral / Absorbed", cls: "neutral" };
   }
 
-  function biasLabelToFilter(label) {
-  if (label === "Strong Bullish Pressure") return "strong-bull";
-  if (label === "Strong Bearish Pressure") return "strong-bear";
-  return "none"; // ignore mild + neutral
-}
-
   
-
   
     /* ================= 4H HTF CACHE ================= */
 const HTF_CACHE = {};
@@ -4652,26 +4645,7 @@ const id = `card-${scope}-${d.sym}`;
   label: "No Active Volume Structure"
 };
 
-                      const behavior = getSymbolBehavior(d);
-
-
-    // === Bias Accumulation (LABEL-BASED) ===
-const biasAccVal = d.biasAcc ?? 0;
-const biasAccFmt = formatBiasAccumulation(biasAccVal);
-
-// map LABEL → filter key
-let biasAccFilter = "none";
-
-if (biasAccFmt.label === "Strong Bullish Pressure") {
-  biasAccFilter = "strong-bull";
-}
-else if (biasAccFmt.label === "Strong Bearish Pressure") {
-  biasAccFilter = "strong-bear";
-}
-
-
-
-    
+                      const behavior = getSymbolBehavior(d); 
 
   
   card.dataset.bias = d.bias;
@@ -4692,7 +4666,7 @@ card.dataset.aiverdict = aiVerdict.verdict;
     card.dataset.volstructure = volumeStruct.name;
     card.dataset.defense = d.defenseFailure || "NONE";
     // attach for filtering
-card.dataset.biasAccumulation = d.biasAccFilter;
+card.dataset.biasAccumulation = d.biasAcc;
 
 
     card.dataset.momentum =
