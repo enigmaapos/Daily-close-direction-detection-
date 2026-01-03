@@ -1275,22 +1275,39 @@ const FLIP_REGISTRY = {};
     .sort((a, b) => b.ts - a.ts)
     .slice(0, 60);
 
-  grid.innerHTML = flips.map(f => `
-  <div 
-    class="flip-card ${f.trendDir}" 
-    data-sym="${f.sym}"
-    onclick="openFlipSymbol('${f.sym}')"
-  >
-    <b>${f.sym}</b>
-    <div class="muted">
-      ${formatTime(f.timeFrom)} ${f.from}
-      →
-      ${formatTime(f.timeTo)} ${f.to}
-    </div>
-  </div>
-`).join("");
+  grid.innerHTML = flips.map(f => {
+    const changeClass =
+      f.changeState === "EXTREME"
+        ? "bear"
+        : f.changeState === "VERY_HIGH"
+        ? "neutral"
+        : "";
+
+    return `
+      <div 
+        class="flip-card ${f.trendDir}" 
+        data-sym="${f.sym}"
+        onclick="openFlipSymbol('${f.sym}')"
+      >
+        <b>${f.sym}</b>
+
+        <div class="muted">
+          ${formatTime(f.timeFrom)} ${f.from}
+          →
+          ${formatTime(f.timeTo)} ${f.to}
+        </div>
+
+        <div class="muted ${changeClass}">
+          ⏱ 24h Expansion:
+          <b>${f.change?.toFixed(2) ?? "–"}%</b>
+          (${f.changeState ?? "N/A"})
+        </div>
+      </div>
+    `;
+  }).join("");
 }
 
+  
     async function openFlipSymbol(sym) {
   // set as active manual symbol
   activeSearchSymbol = sym;
