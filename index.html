@@ -1246,7 +1246,7 @@ function logFlipAttempt(sym, flip) {
   /* ================= FLIP REGISTRY ================= */
 const FLIP_REGISTRY = {};
 
-  function registerFlipAttempt(sym, flip, mainTrend) {
+  function registerFlipAttempt(sym, flip, trend, change, changeState) {
   if (!flip) return;
 
   const mt = (mainTrend || "").toUpperCase();
