@@ -4658,6 +4658,8 @@ const id = `card-${scope}-${d.sym}`;
 
                       const behavior = getSymbolBehavior(d);
 
+    const biasAccVal = d.biasAccumulation ?? 0;
+const biasAccState = getBiasAccumulationState(biasAccVal);
     
 
         // ===== Bias Accumulation (24h) =====
