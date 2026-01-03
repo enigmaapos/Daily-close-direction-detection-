@@ -4648,7 +4648,10 @@ const id = `card-${scope}-${d.sym}`;
 
                       const behavior = getSymbolBehavior(d);
 
-    const biasAccState = getBiasAccumulationState(d.biasAccumulation);
+
+        // ===== Bias Accumulation (24h) =====
+const biasAccVal = d.biasAccumulation; // number
+const biasAccState = getBiasAccumulationState(biasAccVal);
 
   
   card.dataset.bias = d.bias;
@@ -4669,6 +4672,8 @@ card.dataset.aiverdict = aiVerdict.verdict;
     card.dataset.volstructure = volumeStruct.name;
     card.dataset.defense = d.defenseFailure || "NONE";
     card.dataset.biasAccumulation = biasAccState;
+
+
 
     card.dataset.momentum =
   d.rsiMomentumShift
