@@ -3992,13 +3992,13 @@ prob = Math.max(40, Math.min(prob, 95));
  
 
 /* ================= STRUCTURE QUALITY ================= */
-let structureQuality = "normal";
+let structureQuality = "unaccepted";
 
-if (volumeStructure.name.includes("accepted"))
+if (structure.includes("(accepted)"))
   structureQuality = "accepted";
-else if (volumeStructure.name.includes("confirmed"))
+else if (structure.includes("(confirmed)"))
   structureQuality = "confirmed";
-else if (volumeStructure.name.includes("weak"))
+else if (structure.includes("weak"))
   structureQuality = "weak";
   
 
@@ -4012,14 +4012,16 @@ const structureHolding =
     !structure.startsWith("support holding"));
 
 /* ================= STRUCTURE TYPE ================= */
-const structureType =
-  structure.startsWith("support holding")   ? "support holding" :
-  structure.startsWith("support broken")    ? "support broken" :
-  structure.startsWith("support weak")      ? "support weak" :
-  structure.startsWith("resistance failed") ? "resistance failed" :
-  structure.startsWith("resistance broken") ? "resistance broken" :
-  structure.startsWith("resistance weak")   ? "resistance weak" :
-  "none";
+let structureType = "none";
+
+if (structure.includes("support holding"))
+  structureType = "support holding";
+else if (structure.includes("support broken"))
+  structureType = "support broken";
+else if (structure.includes("resistance failed"))
+  structureType = "resistance failed";
+else if (structure.includes("resistance broken"))
+  structureType = "resistance broken";
 
   /* ================= STRONG ZONE DEFENSE ================= */
 
@@ -4385,6 +4387,16 @@ if (fm !== "all") {
   c.style.display = ok ? "" : "none";
 });
 }
+
+  if (
+  filterStructure.value !== "all" &&
+  filterStructure.value !== d.structureType
+) return false;
+
+if (
+  filterStructureQuality.value !== "all" &&
+  filterStructureQuality.value !== d.structureQuality
+) return false;
   
   
 
@@ -4643,9 +4655,9 @@ card.dataset.aiverdict = aiVerdict.verdict;
     
 
 card.dataset.structureQuality =
+  d.structure.includes("unaccepted") ? "unaccepted" :
   d.structure.includes("accepted") ? "accepted" :
   d.structure.includes("confirmed") ? "confirmed" :
-  d.structure.includes("unaccepted") ? "unaccepted" :
   d.structure.includes("weak") ? "weak" :
   "none";
 
