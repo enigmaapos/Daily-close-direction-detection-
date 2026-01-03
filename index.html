@@ -1273,7 +1273,7 @@ const FLIP_REGISTRY = {};
 
   const flips = Object.values(FLIP_REGISTRY)
     .sort((a, b) => b.ts - a.ts)
-    .slice(0, 60);
+    .slice(0, 10);
 
   grid.innerHTML = flips.map(f => `
   <div 
