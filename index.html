@@ -390,9 +390,6 @@ button.secondary{
 
 <!-- FILTERS ROW -->
 <div class="row filter-box">
-   <button class="secondary" id="resetFiltersBtn" onclick="resetFilters()">
-    Reset Filters
-   </button>
 
   <select id="filterVol">
     <option value="all">All Volume</option>
@@ -419,8 +416,6 @@ button.secondary{
   <option value="support broken">Support Broken</option>
   <option value="resistance failed">Resistance Failed</option>
   <option value="resistance broken">Resistance Broken</option>
-    <option value="resistance weak">Resistance Weak</option>
-    <option value="support weak">Support Weak</option>
 </select>
 
 <select id="filterStructureQuality">
@@ -580,6 +575,9 @@ button.secondary{
 <button class="secondary" id="scanVolBreakBtn">
   🔥 Scan 24h Volume Break
 </button>
+  <button class="secondary" id="resetFiltersBtn" onclick="resetFilters()">
+    Reset Filters
+  </button>
   <div class="row filter-box">
   <label class="muted" style="display:flex;align-items:center;gap:8px;cursor:pointer;">
     <input
