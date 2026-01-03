@@ -4655,12 +4655,21 @@ const id = `card-${scope}-${d.sym}`;
                       const behavior = getSymbolBehavior(d);
 
 
-  // === Bias Accumulation (LABEL-BASED) ===
+    // === Bias Accumulation (LABEL-BASED) ===
 const biasAccVal = d.biasAcc ?? 0;
 const biasAccFmt = formatBiasAccumulation(biasAccVal);
 
-// derive filter key from LABEL
-const biasAccFilter = biasLabelToFilter(biasAccFmt.label);
+// map LABEL → filter key
+let biasAccFilter = "none";
+
+if (biasAccFmt.label === "Strong Bullish Pressure") {
+  biasAccFilter = "strong-bull";
+}
+else if (biasAccFmt.label === "Strong Bearish Pressure") {
+  biasAccFilter = "strong-bear";
+}
+
+
 
     
 
