@@ -4869,6 +4869,25 @@ ${d.setupScore ? `
   </div>
 `}
 
+    ${d.breakIntent ? (() => {
+  const bi = formatBreakIntent(d.breakIntent);
+  let out = `
+    <div class="muted ${bi.cls}">
+      ${bi.icon} <b>Break Intent:</b> ${bi.text}
+    </div>
+  `;
+
+  if (d.strongZoneDefended) {
+    out += `
+      <div class="muted" style="color:#22c55e;font-weight:600">
+        🛡 Strong Zone Defended (Post-Momentum)
+      </div>
+    `;
+  }
+
+  return out;
+})() : ""}
+
   ${typeof d.ema200DistPct === "number" ? `
   <div class="muted">
     📏 EMA200 Distance:
@@ -5000,103 +5019,21 @@ ${d.structure === "none" && d.volumeStructure?.name !== "none" ? `
   </div>
 ` : ""}
 
-    ${d.breakIntent ? (() => {
-  const bi = formatBreakIntent(d.breakIntent);
-  let out = `
-    <div class="muted ${bi.cls}">
-      ${bi.icon} <b>Break Intent:</b> ${bi.text}
-    </div>
-  `;
 
-  if (d.strongZoneDefended) {
-    out += `
-      <div class="muted" style="color:#22c55e;font-weight:600">
-        🛡 Strong Zone Defended (Post-Momentum)
-      </div>
-    `;
-  }
-
-  return out;
-})() : ""}
-
-${d.structureIntent ? (() => {
-  let out = "";
-
-  /* ================= STRUCTURE ZONE ================= */
-  if (d.resistanceZone) {
-    out += `
-      <div class="muted">
-        📐 <b>Structure Zone:</b>
-        ${d.resistanceZone.low.toFixed(4)} – ${d.resistanceZone.high.toFixed(4)}
-      </div>
-    `;
-  }
-
-  /* ================= STRUCTURE STRENGTH ================= */
-  out += `
-    <div class="muted">
-      Strength:
-      ${"●".repeat(d.structureScore)}
-      ${"○".repeat(5 - d.structureScore)}
-      <span class="muted">(${d.structureScore}/5)</span>
-    </div>
-  `;
-
-  /* ================= STRUCTURE REACTION ================= */
-  out += `
+${d.dailyRSI ? `
     <div class="muted ${
-      d.resistanceReaction === "DEFENDED"
-        ? "bull"
-        : d.resistanceReaction === "WEAKENING"
-        ? "neutral"
-        : ""
+      d.dailyRSI.value >= 50 ? "bull" :
+      d.dailyRSI.value < 50 ? "bear" : "neutral"
     }">
-      🧱 <b>Reaction:</b> ${d.resistanceReaction}
+      📅 Daily RSI14: ${d.dailyRSI.value}
+      <br>
+      <span class="muted">
+        ${d.dailyRSI.label} (Δ ${d.dailyRSI.diff})
+      </span>
     </div>
-  `;
+  ` : ""}
 
-  /* ================= PRESSURE ================= */
-  out += `
-    <div class="muted ${
-      d.pressure === "BUY"
-        ? "bull"
-        : d.pressure === "SELL"
-        ? "bear"
-        : "neutral"
-    }">
-      🧭 <b>Pressure:</b> ${d.pressure}
-    </div>
-  `;
 
-  /* ================= STRUCTURE INTENT ================= */
-  out += `
-    <div class="${
-      d.structureScore >= 4
-        ? "bull"
-        : d.structureScore >= 2
-        ? "neutral"
-        : "muted"
-    }">
-      🧠 <b>Structure Intent:</b> ${d.structureIntent}
-    </div>
-  `;
-
-  /* ================= CONFIDENCE ================= */
-  out += `
-    <div class="muted">
-      Confidence:
-      ${
-        d.structureScore >= 4
-          ? "HIGH"
-          : d.structureScore >= 2
-          ? "MEDIUM"
-          : "LOW"
-      }
-    </div>
-  `;
-
-  return out;
-})() : ""}
 
 ${d.marketPhase ? `
   <div class="muted ${d.marketPhase.cls}">
@@ -5176,6 +5113,85 @@ ${(d.rsiMomentumShift && d.momentumCollapseDone) ? `
     ${d.rsiMomentumShift.bearish ? "Bearish" : "Bullish"} (Resolved)
   </div>
 ` : ""}
+
+${d.structureIntent ? (() => {
+  let out = "";
+
+  /* ================= STRUCTURE ZONE ================= */
+  if (d.resistanceZone) {
+    out += `
+      <div class="muted">
+        📐 <b>Structure Zone:</b>
+        ${d.resistanceZone.low.toFixed(4)} – ${d.resistanceZone.high.toFixed(4)}
+      </div>
+    `;
+  }
+
+  /* ================= STRUCTURE STRENGTH ================= */
+  out += `
+    <div class="muted">
+      Strength:
+      ${"●".repeat(d.structureScore)}
+      ${"○".repeat(5 - d.structureScore)}
+      <span class="muted">(${d.structureScore}/5)</span>
+    </div>
+  `;
+
+  /* ================= STRUCTURE REACTION ================= */
+  out += `
+    <div class="muted ${
+      d.resistanceReaction === "DEFENDED"
+        ? "bull"
+        : d.resistanceReaction === "WEAKENING"
+        ? "neutral"
+        : ""
+    }">
+      🧱 <b>Reaction:</b> ${d.resistanceReaction}
+    </div>
+  `;
+
+  /* ================= PRESSURE ================= */
+  out += `
+    <div class="muted ${
+      d.pressure === "BUY"
+        ? "bull"
+        : d.pressure === "SELL"
+        ? "bear"
+        : "neutral"
+    }">
+      🧭 <b>Pressure:</b> ${d.pressure}
+    </div>
+  `;
+
+  /* ================= STRUCTURE INTENT ================= */
+  out += `
+    <div class="${
+      d.structureScore >= 4
+        ? "bull"
+        : d.structureScore >= 2
+        ? "neutral"
+        : "muted"
+    }">
+      🧠 <b>Structure Intent:</b> ${d.structureIntent}
+    </div>
+  `;
+
+  /* ================= CONFIDENCE ================= */
+  out += `
+    <div class="muted">
+      Confidence:
+      ${
+        d.structureScore >= 4
+          ? "HIGH"
+          : d.structureScore >= 2
+          ? "MEDIUM"
+          : "LOW"
+      }
+    </div>
+  `;
+
+  return out;
+})() : ""}
 
 
   <div class="muted ${
@@ -5259,20 +5275,6 @@ ${(d.rsiMomentumShift && d.momentumCollapseDone) ? `
 }">
   ⏱ 24h Move: <b>${d.moveType}</b> (${d.moveStrength})
 </div>
-
-
-  ${d.dailyRSI ? `
-    <div class="muted ${
-      d.dailyRSI.value >= 50 ? "bull" :
-      d.dailyRSI.value < 50 ? "bear" : "neutral"
-    }">
-      📅 Daily RSI14: ${d.dailyRSI.value}
-      <br>
-      <span class="muted">
-        ${d.dailyRSI.label} (Δ ${d.dailyRSI.diff})
-      </span>
-    </div>
-  ` : ""}
 
 
 <div class="muted">
