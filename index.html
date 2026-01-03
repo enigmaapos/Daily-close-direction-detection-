@@ -1395,12 +1395,10 @@ const LAST_FLIP_SOUND_TS = {};
   return { label: "Neutral / Absorbed", cls: "neutral" };
   }
 
-  function getBiasAccumulationState(val) {
-  if (val >= 8) return "strong-bull";
-  if (val >= 3) return "mild-bull";
-  if (val <= -8) return "strong-bear";
-  if (val <= -3) return "mild-bear";
-  return "neutral";
+  function biasLabelToFilter(label) {
+  if (label === "Strong Bullish Pressure") return "strong-bull";
+  if (label === "Strong Bearish Pressure") return "strong-bear";
+  return "none"; // ignore mild + neutral
 }
 
   
@@ -4656,16 +4654,14 @@ const id = `card-${scope}-${d.sym}`;
 
                       const behavior = getSymbolBehavior(d);
 
-    // === Bias Accumulation ===
-const biasAccVal = d.biasAcc ?? 0; // 🔥 CORRECT FIELD
-const biasAccState = getBiasAccumulationState(biasAccVal);
-    
 
-        // ===== Bias Accumulation (24h) =====
-let biasAccFilter = "none";
+  // === Bias Accumulation (LABEL-BASED) ===
+const biasAccVal = d.biasAcc ?? 0;
+const biasAccFmt = formatBiasAccumulation(biasAccVal);
 
-if (biasAccState === "strong-bull") biasAcc = "strong-bull";
-else if (biasAccState === "strong-bear") biasAcc = "strong-bear";
+// derive filter key from LABEL
+const biasAccFilter = biasLabelToFilter(biasAccFmt.label);
+
     
 
   
@@ -4686,8 +4682,8 @@ card.dataset.aiverdict = aiVerdict.verdict;
     card.dataset.volai = d.volAI?.meaning || "Neutral";
     card.dataset.volstructure = volumeStruct.name;
     card.dataset.defense = d.defenseFailure || "NONE";
-    card.dataset.biasAccumulation = biasAcc;
-
+    // attach for filtering
+card.dataset.biasAccumulation = biasAccFilter;
 
 
     card.dataset.momentum =
