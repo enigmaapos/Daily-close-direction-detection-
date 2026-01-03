@@ -4667,18 +4667,6 @@ const biasAccVal = d.biasAccumulation; // number
 const biasAccState = getBiasAccumulationState(biasAccVal);
     const biasAccFmt = formatBiasAccumulation(biasAcc);
 
-const biasAccEl = card.querySelector(`#biasAcc-${d.sym}`);
-const rawBiasAccEl = card.querySelector(`#rawBiasAcc-${d.sym}`);
-
-if (biasAccEl) {
-  biasAccEl.textContent = biasAccFmt.label;
-  biasAccEl.className = biasAccFmt.cls;
-}
-
-if (rawBiasAccEl) {
-  rawBiasAccEl.textContent = rawAcc;
-  }
-
   
   card.dataset.bias = d.bias;
 card.dataset.vol  = d.bull ? "bull" : "bear";
