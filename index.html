@@ -4166,19 +4166,19 @@ const biasAcc = interpAcc; // normalized source
 
   
 
-if (marketPhase === "CONTINUATION UP" && tradeSide === "LONG") {
+if (marketPhase === "CONTINUATION UP") {
   prob += 8;
 }
 
-if (marketPhase === "CONTINUATION DOWN" && tradeSide === "SHORT") {
+if (marketPhase === "CONTINUATION DOWN") {
   prob += 8;
 }
 
-if (marketPhase === "EARLY DISTRIBUTION" && tradeSide === "LONG") {
+if (marketPhase === "EARLY DISTRIBUTION") {
   prob -= 3;
 }
 
-if (marketPhase === "EARLY ACCUMULATION" && tradeSide === "SHORT") {
+if (marketPhase === "EARLY ACCUMULATION") {
   prob -= 3;
 }
 
