@@ -3606,18 +3606,48 @@ const sw = {
 
   const rsi15Momentum = getRSI15Momentum(rsi15Arr);
 
+  const closeAboveResistance =
+  rZone && c.at(-1) > rZone.high;
+
+const closeBelowSupport =
+  sZone && c.at(-1) < sZone.low;
+
+    const recentVol = v.at(-1);
+const volConfirmed = recentVol >= avgVol * 1.2;
+
+
+
+// HTF permission logic
+const htfBullOk =
+  htf?.htfTrend !== "bearish" &&
+  htf?.htfRSIState !== "overbought" &&
+  htf?.htfStructure?.resistance !== "holding";
+
+const htfBearOk =
+  htf?.htfTrend !== "bullish" &&
+  htf?.htfRSIState !== "oversold" &&
+  htf?.htfStructure?.support !== "holding";
+
   
    const bullishBreakAccepted =
   rb &&
+  closeAboveResistance &&
+  volConfirmed &&
   rsi15 !== null &&
+  rsi15Rising &&
   !rsi50State?.consistentlyBelow50 &&
-  rsi15Rising;
+  reactionR !== "DEFENDED" &&
+  htfBullOk;
 
 const bearishBreakAccepted =
   sb &&
+  closeBelowSupport &&
+  volConfirmed &&
   rsi15 !== null &&
+  !rsi15Rising &&
   !rsi50State?.consistentlyAbove50 &&
-  !rsi15Rising;
+  reactionS !== "DEFENDED" &&
+  htfBearOk;
 
   
 
@@ -3642,7 +3672,13 @@ if (mainTrend === "bullish") {
   }
 
   else if (sw.S.length && !sb) {
-    if (!rsi50State?.consistentlyBelow50) {
+
+    const rsi50BullOk =
+      !rsi50State?.consistentlyBelow50 &&
+      htf?.htfRSIState !== "overbought" &&
+      htf?.htfTrend !== "bearish";
+
+    if (rsi50BullOk) {
       bias = "Bullish Defense";
       prob = 75;
       structure = "support holding (confirmed)";
@@ -3652,7 +3688,7 @@ if (mainTrend === "bullish") {
       structure = "support weak (RSI pressure)";
     }
   }
-  }
+}
 
 /* ================= BEARISH ENVIRONMENT ================= */
 else if (mainTrend === "bearish") {
@@ -3670,7 +3706,13 @@ else if (mainTrend === "bearish") {
   }
 
   else if (sw.R.length && !rb) {
-    if (!rsi50State?.consistentlyAbove50) {
+
+    const rsi50BearOk =
+      !rsi50State?.consistentlyAbove50 &&
+      htf?.htfRSIState !== "oversold" &&
+      htf?.htfTrend !== "bullish";
+
+    if (rsi50BearOk) {
       bias = "Bearish Defense";
       prob = 75;
       structure = "resistance failed (confirmed)";
@@ -3770,54 +3812,66 @@ const momentumCollapseDone = isMomentumResolved({
 };
 
       
-/* ================= VOLUME STRUCTURE (NON-BINDING | OLD NAMING) ================= */
+/* ================= VOLUME STRUCTURE (DESCRIPTIVE | HTF-AWARE) ================= */
 
 if (bull) {
-  // 🟢 BUYERS dominant (green pressure failed / absorbed)
+  // 🟢 BUYERS dominant
 
-  // Price pushed above resistance on buy volume
+  // Price pushed above resistance
   if (rb) {
     if (bullishBreakAccepted) {
       volumeStructure.name  = "resistance broken (accepted)";
       volumeStructure.label = "🟢 Buy-Side Acceptance (Resistance Broken)";
     } else {
-      volumeStructure.name  = "resistance weak (RSI pressure)";
+      volumeStructure.name  = "resistance weak (unaccepted)";
       volumeStructure.label = "🟡 Buy-Side Rejection Risk (Resistance Weak)";
     }
   }
 
   // Buyers defending support
-  else if (sw.S.length) {
-    if (!rsi50State?.consistentlyBelow50) {
+  else if (sw.S.length && !sb) {
+
+    const rsi50BullOk =
+      !rsi50State?.consistentlyBelow50 &&
+      htf?.htfRSIState !== "overbought" &&
+      htf?.htfTrend !== "bearish";
+
+    if (rsi50BullOk) {
       volumeStructure.name  = "support holding (confirmed)";
       volumeStructure.label = "🟢 Buy-Side Defense (Support Holding)";
     } else {
-      volumeStructure.name  = "support weak (RSI pressure)";
+      volumeStructure.name  = "support weak (pressure)";
       volumeStructure.label = "🟡 Buy-Side Weakening (Support Weak)";
     }
   }
 
 } else {
-  // 🔴 SELLERS dominant (red pressure failed / absorbed)
+  // 🔴 SELLERS dominant
 
-  // Price pushed below support on sell volume
+  // Price pushed below support
   if (sb) {
     if (bearishBreakAccepted) {
       volumeStructure.name  = "support broken (accepted)";
       volumeStructure.label = "🔴 Sell-Side Acceptance (Support Broken)";
     } else {
-      volumeStructure.name  = "support weak (RSI pressure)";
+      volumeStructure.name  = "support weak (unaccepted)";
       volumeStructure.label = "🟡 Sell-Side Rejection Risk (Support Weak)";
     }
   }
 
-  // Sellers defending resistance  ⭐ THIS IS YOUR KEY CASE
-  else if (sw.R.length) {
-    if (!rsi50State?.consistentlyAbove50) {
-      volumeStructure.name  = "resistance failed (confirmed)";
+  // Sellers defending resistance
+  else if (sw.R.length && !rb) {
+
+    const rsi50BearOk =
+      !rsi50State?.consistentlyAbove50 &&
+      htf?.htfRSIState !== "oversold" &&
+      htf?.htfTrend !== "bullish";
+
+    if (rsi50BearOk) {
+      volumeStructure.name  = "resistance holding (confirmed)";
       volumeStructure.label = "🔴 Sell-Side Defense (Resistance Holding)";
     } else {
-      volumeStructure.name  = "resistance weak (RSI pressure)";
+      volumeStructure.name  = "resistance weak (pressure)";
       volumeStructure.label = "🟡 Sell-Side Weakening (Resistance Weak)";
     }
   }
