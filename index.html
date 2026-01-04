@@ -2379,7 +2379,7 @@ function findSwings(h, l, c, v){
     bearish =
       rsiHigh >= 50 &&
       rsiLow <= 50 &&
-      rsiRange >= 50 &&
+      rsiRange >= 10 &&
       priceHolding;
 
     // 🔍 find LAST RSI cross below 50 while price held
@@ -2410,7 +2410,7 @@ function findSwings(h, l, c, v){
     bullish =
       rsiLow <= 50 &&
       rsiHigh >= 50 &&
-      rsiRange >= 50 &&
+      rsiRange >= 10 &&
       priceHolding;
 
     // 🔍 find LAST RSI cross above 50 while price held
