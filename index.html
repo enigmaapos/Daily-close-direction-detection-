@@ -3604,6 +3604,13 @@ const sw = {
   const sb=sw.S.some(x=>price<x);
   const rb=sw.R.some(x=>price>x);
 
+  // === STRUCTURE ZONES ===
+const rZone = sw.R.length ? makeZone(sw.R[0]) : null;
+const sZone = sw.S.length ? makeZone(sw.S[0]) : null;
+
+  const reactionR = rZone ? structureReaction(rZone, candles) : null;
+const reactionS = sZone ? structureReaction(sZone, candles) : null;
+  
   const rsi15Momentum = getRSI15Momentum(rsi15Arr);
 
   const closeAboveResistance =
