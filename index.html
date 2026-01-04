@@ -3698,7 +3698,7 @@ if (mainTrend === "bullish") {
     } else {
       bias = "Bull Trap Risk";
       prob = 45;
-      structure = "support weak (RSI pressure)";
+      structure = "support weak (pressure)";
     }
   }
 }
@@ -3732,7 +3732,7 @@ else if (mainTrend === "bearish") {
     } else {
       bias = "Bear Trap Risk";
       prob = 45;
-      structure = "resistance weak (RSI pressure)";
+      structure = "resistance weak (pressure)";
     }
   }
 }
@@ -3881,8 +3881,8 @@ if (bull) {
       htf?.htfTrend !== "bullish";
 
     if (rsi50BearOk) {
-      volumeStructure.name  = "resistance holding (confirmed)";
-      volumeStructure.label = "🔴 Sell-Side Defense (Resistance Holding)";
+      volumeStructure.name  = "resistance failed (confirmed)";
+      volumeStructure.label = "🔴 Sell-Side Defense (Resistance Failed)";
     } else {
       volumeStructure.name  = "resistance weak (pressure)";
       volumeStructure.label = "🟡 Sell-Side Weakening (Resistance Weak)";
