@@ -5101,6 +5101,15 @@ ${d.dailyRSI ? `
     </div>
   ` : ""}
 
+  ${d.rsi15 !== null ? `
+  <div class="muted ${
+    d.rsi15 >= 50 ? "bull" :
+    d.rsi15 < 50 ? "bear" : "neutral"
+  }">
+    ⏱ 15m RSI14: ${d.rsi15}
+  </div>
+` : ""}
+
 
 
 ${d.marketPhase ? `
@@ -5279,15 +5288,6 @@ ${d.structureIntent ? (() => {
       d.emaShortCross === "bearish-cross" ? " ⬇ Cross" : ""
     }
   </div>
-
-  ${d.rsi15 !== null ? `
-  <div class="muted ${
-    d.rsi15 >= 50 ? "bull" :
-    d.rsi15 < 50 ? "bear" : "neutral"
-  }">
-    ⏱ 15m RSI14: ${d.rsi15}
-  </div>
-` : ""}
 
 <div class="muted neutral"
      title="Volume-based context only. Describes the likely near-term behavior, not a trade signal.">
