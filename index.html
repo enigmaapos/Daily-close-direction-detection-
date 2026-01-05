@@ -412,9 +412,9 @@ button.secondary{
 
   <select id="filterStructure">
   <option value="all">All Structure Directions</option>
-  <option value="support holding">Support Holding</option>
+  <option value="support holding">Support absorption</option>
   <option value="support broken">Support Broken</option>
-  <option value="resistance failed">Resistance Failed</option>
+  <option value="resistance failed">Resistance absorbed</option>
   <option value="resistance broken">Resistance Broken</option>
 </select>
 
@@ -506,13 +506,13 @@ button.secondary{
 
   <optgroup label="Bullish">
     <option>Bullish Continuation</option>
-    <option>Bullish Defense</option>
+    <option>Bullish Absorption</option>
     <option>Bull Trap Risk</option>
   </optgroup>
 
   <optgroup label="Bearish">
     <option>Bearish Continuation</option>
-    <option>Bearish Defense</option>
+    <option>Bearish Absorption</option>
     <option>Bear Trap Risk</option>
   </optgroup>
 
@@ -3692,9 +3692,9 @@ if (mainTrend === "bullish") {
       htf?.htfTrend !== "bearish";
 
     if (rsi50BullOk) {
-      bias = "Bullish Defense";
+      bias = "Bullish Absorption";
       prob = 75;
-      structure = "support holding (confirmed)";
+      structure = "support absorption (confirmed)";
     } else {
       bias = "Bull Trap Risk";
       prob = 45;
@@ -3726,9 +3726,9 @@ else if (mainTrend === "bearish") {
       htf?.htfTrend !== "bullish";
 
     if (rsi50BearOk) {
-      bias = "Bearish Defense";
+      bias = "Bearish Absorption";
       prob = 75;
-      structure = "resistance failed (confirmed)";
+      structure = "resistance absorbed (confirmed)";
     } else {
       bias = "Bear Trap Risk";
       prob = 45;
@@ -3850,8 +3850,8 @@ if (bull) {
       htf?.htfTrend !== "bearish";
 
     if (rsi50BullOk) {
-      volumeStructure.name  = "support holding (confirmed)";
-      volumeStructure.label = "🟢 Buy-Side Defense (Support Holding)";
+      volumeStructure.name  = "support absorption (confirmed)";
+      volumeStructure.label = "🟢 Buy-Side Absorption (Support Absorption)";
     } else {
       volumeStructure.name  = "support weak (pressure)";
       volumeStructure.label = "🟡 Buy-Side Weakening (Support Weak)";
@@ -3881,8 +3881,8 @@ if (bull) {
       htf?.htfTrend !== "bullish";
 
     if (rsi50BearOk) {
-      volumeStructure.name  = "resistance failed (confirmed)";
-      volumeStructure.label = "🔴 Sell-Side Defense (Resistance Failed)";
+      volumeStructure.name  = "resistance absorbed (confirmed)";
+      volumeStructure.label = "🔴 Sell-Side Absorption (Resistance Absorbed)";
     } else {
       volumeStructure.name  = "resistance weak (pressure)";
       volumeStructure.label = "🟡 Sell-Side Weakening (Resistance Weak)";
