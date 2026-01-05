@@ -2758,8 +2758,8 @@ async function getDailyRSIContext(sym){
 
   const recent = rsiArr.slice(-lookback);
 
-  const above50 = recent.filter(v => v >= 55).length;
-  const below50 = recent.filter(v => v < 45).length;
+  const above50 = recent.filter(v => v >= 60).length;
+  const below50 = recent.filter(v => v < 40).length;
 
   return {
     consistentlyAbove50: above50 >= 3,
