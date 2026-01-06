@@ -2404,7 +2404,7 @@ function findSwings(h, l, c, v){
 
     bearish =
       rsiHigh >= 50 &&
-      rsiLow <= 30 &&
+      rsiLow <= 50 &&
       rsiRange >= 10 &&
       priceHolding;
 
@@ -2435,7 +2435,7 @@ function findSwings(h, l, c, v){
 
     bullish =
       rsiLow <= 50 &&
-      rsiHigh >= 70 &&
+      rsiHigh >= 50 &&
       rsiRange >= 10 &&
       priceHolding;
 
