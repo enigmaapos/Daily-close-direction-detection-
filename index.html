@@ -435,6 +435,16 @@ button.secondary{
     <option value="LOWEST ZONE PUMP">LOWEST ZONE PUMP</option>
     <option value="LOWEST ZONE DUMP">LOWEST ZONE DUMP</option>
   </select>
+
+  <select id="filterRsi15Context">
+    <option value="all">All RSI 15m</option>
+    <option value="MAX ZONE PUMP">MAX ZONE PUMP</option>
+    <option value="MAX ZONE DUMP">MAX ZONE DUMP</option>
+    <option value="BALANCE ZONE PUMP">BALANCE ZONE PUMP</option>
+    <option value="BALANCE ZONE DUMP">BALANCE ZONE DUMP</option>
+    <option value="LOWEST ZONE PUMP">LOWEST ZONE PUMP</option>
+    <option value="LOWEST ZONE DUMP">LOWEST ZONE DUMP</option>
+  </select>
 </div>
 
 <div class="row filter-box">
@@ -4475,6 +4485,7 @@ function applyFilters(){
   const v  = filterVol.value;
   const p  = +filterProb.value;
   const r  = filterDailyRSI.value;
+  const r15  = filterRsi15Context.value;
   const s  = filterStructure.value;
   const vb = filterVolBreak.value;
   const av = document.getElementById("filterAIVerdict")?.value || "all";
@@ -4501,6 +4512,7 @@ function applyFilters(){
     if (v !== "all" && c.dataset.vol !== v) ok = false;
     if (p > 0 && +c.dataset.prob < p) ok = false;
     if (r !== "all" && c.dataset.dailyrsi !== r) ok = false;
+    if (r15 !== "all" && c.dataset.rsi15Context !== r) ok = false;
     if (s !== "all" && c.dataset.structureType !== s) ok = false;
     if (sq !== "all" && c.dataset.structureQuality !== sq) ok = false;
     if (vb !== "all" && c.dataset.volbreak !== vb) ok = false;
@@ -4553,6 +4565,7 @@ function applyFilters(){
   filterVol.value = "all";
   filterProb.value = "0";
   filterDailyRSI.value = "all";
+           filterRsi15Context.value = "all";
   filterStructure.value = "all";
   filterVolBreak.value = "all";
   document.getElementById("filterAIVerdict").value = "all"; // 👈 ADD
@@ -5196,17 +5209,6 @@ ${d.dailyRSI ? `
     </span>
   </div>
 ` : ""}
-
-
-  ${d.rsi15 !== null ? `
-  <div class="muted ${
-    d.rsi15 >= 50 ? "bull" :
-    d.rsi15 < 50 ? "bear" : "neutral"
-  }">
-    ⏱ 15m RSI14: ${d.rsi15}
-  </div>
-` : ""}
-
 
 
 ${d.marketPhase ? `
@@ -5992,7 +5994,8 @@ async function runSearch(){
   "filterRR",
     "filterDefense",
     "filterAttack",
-    "filterMomentum"
+    "filterMomentum",
+    "filterRsi15Context"
 ].forEach(id=>{
   document.getElementById(id)?.addEventListener("change", applyFilters);
 });
