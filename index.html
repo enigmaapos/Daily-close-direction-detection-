@@ -5230,6 +5230,22 @@ ${d.marketPhase ? `
   </div>
 ` : ""}
 
+    <div class="muted neutral">
+  ⏱ 4H Context:
+<b>${(d.htfTrend || "neutral").toUpperCase()}</b>
+  RSI ${["normal","overbought","oversold"].includes(d.htfRSIState)
+  ? d.htfRSIState
+  : "normal"}
+  Support ${
+  d.htfStructure?.support
+    ? d.htfStructure.support
+    : isDailyRSIActive()
+      ? "HTF disabled"
+      : "N/A"
+}
+</div>
+     
+
 
       <div class="bias-chart-wrap">
       <div class="bias-accumulation">
@@ -5374,22 +5390,6 @@ ${d.structureIntent ? (() => {
 <div class="muted neutral"
      title="Volume-based context only. Describes the likely near-term behavior, not a trade signal.">
   🔮 Volume Implication: <b>${d.volAI.futureOutcome}</b>
-</div>
-
-
-    <div class="muted neutral">
-  ⏱ 4H Context:
-<b>${(d.htfTrend || "neutral").toUpperCase()}</b>
-  RSI ${["normal","overbought","oversold"].includes(d.htfRSIState)
-  ? d.htfRSIState
-  : "normal"}
-  Support ${
-  d.htfStructure?.support
-    ? d.htfStructure.support
-    : isDailyRSIActive()
-      ? "HTF disabled"
-      : "N/A"
-}
 </div>
 
 
