@@ -2816,32 +2816,6 @@ async function getDailyRSIContext(sym){
 
   return "neutral";
   }
-
-      let rsi15Context = null;
-
-if (rsi15Arr && rsi15Arr.length >= 20) {
-  const d15 = getRecentRSIDiff(rsi15Arr, 14);
-
-  let label15 = "Neutral";
-
-  if (d15.direction === "pump") {
-    if (d15.diff >= 30) label15 = "MAX ZONE PUMP";
-    else if (d15.diff >= 18) label15 = "BALANCE ZONE PUMP";
-    else if (d15.diff >= 1) label15 = "LOWEST ZONE PUMP";
-  }
-  else if (d15.direction === "dump") {
-    if (d15.diff >= 30) label15 = "MAX ZONE DUMP";
-    else if (d15.diff >= 18) label15 = "BALANCE ZONE DUMP";
-    else if (d15.diff >= 1) label15 = "LOWEST ZONE DUMP";
-  }
-
-  rsi15Context = {
-    label: label15,
-    diff: d15.diff,
-    dir: d15.direction,
-    value: +rsi15Arr.at(-1).toFixed(2)
-  };
-}
   
 
   async function batchMap(items, batchSize, asyncFn){
@@ -3530,6 +3504,32 @@ const rsi15Rising =
   rsi15 > rsi15Prev;
 
   const rsi50State = analyzeRSI50Behavior(rsi15Arr);
+
+  let rsi15Context = null;
+
+if (rsi15Arr && rsi15Arr.length >= 20) {
+  const d15 = getRecentRSIDiff(rsi15Arr, 14);
+
+  let label15 = "Neutral";
+
+  if (d15.direction === "pump") {
+    if (d15.diff >= 30) label15 = "MAX ZONE PUMP";
+    else if (d15.diff >= 18) label15 = "BALANCE ZONE PUMP";
+    else if (d15.diff >= 1) label15 = "LOWEST ZONE PUMP";
+  }
+  else if (d15.direction === "dump") {
+    if (d15.diff >= 30) label15 = "MAX ZONE DUMP";
+    else if (d15.diff >= 18) label15 = "BALANCE ZONE DUMP";
+    else if (d15.diff >= 1) label15 = "LOWEST ZONE DUMP";
+  }
+
+  rsi15Context = {
+    label: label15,
+    diff: d15.diff,
+    dir: d15.direction,
+    value: +rsi15Arr.at(-1).toFixed(2)
+  };
+}
 
 
   let domV = 0;
