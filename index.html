@@ -3788,7 +3788,7 @@ if (mainTrend === "bullish") {
     } else {
       bias = "Bull Trap Risk";
       prob = 45;
-      structure = "support weak (support pressure)";
+      structure = "support weak (trend pressure)";
     }
   }
 }
@@ -3822,7 +3822,7 @@ else if (mainTrend === "bearish") {
     } else {
       bias = "Bear Trap Risk";
       prob = 45;
-      structure = "resistance weak (resistance pressure)";
+      structure = "resistance weak (trend pressure)";
     }
   }
 }
@@ -3926,7 +3926,7 @@ if (bull) {
       volumeStructure.name  = "resistance broken (accepted)";
       volumeStructure.label = "🟢 Buy-Side Acceptance (Resistance Broken)";
     } else {
-      volumeStructure.name  = "resistance weak (unaccepted)";
+      volumeStructure.name  = "resistance weak (volume unaccepted)";
       volumeStructure.label = "🟡 Buy-Side Rejection Risk (Resistance Weak)";
     }
   }
@@ -3943,7 +3943,7 @@ if (bull) {
       volumeStructure.name  = "support holding (confirmed)";
       volumeStructure.label = "🟢 Buy-Side Defense (Support Holding)";
     } else {
-      volumeStructure.name  = "support weak (support pressure)";
+      volumeStructure.name  = "support weak (volume pressure)";
       volumeStructure.label = "🟡 Buy-Side Weakening (Support Weak)";
     }
   }
@@ -3957,7 +3957,7 @@ if (bull) {
       volumeStructure.name  = "support broken (accepted)";
       volumeStructure.label = "🔴 Sell-Side Acceptance (Support Broken)";
     } else {
-      volumeStructure.name  = "support weak (unaccepted)";
+      volumeStructure.name  = "support weak (volume unaccepted)";
       volumeStructure.label = "🟡 Sell-Side Rejection Risk (Support Weak)";
     }
   }
@@ -3974,7 +3974,7 @@ if (bull) {
       volumeStructure.name  = "resistance failed (confirmed)";
       volumeStructure.label = "🔴 Sell-Side Defense (Resistance Failed)";
     } else {
-      volumeStructure.name  = "resistance weak (resistance pressure)";
+      volumeStructure.name  = "resistance weak (volume pressure)";
       volumeStructure.label = "🟡 Sell-Side Weakening (Resistance Weak)";
     }
   }
