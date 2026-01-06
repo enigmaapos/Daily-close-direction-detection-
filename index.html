@@ -2802,8 +2802,8 @@ async function getDailyRSIContext(sym){
   const below50 = recent.filter(v => v < 45).length;
 
   return {
-    consistentlyAbove50: above50 >= 5,
-    consistentlyBelow50: below50 >= 5
+    consistentlyAbove50: above50 >= 3,
+    consistentlyBelow50: below50 >= 3
   };
   }
 
