@@ -3738,9 +3738,12 @@ const htfBearOk =
   volConfirmed &&
   rsi15 !== null &&
   rsi15Rising &&
-  !rsi50State?.consistentlyAbove50 &&
+  rsi50State?.consistentlyAbove50 &&
   reactionR !== "DEFENDED" &&
   htfBullOk;
+
+
+  
 
 const bearishBreakAccepted =
   sb &&
@@ -3748,7 +3751,7 @@ const bearishBreakAccepted =
   volConfirmed &&
   rsi15 !== null &&
   !rsi15Rising &&
-  !rsi50State?.consistentlyBelow50 &&
+  rsi50State?.consistentlyBelow50 &&
   reactionS !== "DEFENDED" &&
   htfBearOk;
 
@@ -3777,7 +3780,7 @@ if (mainTrend === "bullish") {
   else if (sw.S.length && !sb) {
 
     const rsi50BullOk =
-      !rsi50State?.consistentlyBelow50 &&
+      rsi50State?.consistentlyBelow50 &&
       htf?.htfRSIState !== "overbought" &&
       htf?.htfTrend !== "bearish";
 
@@ -3788,7 +3791,7 @@ if (mainTrend === "bullish") {
     } else {
       bias = "Bull Trap Risk";
       prob = 45;
-      structure = "support weak (trend pressure)";
+      structure = "support weak (sellers pressure)";
     }
   }
 }
@@ -3811,7 +3814,7 @@ else if (mainTrend === "bearish") {
   else if (sw.R.length && !rb) {
 
     const rsi50BearOk =
-      !rsi50State?.consistentlyAbove50 &&
+      rsi50State?.consistentlyAbove50 &&
       htf?.htfRSIState !== "oversold" &&
       htf?.htfTrend !== "bullish";
 
@@ -3822,7 +3825,7 @@ else if (mainTrend === "bearish") {
     } else {
       bias = "Bear Trap Risk";
       prob = 45;
-      structure = "resistance weak (trend pressure)";
+      structure = "resistance weak (buyers pressure)";
     }
   }
 }
@@ -3935,7 +3938,7 @@ if (bull) {
   else if (sw.S.length && !sb) {
 
     const rsi50BullOk =
-      !rsi50State?.consistentlyBelow50 &&
+      rsi50State?.consistentlyBelow50 &&
       htf?.htfRSIState !== "overbought" &&
       htf?.htfTrend !== "bearish";
 
@@ -3966,7 +3969,7 @@ if (bull) {
   else if (sw.R.length && !rb) {
 
     const rsi50BearOk =
-      !rsi50State?.consistentlyAbove50 &&
+      rsi50State?.consistentlyAbove50 &&
       htf?.htfRSIState !== "oversold" &&
       htf?.htfTrend !== "bullish";
 
