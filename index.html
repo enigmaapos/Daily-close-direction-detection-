@@ -3572,7 +3572,14 @@ if (ema70Last != null && price != null && ema70Last !== 0) {
     ema200,
     0.3 // tolerance %
   );
-  
+
+  console.log(
+  d.sym,
+  "EMA200 touched:",
+  d.ema200Touched,
+  "EMA200 dist:",
+  d.ema200DistPct
+);
 
   // 🧠 Market dominance side (logic-safe)
 const marketDomSide =
@@ -5208,22 +5215,6 @@ ${d.marketPhase ? `
     ${aiVerdict.reason}
   </div>
 
-  
-     ${rrDisplay ? `
-  <div class="muted neutral">
-    ⚖ Risk–Reward: <b>${rrDisplay}R</b>
-  </div>
-` : ""}
-
-  ${tpProb !== null ? `
-  <div class="muted ${
-    tpProb >= 40 ? "bull" :
-    tpProb >= 30 ? "neutral" :
-    "bear"
-  }">
-    🎯 Estimated TP Hit: <b>${tpProb}%</b>
-  </div>
-` : ""}
 
   ${d.S[0] ? `<div class="muted bear">S1: ${d.S[0].toFixed(4)}</div>` : ""}
   ${d.S[1] ? `<div class="muted bear">S2: ${d.S[1].toFixed(4)}</div>` : ""}
@@ -5420,6 +5411,22 @@ ${flipAttemptCount > 0 ? `
   🔁 Polarity Flip Attempts (24h):
   <b>${flipAttemptCount}</b>
 </div>
+` : ""}
+
+     ${rrDisplay ? `
+  <div class="muted neutral">
+    ⚖ Risk–Reward: <b>${rrDisplay}R</b>
+  </div>
+` : ""}
+
+  ${tpProb !== null ? `
+  <div class="muted ${
+    tpProb >= 40 ? "bull" :
+    tpProb >= 30 ? "neutral" :
+    "bear"
+  }">
+    🎯 Estimated TP Hit: <b>${tpProb}%</b>
+  </div>
 ` : ""}
 
 <div class="muted ${tradeSideClass}">
