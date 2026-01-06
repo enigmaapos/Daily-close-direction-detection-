@@ -2817,6 +2817,33 @@ async function getDailyRSIContext(sym){
   return "neutral";
   }
 
+      let rsi15Context = null;
+
+if (rsi15Arr && rsi15Arr.length >= 20) {
+  const d15 = getRecentRSIDiff(rsi15Arr, 14);
+
+  let label15 = "Neutral";
+
+  if (d15.direction === "pump") {
+    if (d15.diff >= 30) label15 = "MAX ZONE PUMP";
+    else if (d15.diff >= 18) label15 = "BALANCE ZONE PUMP";
+    else if (d15.diff >= 1) label15 = "LOWEST ZONE PUMP";
+  }
+  else if (d15.direction === "dump") {
+    if (d15.diff >= 30) label15 = "MAX ZONE DUMP";
+    else if (d15.diff >= 18) label15 = "BALANCE ZONE DUMP";
+    else if (d15.diff >= 1) label15 = "LOWEST ZONE DUMP";
+  }
+
+  rsi15Context = {
+    label: label15,
+    diff: d15.diff,
+    dir: d15.direction,
+    value: +rsi15Arr.at(-1).toFixed(2)
+  };
+}
+  
+
   async function batchMap(items, batchSize, asyncFn){
   const results = [];
   for(let i = 0; i < items.length; i += batchSize){
@@ -4420,7 +4447,7 @@ await seedBiasFrom15mHistory(sym, htf.htfTrend);
   
   
 
-  return {sym,price,change,bull,prob,bias,structure,structureType,volumeStructure,structureQuality,volumeAlign,defenseFailure,trendStructureRisk,S:sw.S,R:sw.R,dailyRSI,rsi15,rsi15Momentum,volumeBreakout,
+  return {sym,price,change,bull,prob,bias,structure,structureType,volumeStructure,structureQuality,volumeAlign,defenseFailure,trendStructureRisk,S:sw.S,R:sw.R,dailyRSI,rsi15Context,rsi15,rsi15Momentum,volumeBreakout,
   breakoutAge,volumeBreakoutType,fakeVolumeBreak,postVolBreakRSIConfirm: postVolBreakRSIConfirmSafe,
   domV,
   lastVol,mainTrend,volAI,intradayRSIDiv,fundingRate,ema14: ema14Last,
@@ -5155,6 +5182,21 @@ ${d.dailyRSI ? `
       </span>
     </div>
   ` : ""}
+
+
+  ${d.rsi15Context ? `
+  <div class="muted ${
+    d.rsi15Context.value >= 50 ? "bull" :
+    d.rsi15Context.value < 50 ? "bear" : "neutral"
+  }">
+    ⏱ 15m RSI14: ${d.rsi15Context.value}
+    <br>
+    <span class="muted">
+      ${d.rsi15Context.label} (Δ ${d.rsi15Context.diff})
+    </span>
+  </div>
+` : ""}
+
 
   ${d.rsi15 !== null ? `
   <div class="muted ${
