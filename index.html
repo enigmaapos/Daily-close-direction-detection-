@@ -5193,15 +5193,6 @@ ${d.marketPhase ? `
   ${d.R[1] ? `<div class="muted bull">R2: ${d.R[1].toFixed(4)}</div>` : ""}
 
 
- <div class="muted ${tradeSideClass}">
-    🎯 Trade Side: <b>${aiVerdict.tradeSide}</b>
-  </div>
-
-  <div class="muted ${execClass}">
-    🧭 Execution Zone: <b>${executionZone}</b>
-  </div>
-
-
 ${(d.rsiMomentumShift && d.momentumCollapseDone) ? `
   <div class="muted">
     🧭 Prior Momentum Shift:
@@ -5392,6 +5383,14 @@ ${flipAttemptCount > 0 ? `
   <b>${flipAttemptCount}</b>
 </div>
 ` : ""}
+
+<div class="muted ${tradeSideClass}">
+    🎯 Trade Side: <b>${aiVerdict.tradeSide}</b>
+  </div>
+
+  <div class="muted ${execClass}">
+    🧭 Execution Zone: <b>${executionZone}</b>
+  </div>
 
 
 <div class="muted">
