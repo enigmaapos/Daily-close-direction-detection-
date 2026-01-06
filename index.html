@@ -2784,6 +2784,10 @@ async function getDailyRSIContext(sym){
   return filterDailyRSI.value !== "all";
   }
 
+      function isRSI15ContextActive() {
+  return filterRsi15Context.value !== "all";
+      }
+
   function analyzeRSI50Behavior(rsiArr, lookback = 5) {
   if (!rsiArr || rsiArr.length < lookback) {
     return {
