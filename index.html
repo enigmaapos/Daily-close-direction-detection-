@@ -2403,7 +2403,7 @@ function findSwings(h, l, c, v){
       lastPrice > priceLow + priceRange * 0.5;
 
     bearish =
-      rsiHigh >= 70 &&
+      rsiHigh >= 50 &&
       rsiLow <= 30 &&
       rsiRange >= 10 &&
       priceHolding;
@@ -2434,7 +2434,7 @@ function findSwings(h, l, c, v){
       lastPrice < priceLow + priceRange * 0.5;
 
     bullish =
-      rsiLow <= 30 &&
+      rsiLow <= 50 &&
       rsiHigh >= 70 &&
       rsiRange >= 10 &&
       priceHolding;
