@@ -2788,7 +2788,7 @@ async function getDailyRSIContext(sym){
   return filterRsi15Context.value !== "all";
       }
 
-  function analyzeRSI50Behavior(rsiArr, lookback = 5) {
+function analyzeRSI50Behavior(rsiArr, lookback = 5) {
   if (!rsiArr || rsiArr.length < lookback) {
     return {
       consistentlyAbove50: false,
@@ -2798,14 +2798,14 @@ async function getDailyRSIContext(sym){
 
   const recent = rsiArr.slice(-lookback);
 
-  const above50 = recent.filter(v => v >= 50).length;
-  const below50 = recent.filter(v => v < 50).length;
+  const above = recent.filter(v => v >= 55).length;
+  const below = recent.filter(v => v <= 45).length;
 
   return {
-    consistentlyAbove50: above50 >= 3,
-    consistentlyBelow50: below50 >= 3
+    consistentlyAbove50: above >= lookback,
+    consistentlyBelow50: below >= lookback
   };
-  }
+}
 
   function getRSI15Momentum(rsi15Arr) {
   if (!rsi15Arr || rsi15Arr.length < 3) {
