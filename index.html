@@ -3697,7 +3697,7 @@ const htfBearOk =
   volConfirmed &&
   rsi15 !== null &&
   rsi15Rising &&
-  !rsi50State?.consistentlyBelow50 &&
+  !rsi50State?.consistentlyAbove50 &&
   reactionR !== "DEFENDED" &&
   htfBullOk;
 
@@ -3707,7 +3707,7 @@ const bearishBreakAccepted =
   volConfirmed &&
   rsi15 !== null &&
   !rsi15Rising &&
-  !rsi50State?.consistentlyAbove50 &&
+  !rsi50State?.consistentlyBelow50 &&
   reactionS !== "DEFENDED" &&
   htfBearOk;
 
