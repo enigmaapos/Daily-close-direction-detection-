@@ -3926,8 +3926,8 @@ if (bull) {
       volumeStructure.name  = "resistance broken (accepted)";
       volumeStructure.label = "🟢 Buy-Side Acceptance (Resistance Broken)";
     } else {
-      volumeStructure.name  = "resistance weak (volume unaccepted)";
-      volumeStructure.label = "🟡 Buy-Side Rejection Risk (Resistance Weak)";
+      volumeStructure.name  = "resistance weak (unaccepted)";
+      volumeStructure.label = "🟡 Buy-Side Rejection Risk (BUYERS dominant)";
     }
   }
 
@@ -3941,10 +3941,10 @@ if (bull) {
 
     if (rsi50BullOk) {
       volumeStructure.name  = "support holding (confirmed)";
-      volumeStructure.label = "🟢 Buy-Side Defense (Support Holding)";
+      volumeStructure.label = "🟢 Buy-Side Defense (Buyers defending support)";
     } else {
-      volumeStructure.name  = "support weak (volume pressure)";
-      volumeStructure.label = "🟡 Buy-Side Weakening (Support Weak)";
+      volumeStructure.name  = "support weak (sellers pressure)";
+      volumeStructure.label = "🟡 Buy-Side Weakening (Buyers defending support)";
     }
   }
 
@@ -3957,8 +3957,8 @@ if (bull) {
       volumeStructure.name  = "support broken (accepted)";
       volumeStructure.label = "🔴 Sell-Side Acceptance (Support Broken)";
     } else {
-      volumeStructure.name  = "support weak (volume unaccepted)";
-      volumeStructure.label = "🟡 Sell-Side Rejection Risk (Support Weak)";
+      volumeStructure.name  = "support weak (unaccepted)";
+      volumeStructure.label = "🟡 Sell-Side Rejection Risk (SELLERS dominant)";
     }
   }
 
@@ -3972,10 +3972,10 @@ if (bull) {
 
     if (rsi50BearOk) {
       volumeStructure.name  = "resistance failed (confirmed)";
-      volumeStructure.label = "🔴 Sell-Side Defense (Resistance Failed)";
+      volumeStructure.label = "🔴 Sell-Side Defense (Sellers defending resistance)";
     } else {
-      volumeStructure.name  = "resistance weak (volume pressure)";
-      volumeStructure.label = "🟡 Sell-Side Weakening (Resistance Weak)";
+      volumeStructure.name  = "resistance weak (buyers pressure)";
+      volumeStructure.label = "🟡 Sell-Side Weakening (Sellers defending resistance)";
     }
   }
 }
