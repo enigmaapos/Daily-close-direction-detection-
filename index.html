@@ -4485,7 +4485,6 @@ function applyFilters(){
   const v  = filterVol.value;
   const p  = +filterProb.value;
   const r  = filterDailyRSI.value;
-  const r15  = filterRsi15Context.value;
   const s  = filterStructure.value;
   const vb = filterVolBreak.value;
   const av = document.getElementById("filterAIVerdict")?.value || "all";
@@ -4497,6 +4496,7 @@ function applyFilters(){
   const df = document.getElementById("filterDefense")?.value || "all";
   const fa = document.getElementById("filterAttack")?.value || "all";
   const fm = document.getElementById("filterMomentum")?.value || "all";
+const r15 = document.getElementById("filterRsi15Context")?.value || "all";
   
   document.querySelectorAll(".card").forEach(c => {
 
