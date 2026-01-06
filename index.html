@@ -4824,36 +4824,42 @@ const volumeStructClass =
 
 
 /* ================= EXECUTION ALERT ================= */
-  //const now = Date.now();
-  //const alertKey = `${d.sym}-${aiVerdict.tradeSide}`;
+const now = Date.now();
+const alertKey = `${d.sym}-${aiVerdict.tradeSide}`;
 
-  //const isManual = card.dataset.manual === "true";
-  //const isFavGrid = el.id === "favGrid";
+const isManual = card.dataset.manual === "true";
+const isFavGrid = el.id === "favGrid";
 
-  //const isLongExecution =
-    //aiVerdict.tradeSide === "LONG" &&
-    //aiVerdict.executionZone === "ENTRY ZONE" &&
-    //el.id === "redGrid";     // 🔴 Top 30 Red
+// 🔑 NEW unified ENTRY ZONE check
+const isEntryZone =
+  typeof aiVerdict.executionZone === "string" &&
+  aiVerdict.executionZone.startsWith("ENTRY ZONE");
 
-  //const isShortExecution =
-    //aiVerdict.tradeSide === "SHORT" &&
-    //aiVerdict.executionZone === "ENTRY ZONE" &&
-    //el.id === "greenGrid";   // 🟢 Top 30 Green
+const isLongExecution =
+  aiVerdict.tradeSide === "LONG" &&
+  isEntryZone &&
+  el.id === "redGrid";     // 🔴 Bullish grid
 
-  //if (
-    //isNewCard &&
-    //!isManual &&
-    //!isFavGrid &&
-    //(isLongExecution || isShortExecution)
-  //) {
-    //if (
-      //!execAlertCooldown[alertKey] ||
-      //now - execAlertCooldown[alertKey] > EXEC_ALERT_COOLDOWN
-    //) {
-      //executionAlert.play().catch(()=>{});
-      //execAlertCooldown[alertKey] = now;
-    //}
-  //}
+const isShortExecution =
+  aiVerdict.tradeSide === "SHORT" &&
+  isEntryZone &&
+  el.id === "greenGrid";   // 🟢 Bearish grid
+
+if (
+  isNewCard &&
+  !isManual &&
+  !isFavGrid &&
+  (isLongExecution || isShortExecution)
+) {
+  if (
+    !execAlertCooldown[alertKey] ||
+    now - execAlertCooldown[alertKey] > EXEC_ALERT_COOLDOWN
+  ) {
+    executionAlert.play().catch(()=>{});
+    execAlertCooldown[alertKey] = now;
+  }
+}
+    
 
     const marketDomBias = d.marketDom?.bias || "Neutral";
 
