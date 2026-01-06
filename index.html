@@ -2346,6 +2346,32 @@ function findSwings(h, l, c, v){
   return result;
   }
 
+  function touchedEMA200Last24h(
+  closes15m,
+  ema200Arr,
+  tolerancePct = 0.3 // percent distance allowed
+) {
+  if (!closes15m || !ema200Arr) return false;
+
+  const lookback = 96; // 24h of 15m candles
+  const start = Math.max(0, closes15m.length - lookback);
+
+  for (let i = start; i < closes15m.length; i++) {
+    const price = closes15m[i];
+    const ema   = ema200Arr[i];
+
+    if (price == null || ema == null || ema === 0) continue;
+
+    const distPct = Math.abs((price - ema) / ema) * 100;
+
+    if (distPct <= tolerancePct) {
+      return true; // ✅ pulled back to EMA200
+    }
+  }
+
+  return false;
+  }
+
   function detect24hRSIMomentumShift(closes15m, rsi15m, mainTrend) {
   if (mainTrend !== "bullish" && mainTrend !== "bearish") return null;
   if (!rsi15m || rsi15m.length < 96) return null;
