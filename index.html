@@ -1984,65 +1984,65 @@ function getTradeSide(d){
 
   if (tradeSide === "WAIT") return "NO TRADE ZONE";
 
-  const bias = d.bias || "";
-  const verdict = d.aiVerdict;
+  const trend     = d.mainTrend;
+  const structure = d.structure || "";
+  const volStruct = d.volumeStructure?.name || "";
 
-  /* ================= ENTRY ZONE (STRICT & SIMPLE) ================= */
+  const ema200Touched =
+    touchedEMA200Last24h(d.closes15m, d.ema200Arr);
 
-  const isDefenseAligned =
-    (bias === "Bullish Defense" && tradeSide === "LONG") ||
-    (bias === "Bearish Defense" && tradeSide === "SHORT");
-
-  const hasConfirmedStructure =
-    d.structure?.includes("holding (confirmed)");
-
-  const hasStrongDefenseVolume =
-    hasValidDefenseVolume(d, tradeSide);
-
-  const isBestDefense =
-    isBest24hDefenseForEntry(d.volume24hAI, tradeSide);
-
+  /* ================= LONG ENTRY ================= */
   if (
-    isDefenseAligned &&
-    hasConfirmedStructure &&
-    hasStrongDefenseVolume &&
-    isBestDefense
+    tradeSide === "LONG" &&
+    trend === "bullish" &&
+    structure === "support holding (confirmed)" &&
+    ema200Touched &&
+    (
+      volStruct === "support holding (confirmed)" ||
+      volStruct === "resistance weak (pressure)"
+    )
   ) {
-    // 🔒 Light safety only
-    if (
-      d.defenseFailure === "CRITICAL FAILURE" ||
-      d.intradayRSIDiv ||
-      d.changeState === "EXTREME"
-    ) {
-      return "PULLBACK ZONE";
+
+    // 🟢 STRONG defense at support
+    if (volStruct === "support holding (confirmed)") {
+      return "ENTRY ZONE – STRONG";
+    }
+
+    // 🟡 Early entry – sellers weakening
+    if (volStruct === "resistance weak (pressure)") {
+      return "ENTRY ZONE – EARLY";
     }
 
     return "ENTRY ZONE";
   }
 
-  /* ================= NON-ENTRY ZONES ================= */
-
-  // Trap logic
+  /* ================= SHORT ENTRY ================= */
   if (
-    verdict === AI_VERDICTS.TRAP_RISK &&
-    hasValidTrapVolume(d, tradeSide === "LONG" ? "SHORT" : "LONG")
+    tradeSide === "SHORT" &&
+    trend === "bearish" &&
+    structure === "resistance holding (confirmed)" &&
+    ema200Touched &&
+    (
+      volStruct === "resistance holding (confirmed)" ||
+      volStruct === "support weak (pressure)"
+    )
   ) {
-    return "PULLBACK ZONE";
+
+    // 🔴 STRONG defense at resistance
+    if (volStruct === "resistance holding (confirmed)") {
+      return "ENTRY ZONE – STRONG";
+    }
+
+    // 🟡 Early entry – buyers weakening
+    if (volStruct === "support weak (pressure)") {
+      return "ENTRY ZONE – EARLY";
+    }
+
+    return "ENTRY ZONE";
   }
 
-  // Continuation logic
-  if (
-    verdict === AI_VERDICTS.STRONG_CONTINUATION ||
-    verdict === AI_VERDICTS.CONTROLLED_CONTINUATION
-  ) {
-    return hasValidContinuationVolume(d, tradeSide)
-      ? "LATE ZONE"
-      : "PULLBACK ZONE";
-  }
-
-  // Default safety
-  return "PULLBACK ZONE";
-  }
+  return "NO TRADE ZONE";
+}
 
   
   
@@ -3076,6 +3076,24 @@ function hasValidDefenseVolume(d, tradeSide) {
 
   return false;
 }
+
+    function touchedEMA200Last24h(closes15m, ema200Arr, tolerancePct = 0.3) {
+  if (!closes15m || !ema200Arr) return false;
+
+  const lookback = 96; // 24h of 15m candles
+  const start = Math.max(0, closes15m.length - lookback);
+
+  for (let i = start; i < closes15m.length; i++) {
+    const price = closes15m[i];
+    const ema   = ema200Arr[i];
+    if (!price || !ema) continue;
+
+    const distPct = Math.abs((price - ema) / ema) * 100;
+    if (distPct <= tolerancePct) return true;
+  }
+
+  return false;
+    }
 
   
   function getVolumeStateLabel(d) {
