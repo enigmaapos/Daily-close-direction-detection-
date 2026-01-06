@@ -3566,6 +3566,12 @@ const ema70Last = ema70Arr.at(-1);   // scalar
 if (ema70Last != null && price != null && ema70Last !== 0) {
   ema70DistPct = ((price - ema70Last) / ema70Last) * 100;
 }
+
+    const ema200Touched = touchedEMA200Last24h(
+    c,
+    ema200,
+    0.3 // tolerance %
+  );
   
 
   // 🧠 Market dominance side (logic-safe)
@@ -4421,7 +4427,7 @@ await seedBiasFrom15mHistory(sym, htf.htfTrend);
   lastVol,mainTrend,volAI,intradayRSIDiv,fundingRate,ema14: ema14Last,
   ema21: ema21Last,
   emaShortBias,
-  emaShortCross,aiVerdict,marketDom: GLOBAL_MARKET_DOM,changeState,moveType,
+  emaShortCross,ema200Touched,aiVerdict,marketDom: GLOBAL_MARKET_DOM,changeState,moveType,
 moveStrength,directionalBias,setupScore,htf,htfTrend: htf.htfTrend,
   htfRSIState: htf.htfRSIState,
   htfStructure: htf.htfStructure,volumeContext,probability: prob,breakIntent,strongZoneDefended,momentumAttack,momentumCollapseDone,
