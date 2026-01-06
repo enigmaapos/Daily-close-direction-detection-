@@ -3573,14 +3573,6 @@ if (ema70Last != null && price != null && ema70Last !== 0) {
     0.3 // tolerance %
   );
 
-  console.log(
-  d.sym,
-  "EMA200 touched:",
-  d.ema200Touched,
-  "EMA200 dist:",
-  d.ema200DistPct
-);
-
   // 🧠 Market dominance side (logic-safe)
 const marketDomSide =
   GLOBAL_MARKET_DOM?.bias === "Bull Dominant"
