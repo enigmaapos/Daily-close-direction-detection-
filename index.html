@@ -5138,21 +5138,6 @@ ${(d.defenseFailure && d.defenseFailure !== "NONE") || d.trendStructureRisk
   : ""} 
   
 
-<div class="muted ${rsiShiftClass}">
-  🧭 24h RSI Momentum Shift (15m):
-  <b>
-    ${
-      d.intradayRSIDiv
-        ? d.intradayRSIDiv.bearish
-          ? "Bearish Momentum Collapse"
-          : d.intradayRSIDiv.bullish
-          ? "Bullish Momentum Recovery"
-          : "Momentum Unstable"
-        : "None"
-    }
-  </b>
-</div>
-
 
 ${d.intradayRSIDiv ? (() => {
   const triggerTimePH = getPHTriggerTime(d.intradayRSIDiv.age);
@@ -5282,6 +5267,21 @@ ${d.breakIntent ? (() => {
 
   return out;
 })() : ""}
+
+<div class="muted ${rsiShiftClass}">
+  🧭 24h RSI Momentum Shift (15m):
+  <b>
+    ${
+      d.intradayRSIDiv
+        ? d.intradayRSIDiv.bearish
+          ? "Bearish Momentum Collapse"
+          : d.intradayRSIDiv.bullish
+          ? "Bullish Momentum Recovery"
+          : "Momentum Unstable"
+        : "None"
+    }
+  </b>
+</div>
      
 
 
