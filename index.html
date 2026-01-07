@@ -1510,6 +1510,40 @@ const HTF_TTL = 15 * 60 * 1000; // 15 minutes
   };
   }
 
+      async function get12hCandleContext(sym) {
+  try {
+    const k = await fetchJSON(
+      `${API}/fapi/v1/klines?symbol=${sym}&interval=12h&limit=2`
+    );
+
+    // Use the last CLOSED candle
+    const c = k[k.length - 2];
+
+    const open  = +c[1];
+    const high  = +c[2];
+    const low   = +c[3];
+    const close = +c[4];
+
+    const color =
+      close > open ? "green" :
+      close < open ? "red" :
+      "doji";
+
+    return {
+      open,
+      high,
+      low,
+      close,
+      color,
+      bodyPct: Math.abs(close - open) / open * 100
+    };
+
+  } catch (e) {
+    console.error("12H candle fetch failed:", sym, e);
+    return null;
+  }
+      }
+
   
 /* ================= COUNTDOWN ================= */
 function startCountdown(){
@@ -3518,6 +3552,8 @@ const htfNote =
     ? "HTF disabled (Daily RSI filter)"
     : null;
 
+  const candle12h = await get12hCandleContext(sym);
+
 
   const mappedK = mapKlines(k);
 
@@ -4508,7 +4544,7 @@ await seedBiasFrom15mHistory(sym, htf.htfTrend);
   lastVol,mainTrend,volAI,intradayRSIDiv,fundingRate,ema14: ema14Last,
   ema21: ema21Last,
   emaShortBias,
-  emaShortCross,ema200Touched,aiVerdict,marketDom: GLOBAL_MARKET_DOM,changeState,moveType,
+  emaShortCross,ema200Touched,candle12h,aiVerdict,marketDom: GLOBAL_MARKET_DOM,changeState,moveType,
 moveStrength,directionalBias,setupScore,htf,htfNote,htfTrend: htf.htfTrend,
   htfRSIState: htf.htfRSIState,
   htfStructure: htf.htfStructure,volumeContext,probability: prob,breakIntent,strongZoneDefended,momentumAttack,momentumCollapseDone,
@@ -5103,6 +5139,12 @@ ${typeof d.ema70DistPct === "number" ? `
   <div class="muted">
     📏 EMA70 Distance:
     <b>${d.ema70DistPct.toFixed(2)}%</b>
+  </div>
+` : ""}
+
+${d.candle12h ? `
+  <div class="muted ${d.candle12h.color === "green" ? "bull" : "bear"}">
+    ⏱ 12H Candle: ${d.candle12h.color.toUpperCase()}
   </div>
 ` : ""}
 
