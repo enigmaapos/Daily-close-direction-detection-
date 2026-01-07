@@ -5136,31 +5136,6 @@ ${(d.defenseFailure && d.defenseFailure !== "NONE") || d.trendStructureRisk
       return out;
     })()
   : ""} 
-  
-
-
-${d.intradayRSIDiv ? (() => {
-  const triggerTimePH = getPHTriggerTime(d.intradayRSIDiv.age);
-
-  return `
-    <div class="muted">
-      📍 Trigger Index:
-      <b>${d.intradayRSIDiv.triggerIndex}</b>
-    </div>
-
-    <div class="muted">
-      ⏱ Age:
-      <b>${d.intradayRSIDiv.age} candles ago</b>
-    </div>
-
-    ${triggerTimePH ? `
-      <div class="muted">
-        🕒 Trigger Time (PH):
-        <b>${triggerTimePH}</b>
-      </div>
-    ` : ""}
-  `;
-})() : ""}
 
 
   <div class="muted ${
@@ -5282,6 +5257,29 @@ ${d.breakIntent ? (() => {
     }
   </b>
 </div>
+
+${d.intradayRSIDiv ? (() => {
+  const triggerTimePH = getPHTriggerTime(d.intradayRSIDiv.age);
+
+  return `
+    <div class="muted">
+      📍 Trigger Index:
+      <b>${d.intradayRSIDiv.triggerIndex}</b>
+    </div>
+
+    <div class="muted">
+      ⏱ Age:
+      <b>${d.intradayRSIDiv.age} candles ago</b>
+    </div>
+
+    ${triggerTimePH ? `
+      <div class="muted">
+        🕒 Trigger Time (PH):
+        <b>${triggerTimePH}</b>
+      </div>
+    ` : ""}
+  `;
+})() : ""}
      
 
 
