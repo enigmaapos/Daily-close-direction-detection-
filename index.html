@@ -5213,24 +5213,6 @@ ${d.htfNote ? `
   </div>
 ` : ""}
 
-${d.breakIntent ? (() => {
-  const bi = formatBreakIntent(d.breakIntent);
-  let out = `
-    <div class="muted ${bi.cls}">
-      ${bi.icon} <b>Break Intent:</b> ${bi.text}
-    </div>
-  `;
-
-  if (d.strongZoneDefended) {
-    out += `
-      <div class="muted" style="color:#22c55e;font-weight:600">
-        🛡 Strong Zone Defended (Post-Momentum)
-      </div>
-    `;
-  }
-
-  return out;
-})() : ""}
 
 ${(d.defenseFailure && d.defenseFailure !== "NONE") || d.trendStructureRisk
   ? (() => {
@@ -5261,6 +5243,27 @@ ${(d.defenseFailure && d.defenseFailure !== "NONE") || d.trendStructureRisk
       return out;
     })()
   : ""} 
+
+
+  ${d.breakIntent ? (() => {
+  const bi = formatBreakIntent(d.breakIntent);
+  let out = `
+    <div class="muted ${bi.cls}">
+      ${bi.icon} <b>Break Intent:</b> ${bi.text}
+    </div>
+  `;
+
+  if (d.strongZoneDefended) {
+    out += `
+      <div class="muted" style="color:#22c55e;font-weight:600">
+        🛡 Strong Zone Defended (Post-Momentum)
+      </div>
+    `;
+  }
+
+  return out;
+})() : ""}
+
 
 <div class="muted ${rsiShiftClass}">
   🧭 24h RSI Momentum Shift (15m):
