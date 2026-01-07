@@ -490,6 +490,13 @@ button.secondary{
   <option value="all">All Setups</option>
   <option value="present">Setups With Risk Reward</option>
   </select>
+
+      <select id="filter12hCandle">
+  <option value="all">All 12H Candle</option>
+  <option value="green">12H Green</option>
+  <option value="red">12H Red</option>
+  <option value="doji">12H Doji</option>
+      </select>
     </div>
   
 <!-- SORT + RESET ROW -->
@@ -4603,7 +4610,15 @@ const r15 = document.getElementById("filterRsi15Context")?.value || "all";
     if (ts !== "all" && c.dataset.tradeside !== ts) ok = false;
     if (ez !== "all" && c.dataset.execution !== ez) ok = false;
     if (vai !== "all" && c.dataset.volai !== vai) ok = false;
+    const f12h = document.getElementById("filter12hCandle")?.value || "all";
 
+if (
+  f12h !== "all" &&
+  card.dataset.candle12h !== f12h
+) {
+  ok = false;
+  }
+    
     // HTF RSI STATE FILTER ONLY
 if (filterHTFRSI !== "all") {
 
@@ -4671,6 +4686,7 @@ if (filterHTFRSI !== "all") {
            document.getElementById("filterAttack").value = "all";
            document.getElementById("filterMomentum").value = "all";
            document.getElementById("filterHTFRSI").value = "all";
+           document.getElementById("filter12hCandle").value = "all";
            
            
            
@@ -4905,6 +4921,8 @@ card.dataset.aiverdict = aiVerdict.verdict;
     card.dataset.volstructure = volumeStruct.name;
     card.dataset.defense = d.defenseFailure || "NONE";
     card.dataset.htfRsiState = d.htfRSIState || "normal";
+    card.dataset.candle12h =
+  d.candle12h?.color || "unknown";
     
 
     card.dataset.rsiMomentumShift =
@@ -6104,7 +6122,8 @@ async function runSearch(){
     "filterAttack",
     "filterMomentum",
     "filterRsi15Context",
-    "filterHTFRSI"
+    "filterHTFRSI",
+    "filter12hCandle"
 ].forEach(id=>{
   document.getElementById(id)?.addEventListener("change", applyFilters);
 });
