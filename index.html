@@ -3265,6 +3265,26 @@ if (typeof d.change === "number" && Math.abs(d.change) >= 25) {
     score += 1;
   }
 
+  // 7️⃣ HTF contradiction escalator
+if (d.htfTrend) {
+
+  // HTF against the current trend → structure more fragile
+  if (
+    (d.mainTrend === "bullish" && d.htfTrend === "bearish") ||
+    (d.mainTrend === "bearish" && d.htfTrend === "bullish")
+  ) {
+    score += 1;
+  }
+
+  // HTF RSI extreme → late-cycle stress
+  if (
+    d.htfRSIState === "overbought" && d.mainTrend === "bullish" ||
+    d.htfRSIState === "oversold" && d.mainTrend === "bearish"
+  ) {
+    score += 1;
+  }
+  }
+
   if (score >= 3) return "CRITICAL FAILURE";
   if (score === 2) return "EARLY WARNING";
   return "NONE";
@@ -5107,37 +5127,6 @@ ${typeof d.ema70DistPct === "number" ? `
 ` : ""}
 
 
-${(d.defenseFailure && d.defenseFailure !== "NONE") || d.trendStructureRisk
-  ? (() => {
-      let out = "";
-
-      /* 🛡 Defense Status */
-      if (d.defenseFailure && d.defenseFailure !== "NONE") {
-        out += `
-          <div class="muted ${
-            d.defenseFailure === "CRITICAL FAILURE"
-              ? "bear"
-              : "neutral"
-          }">
-            🛡 <b>Structure Risk:</b> ${d.defenseFailure}
-          </div>
-        `;
-      }
-
-      /* 📐 Trend Structure / Continuation Risk */
-      if (d.trendStructureRisk) {
-        out += `
-          <div class="structure-risk ${d.trendStructureRisk.cls}">
-            📐 <b>Trend Structure:</b> ${d.trendStructureRisk.label}
-          </div>
-        `;
-      }
-
-      return out;
-    })()
-  : ""} 
-
-
   <div class="muted ${
     structureBias === "bullish" ? "bull" :
     structureBias === "bearish" ? "bear" : "neutral"
@@ -5242,6 +5231,36 @@ ${d.breakIntent ? (() => {
 
   return out;
 })() : ""}
+
+${(d.defenseFailure && d.defenseFailure !== "NONE") || d.trendStructureRisk
+  ? (() => {
+      let out = "";
+
+      /* 🛡 Defense Status */
+      if (d.defenseFailure && d.defenseFailure !== "NONE") {
+        out += `
+          <div class="muted ${
+            d.defenseFailure === "CRITICAL FAILURE"
+              ? "bear"
+              : "neutral"
+          }">
+            🛡 <b>Structure Risk:</b> ${d.defenseFailure}
+          </div>
+        `;
+      }
+
+      /* 📐 Trend Structure / Continuation Risk */
+      if (d.trendStructureRisk) {
+        out += `
+          <div class="structure-risk ${d.trendStructureRisk.cls}">
+            📐 <b>Trend Structure:</b> ${d.trendStructureRisk.label}
+          </div>
+        `;
+      }
+
+      return out;
+    })()
+  : ""} 
 
 <div class="muted ${rsiShiftClass}">
   🧭 24h RSI Momentum Shift (15m):
