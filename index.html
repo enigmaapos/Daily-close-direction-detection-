@@ -445,6 +445,13 @@ button.secondary{
     <option value="LOWEST ZONE PUMP">LOWEST ZONE PUMP</option>
     <option value="LOWEST ZONE DUMP">LOWEST ZONE DUMP</option>
   </select>
+
+  <select id="filterHTFRSI">
+  <option value="all">All HTF RSI</option>
+  <option value="normal">Normal</option>
+  <option value="overbought">Overbought</option>
+  <option value="oversold">Oversold</option>
+  </select>
 </div>
 
 <div class="row filter-box">
@@ -4504,6 +4511,8 @@ function applyFilters(){
   const fa = document.getElementById("filterAttack")?.value || "all";
   const fm = document.getElementById("filterMomentum")?.value || "all";
 const r15 = document.getElementById("filterRsi15Context")?.value || "all";
+  const filterHTFRSI =
+  document.getElementById("filterHTFRSI")?.value || "all";
   
   document.querySelectorAll(".card").forEach(c => {
 
@@ -4528,6 +4537,16 @@ const r15 = document.getElementById("filterRsi15Context")?.value || "all";
     if (ez !== "all" && c.dataset.execution !== ez) ok = false;
     if (vai !== "all" && c.dataset.volai !== vai) ok = false;
 
+    // HTF RSI STATE FILTER ONLY
+if (filterHTFRSI !== "all") {
+
+  // if HTF is disabled, do NOT filter out
+  if (isDailyRSIActive()) {
+    // allow through
+  } else if (c.dataset.htfRsiState !== filterHTFRSI) {
+    ok = false;
+  }
+  }
     
 
     // ================= RR PRESENCE FILTER =================
@@ -4584,6 +4603,7 @@ const r15 = document.getElementById("filterRsi15Context")?.value || "all";
            document.getElementById("filterDefense").value = "all";
            document.getElementById("filterAttack").value = "all";
            document.getElementById("filterMomentum").value = "all";
+           document.getElementById("filterHTFRSI").value = "all";
            
            
            
@@ -4817,6 +4837,7 @@ card.dataset.aiverdict = aiVerdict.verdict;
     card.dataset.volai = d.volAI?.meaning || "Neutral";
     card.dataset.volstructure = volumeStruct.name;
     card.dataset.defense = d.defenseFailure || "NONE";
+    card.dataset.htfRsiState = d.htfRSIState || "normal";
     
 
     card.dataset.rsiMomentumShift =
@@ -6003,7 +6024,8 @@ async function runSearch(){
     "filterDefense",
     "filterAttack",
     "filterMomentum",
-    "filterRsi15Context"
+    "filterRsi15Context",
+    "filterHTFRSI"
 ].forEach(id=>{
   document.getElementById(id)?.addEventListener("change", applyFilters);
 });
