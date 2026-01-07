@@ -4587,6 +4587,8 @@ function applyFilters(){
 const r15 = document.getElementById("filterRsi15Context")?.value || "all";
   const filterHTFRSI =
   document.getElementById("filterHTFRSI")?.value || "all";
+  const f12h = document.getElementById("filter12hCandle")?.value || "all";
+  
   
   document.querySelectorAll(".card").forEach(c => {
 
@@ -4610,8 +4612,7 @@ const r15 = document.getElementById("filterRsi15Context")?.value || "all";
     if (ts !== "all" && c.dataset.tradeside !== ts) ok = false;
     if (ez !== "all" && c.dataset.execution !== ez) ok = false;
     if (vai !== "all" && c.dataset.volai !== vai) ok = false;
-    const f12h = document.getElementById("filter12hCandle")?.value || "all";
-
+    
 if (
   f12h !== "all" &&
   card.dataset.candle12h !== f12h
