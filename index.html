@@ -3474,19 +3474,28 @@ function getSetupGradeClass(score) {
   
 
 /* ================= ANALYZE ================= */
-async function analyze(sym,change){
+async function analyze(sym, change, forceHTF = false) {
   const marketDom = GLOBAL_MARKET_DOM;
   const k=await fetchJSON(`${API}/fapi/v1/klines?symbol=${sym}&interval=15m&limit=240`);
   await sleep(DELAY);
 
 
-  const htf = isDailyRSIActive()
-  ? {
-      htfTrend: "neutral",
-      htfRSIState: "normal",
-      htfStructure: { support: "holding", resistance: "holding" }
-    }
-  : await getHTFContext(sym);
+  // 1️⃣ Resolve HTF (real or neutralized)
+const htf =
+  (!forceHTF && isDailyRSIActive())
+    ? {
+        htfTrend: "neutral",
+        htfRSIState: "normal",
+        htfStructure: { support: "holding", resistance: "holding" }
+      }
+    : await getHTFContext(sym);
+
+// 2️⃣ Add HTF note (EXACTLY HERE)
+const htfNote =
+  !forceHTF && isDailyRSIActive()
+    ? "HTF disabled (Daily RSI filter)"
+    : null;
+
 
   const mappedK = mapKlines(k);
 
@@ -4478,7 +4487,7 @@ await seedBiasFrom15mHistory(sym, htf.htfTrend);
   ema21: ema21Last,
   emaShortBias,
   emaShortCross,ema200Touched,aiVerdict,marketDom: GLOBAL_MARKET_DOM,changeState,moveType,
-moveStrength,directionalBias,setupScore,htf,htfTrend: htf.htfTrend,
+moveStrength,directionalBias,setupScore,htf,htfNote,htfTrend: htf.htfTrend,
   htfRSIState: htf.htfRSIState,
   htfStructure: htf.htfStructure,volumeContext,probability: prob,breakIntent,strongZoneDefended,momentumAttack,momentumCollapseDone,
   rsiMomentumShift: activeMomentum,
@@ -5982,7 +5991,7 @@ async function runSearch(){
   searchGrid.innerHTML = "";
 
   const t = await fetchJSON(`${API}/fapi/v1/ticker/24hr?symbol=${sym}`);
-  const d = await analyze(sym, +t.priceChangePercent);
+  const d = await analyze(sym, +t.priceChangePercent, true);
 
   renderCard(d, searchGrid, false, true);
 
