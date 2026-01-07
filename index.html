@@ -4587,8 +4587,9 @@ function applyFilters(){
 const r15 = document.getElementById("filterRsi15Context")?.value || "all";
   const filterHTFRSI =
   document.getElementById("filterHTFRSI")?.value || "all";
-  const f12h = document.getElementById("filter12hCandle")?.value || "all";
-  
+  const f12h =
+  (document.getElementById("filter12hCandle")?.value || "all").toLowerCase();
+
   
   document.querySelectorAll(".card").forEach(c => {
 
@@ -4923,7 +4924,7 @@ card.dataset.aiverdict = aiVerdict.verdict;
     card.dataset.defense = d.defenseFailure || "NONE";
     card.dataset.htfRsiState = d.htfRSIState || "normal";
     card.dataset.candle12h =
-  d.candle12h?.color || "unknown";
+  (d.candle12h?.color || "unknown").toLowerCase();
     
 
     card.dataset.rsiMomentumShift =
