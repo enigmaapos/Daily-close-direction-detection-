@@ -5072,25 +5072,6 @@ ${d.setupScore ? `
   </div>
 `}
 
-    ${d.breakIntent ? (() => {
-  const bi = formatBreakIntent(d.breakIntent);
-  let out = `
-    <div class="muted ${bi.cls}">
-      ${bi.icon} <b>Break Intent:</b> ${bi.text}
-    </div>
-  `;
-
-  if (d.strongZoneDefended) {
-    out += `
-      <div class="muted" style="color:#22c55e;font-weight:600">
-        🛡 Strong Zone Defended (Post-Momentum)
-      </div>
-    `;
-  }
-
-  return out;
-})() : ""}
-
   ${typeof d.ema200DistPct === "number" ? `
   <div class="muted">
     📏 EMA200 Distance:
@@ -5282,6 +5263,25 @@ ${d.htfNote ? `
     ℹ ${d.htfNote}
   </div>
 ` : ""}
+
+${d.breakIntent ? (() => {
+  const bi = formatBreakIntent(d.breakIntent);
+  let out = `
+    <div class="muted ${bi.cls}">
+      ${bi.icon} <b>Break Intent:</b> ${bi.text}
+    </div>
+  `;
+
+  if (d.strongZoneDefended) {
+    out += `
+      <div class="muted" style="color:#22c55e;font-weight:600">
+        🛡 Strong Zone Defended (Post-Momentum)
+      </div>
+    `;
+  }
+
+  return out;
+})() : ""}
      
 
 
