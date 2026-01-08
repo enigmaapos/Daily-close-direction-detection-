@@ -520,12 +520,14 @@ button.secondary{
 
   <optgroup label="Bullish">
     <option>Bullish Continuation</option>
+    <option>Bullish Continuation (Awaiting Acceptance)</option>
     <option>Bullish Defense</option>
     <option>Bull Trap Risk</option>
   </optgroup>
 
   <optgroup label="Bearish">
     <option>Bearish Continuation</option>
+    <option>Bearish Continuation (Awaiting Acceptance)</option>
     <option>Bearish Defense</option>
     <option>Bear Trap Risk</option>
   </optgroup>
@@ -767,6 +769,18 @@ scanLimit.addEventListener("change", () => {
   localStorage.setItem("scanLimit", scanLimit.value);
   onScanControlChange();
 });
+
+  /* ================= GLOBAL CONSTANTS ================= */
+
+const BIAS = {
+  BULL_CONT: "Bullish Continuation",
+  BULL_PRESSURE: "Bullish Continuation (Awaiting Acceptance)",
+  BULL_TRAP: "Bull Trap Risk",
+
+  BEAR_CONT: "Bearish Continuation",
+  BEAR_PRESSURE: "Bearish Continuation (Awaiting Acceptance)",
+  BEAR_TRAP: "Bear Trap Risk"
+};
 
   const BIAS_CHART_PADDING = {
   left: 48,   // space for Y labels
@@ -3913,16 +3927,22 @@ let structure = "none";
 if (mainTrend === "bullish") {
 
   if (rb) {
-    if (bullishBreakAccepted) {
-      bias = "Bullish Continuation";
-      prob = 90;
-      structure = "resistance broken (accepted)";
-    } else {
-      bias = "Bull Trap Risk";
-      prob = 55;
-      structure = "resistance broken (unaccepted)";
-    }
+  if (bullishBreakAccepted) {
+    bias = "Bullish Continuation";
+    prob = 90;
+    structure = "resistance broken (accepted)";
   }
+  else if (bull && rsi50State?.consistentlyAbove50) {
+    bias = "Bullish Continuation (Awaiting Acceptance)";
+    prob = 65;
+    structure = "resistance broken (unaccepted)";
+  }
+  else {
+    bias = "Bull Trap Risk";
+    prob = 45;
+    structure = "resistance broken (unaccepted)";
+  }
+}
 
   else if (sw.S.length && !sb) {
 
@@ -3947,16 +3967,22 @@ if (mainTrend === "bullish") {
 else if (mainTrend === "bearish") {
 
   if (sb) {
-    if (bearishBreakAccepted) {
-      bias = "Bearish Continuation";
-      prob = 90;
-      structure = "support broken (accepted)";
-    } else {
-      bias = "Bear Trap Risk";
-      prob = 55;
-      structure = "support broken (unaccepted)";
-    }
+  if (bearishBreakAccepted) {
+    bias = "Bearish Continuation";
+    prob = 90;
+    structure = "support broken (accepted)";
   }
+  else if (!bull && rsi50State?.consistentlyBelow50) {
+    bias = "Bearish Continuation (Awaiting Acceptance)";
+    prob = 65;
+    structure = "support broken (unaccepted)";
+  }
+  else {
+    bias = "Bear Trap Risk";
+    prob = 45;
+    structure = "support broken (unaccepted)";
+  }
+}
 
   else if (sw.R.length && !rb) {
 
