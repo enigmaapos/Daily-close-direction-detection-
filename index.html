@@ -3990,6 +3990,10 @@ if (intradayRSIDiv?.triggerIndex != null) {
   }
 }
 
+    /* ================= ACTIVE MOMENTUM ================= */
+let activeMomentum = rsiMomentumMemory[sym] || null;
+  
+
 
 /* ================= MOMENTUM AGE ================= */
 let rsiMomentumAge =
@@ -4019,9 +4023,7 @@ if (intradayRSIDiv && activeMomentum) {
   };
 }
 
-  /* ================= ACTIVE MOMENTUM ================= */
-let activeMomentum = rsiMomentumMemory[sym] || null;
-  
+
   
 /* ================= MOMENTUM INTERPRETATION ================= */
 let momentumAttack = null;
