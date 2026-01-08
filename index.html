@@ -2718,7 +2718,7 @@ function classifyBreakIntent(d) {
 if (
   trend === "bullish" &&
   attacker === "BEAR" &&
-  structureResult === "SUPPORT HELD"
+  structureResult === "RESISTANCE BROKEN"
 ) {
   return buildIntentLabel(
     "BEAR",
@@ -2730,7 +2730,7 @@ if (
 if (
   trend === "bearish" &&
   attacker === "BULL" &&
-  structureResult === "RESISTANCE HELD"
+  structureResult === "SUPPORT BROKEN"
 ) {
   return buildIntentLabel(
     "BULL",
@@ -3928,21 +3928,29 @@ if (mainTrend === "bullish") {
 
   if (rb) {
   if (bullishBreakAccepted) {
-    bias = "Bullish Continuation";
+    bias = BIAS.BULL_CONT;
     prob = 90;
     structure = "resistance broken (accepted)";
   }
-  else if (bull && rsi50State?.consistentlyAbove50) {
-    bias = "Bullish Continuation (Awaiting Acceptance)";
+
+  // 🔵 CONTINUATION PRESSURE (NOT A TRAP)
+  else if (
+    bull &&                             // buyers dominant
+    rsi50State?.consistentlyAbove50 &&  // momentum supports bulls
+    htf?.htfTrend !== "bearish"         // HTF not against
+  ) {
+    bias = BIAS.BULL_PRESSURE;
     prob = 65;
     structure = "resistance broken (unaccepted)";
   }
+
+  // 🔴 TRUE TRAP
   else {
-    bias = "Bull Trap Risk";
+    bias = BIAS.BULL_TRAP;
     prob = 45;
     structure = "resistance broken (unaccepted)";
   }
-}
+  }
 
   else if (sw.S.length && !sb) {
 
@@ -3966,19 +3974,25 @@ if (mainTrend === "bullish") {
 /* ================= BEARISH ENVIRONMENT ================= */
 else if (mainTrend === "bearish") {
 
-  if (sb) {
+if (sb) {
   if (bearishBreakAccepted) {
-    bias = "Bearish Continuation";
+    bias = BIAS.BEAR_CONT;
     prob = 90;
     structure = "support broken (accepted)";
   }
-  else if (!bull && rsi50State?.consistentlyBelow50) {
-    bias = "Bearish Continuation (Awaiting Acceptance)";
+
+  else if (
+    !bull &&                            // sellers dominant
+    rsi50State?.consistentlyBelow50 &&
+    htf?.htfTrend !== "bullish"
+  ) {
+    bias = BIAS.BEAR_PRESSURE;
     prob = 65;
     structure = "support broken (unaccepted)";
   }
+
   else {
-    bias = "Bear Trap Risk";
+    bias = BIAS.BEAR_TRAP;
     prob = 45;
     structure = "support broken (unaccepted)";
   }
