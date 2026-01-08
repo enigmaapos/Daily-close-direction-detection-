@@ -2689,6 +2689,31 @@ function classifyBreakIntent(d) {
     return buildIntentLabel(attacker, structureResult, null);
   }
 
+  // 🚑 ALIGN BREAK WITH TREND
+if (
+  trend === "bullish" &&
+  attacker === "BEAR" &&
+  structureResult === "RESISTANCE BROKEN"
+) {
+  return buildIntentLabel(
+    "BEAR",
+    "FAILED BREAK (BULLISH CONTEXT)",
+    volumeResult
+  );
+}
+
+if (
+  trend === "bearish" &&
+  attacker === "BULL" &&
+  structureResult === "SUPPORT BROKEN"
+) {
+  return buildIntentLabel(
+    "BULL",
+    "FAILED BREAK (BEARISH CONTEXT)",
+    volumeResult
+  );
+  }
+
   return "NO CLEAR ATTACK";
       }
     
