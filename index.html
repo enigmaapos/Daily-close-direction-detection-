@@ -3562,16 +3562,7 @@ function getSetupGradeClass(score) {
 
   return Math.max(20, Math.min(95, prob));
   }
-
-  const htfRSI = d.htfRSIState || "normal";
-const htfDoji = d.candle12h?.color === "doji";
-
-const htfExhausted =
-  (trend === "bullish" && htfRSI === "overbought") ||
-  (trend === "bearish" && htfRSI === "oversold");
-
-const htfIndecision =
-  htfDoji && htfRSI !== "normal";
+  
 
 /* ================= ANALYZE ================= */
 async function analyze(sym, change, forceHTF = false) {
@@ -3589,6 +3580,16 @@ const htf =
         htfStructure: { support: "holding", resistance: "holding" }
       }
     : await getHTFContext(sym);
+
+  const htfRSI = d.htfRSIState || "normal";
+const htfDoji = d.candle12h?.color === "doji";
+
+const htfExhausted =
+  (trend === "bullish" && htfRSI === "overbought") ||
+  (trend === "bearish" && htfRSI === "oversold");
+
+const htfIndecision =
+  htfDoji && htfRSI !== "normal";
 
 
 
