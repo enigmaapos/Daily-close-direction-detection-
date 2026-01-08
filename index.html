@@ -1691,6 +1691,15 @@ function get24hMoveStrength(change) {
   
       /* ================= AI VERDICTS ================= */
 
+  const ZONE_PAD = 0.003;
+
+function makeZone(level) {
+  return {
+    low: level * (1 - ZONE_PAD),
+    high: level * (1 + ZONE_PAD)
+  };
+}
+
   const htfRSI = d.htfRSIState || "normal";
 const htfDoji = d.candle12h?.color === "doji";
 
@@ -2706,15 +2715,6 @@ function classifyBreakIntent(d) {
     
 
   /* ================= STRUCTURE HELPERS ================= */
-
-const ZONE_PAD = 0.003;
-
-function makeZone(level) {
-  return {
-    low: level * (1 - ZONE_PAD),
-    high: level * (1 + ZONE_PAD)
-  };
-}
 
 function calculateVWAP(candles) {
   let pv = 0, v = 0;
