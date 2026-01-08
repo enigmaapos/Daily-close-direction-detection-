@@ -3919,21 +3919,21 @@ if (mainTrend === "bullish") {
 
   else if (sw.S.length && !sb) {
 
-    const rsi50BullOk =
-      rsi50State?.consistentlyBelow50 &&   
-      htf?.htfRSIState !== "overbought" &&
-      htf?.htfTrend !== "bearish";
+  const rsi50BullOk =
+    rsi50State?.consistentlyBelow50 &&   // buyers still in control
+    htf?.htfRSIState !== "overbought" &&
+    htf?.htfTrend !== "bearish";
 
-    if (rsi50BullOk) {
-      bias = "Bullish Defense";
-      prob = 75;
-      structure = "support holding (confirmed)";
-    } else {
-      bias = "Bull Trap Risk";
-      prob = 45;
-      structure = "support weak (buyers weakening)";
-    }
+  if (rsi50BullOk) {
+    bias = "Bullish Defense";
+    prob = 75;
+    structure = "support holding (confirmed)";
+  } else {
+    bias = "Bullish Defense Weakening";
+    prob = 55;
+    structure = "support weak (buyers weakening)";
   }
+}
 }
 
 /* ================= BEARISH ENVIRONMENT ================= */
@@ -3965,21 +3965,21 @@ if (sb) {
 
   else if (sw.R.length && !rb) {
 
-    const rsi50BearOk =
-      rsi50State?.consistentlyAbove50 &&   // ✅ FIXED
-      htf?.htfRSIState !== "oversold" &&
-      htf?.htfTrend !== "bullish";
+  const rsi50BearOk =
+    rsi50State?.consistentlyAbove50 &&   // sellers still in control
+    htf?.htfRSIState !== "oversold" &&
+    htf?.htfTrend !== "bullish";
 
-    if (rsi50BearOk) {
-      bias = "Bearish Defense";
-      prob = 75;
-      structure = "resistance failed (confirmed)";
-    } else {
-      bias = "Bear Trap Risk";
-      prob = 45;
-      structure = "resistance weak (sellers weakening)";
-    }
+  if (rsi50BearOk) {
+    bias = "Bearish Defense";
+    prob = 75;
+    structure = "resistance failed (confirmed)";
+  } else {
+    bias = "Bearish Defense Weakening";
+    prob = 55;
+    structure = "resistance weak (sellers weakening)";
   }
+}
   }
 
 /* ================= NO STRUCTURE ================= */
