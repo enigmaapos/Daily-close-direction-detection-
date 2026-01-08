@@ -1700,6 +1700,8 @@ function makeZone(level) {
   };
 }
 
+  const rsiMomentumMemory = {};
+
   const htfRSI = d.htfRSIState || "normal";
 const htfDoji = d.candle12h?.color === "doji";
 
@@ -2583,7 +2585,6 @@ if (triggerIndex === null && (bearish || bullish)) {
   };
   }
 
-  const rsiMomentumMemory = {};
 
 
   function isMomentumResolved({
@@ -3680,9 +3681,6 @@ for(let i = k.length - 96; i < k.length - 1; i++){
   }
 }
 
-      /* ================= ACTIVE MOMENTUM ================= */
-let activeMomentum = rsiMomentumMemory[sym] || null;
-  
 
 
   const ema14 = ema(c.slice(-100), 14);
@@ -4020,6 +4018,10 @@ if (intradayRSIDiv && activeMomentum) {
     age: rsiMomentumAge
   };
 }
+
+  /* ================= ACTIVE MOMENTUM ================= */
+let activeMomentum = rsiMomentumMemory[sym] || null;
+  
   
 /* ================= MOMENTUM INTERPRETATION ================= */
 let momentumAttack = null;
