@@ -4132,7 +4132,7 @@ if (bull) {
 /* ================= VOLUME CONFIRMATION (SUSTAINABILITY ONLY) ================= */
 let volumeAlign = "neutral";
 
-// Volume confirms continuation
+// Strong sustainability (fuel)
 if (
   volumeStructure.name.includes("accepted") &&
   bias.includes("Continuation")
@@ -4140,7 +4140,7 @@ if (
   volumeAlign = "confirmed";
 }
 
-// Volume confirms defense
+// Defense confirmation
 if (
   volumeStructure.name === "support holding (confirmed)" &&
   bias === "Bullish Defense"
@@ -4155,11 +4155,21 @@ if (
   volumeAlign = "confirmed";
 }
 
-// Explicitly classify non-confirming volume states (no penalty)
+// Directional pressure without fuel
 if (
-  volumeStructure.name.includes("unaccepted") ||
-  volumeStructure.name.includes("weak") ||
-  volumeStructure.name === "none"
+  volumeStructure.name.includes("unaccepted") &&
+  bias.includes("Continuation")
+) {
+  volumeAlign = "pressure";
+}
+
+// Weak / none = neutral (no overwrite of pressure)
+if (
+  volumeAlign === "neutral" &&
+  (
+    volumeStructure.name.includes("weak") ||
+    volumeStructure.name === "none"
+  )
 ) {
   volumeAlign = "neutral";
 }
@@ -4168,6 +4178,10 @@ if (
 /* ================= PROBABILITY MODIFIER ================= */
 if (volumeAlign === "confirmed") {
   prob += 5;
+}
+
+if (volumeAlign === "pressure") {
+  prob += 2;
 }
 
 prob = Math.max(40, Math.min(prob, 95));
