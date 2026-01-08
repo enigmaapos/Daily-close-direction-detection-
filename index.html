@@ -4220,17 +4220,6 @@ prob = Math.max(40, Math.min(prob, 95));
 
 
 
-
-/* ================= BREAK INTENT ================= */
-  const breakIntent = classifyBreakIntent({
-  mainTrend,
-  structure: structure || "",
-  volumeStructure: volumeStructure || { name: "" },
-  rsiMomentumShift: intradayRSIDiv || null,
-  strongZoneDefended
-});
-
-
   /* ================= MARKET DOMINANCE PROBABILITY MODIFIER ================= */
 if (marketDom && bias.includes("Continuation")) {
 
@@ -4380,6 +4369,15 @@ if (momentumCollapseDone) {
     strongZoneDefended = true;
   }
 }
+
+  /* ================= BREAK INTENT ================= */
+  const breakIntent = classifyBreakIntent({
+  mainTrend,
+  structure: structure || "",
+  volumeStructure: volumeStructure || { name: "" },
+  rsiMomentumShift: intradayRSIDiv || null,
+  strongZoneDefended
+});
 
 
 const postVolBreakRSIConfirmSafe =
