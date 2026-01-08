@@ -1691,6 +1691,16 @@ function get24hMoveStrength(change) {
   
       /* ================= AI VERDICTS ================= */
 
+  const htfRSI = d.htfRSIState || "normal";
+const htfDoji = d.candle12h?.color === "doji";
+
+const htfExhausted =
+  (trend === "bullish" && htfRSI === "overbought") ||
+  (trend === "bearish" && htfRSI === "oversold");
+
+const htfIndecision =
+  htfDoji && htfRSI !== "normal";
+
 const AI_VERDICTS = {
   STRONG_CONTINUATION: "STRONG CONTINUATION",
   CONTROLLED_CONTINUATION: "CONTROLLED CONTINUATION",
@@ -1836,12 +1846,13 @@ function getAIFinalVerdict(d) {
     reason = "Momentum is stretched after a structure break.";
   }
   else if (
-    anyBreak &&
-    (
-      (structure.includes("resistance broken") && trend === "bearish") ||
-      (structure.includes("support broken") && trend === "bullish")
-    )
-  ) {
+  anyBreak &&
+  (
+    (structure.includes("resistance broken") && trend === "bearish") ||
+    (structure.includes("support broken") && trend === "bullish")
+  ) &&
+  !htfIndecision
+) {
     verdict = AI_VERDICTS.COUNTER_TREND;
     reason = "Structure break occurred against the dominant trend.";
   }
@@ -1868,6 +1879,25 @@ function getAIFinalVerdict(d) {
     verdict = AI_VERDICTS.CONTROLLED_CONTINUATION;
     reason = "Bearish trend intact; pullback phase detected after expansion.";
   }
+
+  /* ================= HTF EXHAUSTION / INDECISION ================= */
+if (
+  verdict === AI_VERDICTS.STRONG_CONTINUATION &&
+  (htfExhausted || htfIndecision)
+) {
+  verdict = AI_VERDICTS.CONTROLLED_CONTINUATION;
+  reason += " HTF exhaustion or indecision detected.";
+}
+
+if (
+  verdict === AI_VERDICTS.CONTROLLED_CONTINUATION &&
+  htfIndecision &&
+  marketPhase !== "BULLISH PULLBACK" &&
+  marketPhase !== "BEARISH PULLBACK"
+) {
+  verdict = AI_VERDICTS.WAIT_FOR_PULLBACK;
+  reason += " HTF indecision (12H doji) increases timing risk.";
+}
 
   /* ================= FUNDING RISK ================= */
   if (verdict === AI_VERDICTS.STRONG_CONTINUATION && extreme) {
