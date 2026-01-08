@@ -2662,6 +2662,7 @@ function normalizeVolumeStructure(volStruct) {
 /* ================= BREAK INTENT CLASSIFIER (ALIGNED) ================= */
 function classifyBreakIntent(d) {
   const trend = d.mainTrend;              // bullish | bearish
+  const dominantBull = d.bull;
   const momentum = d.rsiMomentumShift;
 
   const structureResult = normalizeTrendStructure(d.structure);
@@ -2669,8 +2670,7 @@ function classifyBreakIntent(d) {
 
   // === FIXED ROLES ===
   const trendAttacker = trend === "bullish" ? "BULLS" : "BEARS";
-  const trendDefender = trend === "bullish" ? "BEARS" : "BULLS";
-
+  const trendDefender = dominantBull ? "BEARS" : "BULLS";
   /* ================= STRONG ZONE OVERRIDE ================= */
   if (d.strongZoneDefended) {
     return `${trendDefender} DEFENSE → STRONG (${structureResult || "ZONE HELD"})`;
@@ -4373,6 +4373,7 @@ if (momentumCollapseDone) {
   /* ================= BREAK INTENT ================= */
   const breakIntent = classifyBreakIntent({
   mainTrend,
+  bull, 
   structure: structure || "",
   volumeStructure: volumeStructure || { name: "" },
   rsiMomentumShift: intradayRSIDiv || null,
