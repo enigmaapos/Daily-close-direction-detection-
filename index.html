@@ -3926,7 +3926,7 @@ if (mainTrend === "bullish") {
   else if (sw.S.length && !sb) {
 
     const rsi50BullOk =
-      rsi50State?.consistentlyAbove50 &&   // ✅ FIXED
+      rsi50State?.consistentlyBelow50 &&   
       htf?.htfRSIState !== "overbought" &&
       htf?.htfTrend !== "bearish";
 
@@ -3960,7 +3960,7 @@ else if (mainTrend === "bearish") {
   else if (sw.R.length && !rb) {
 
     const rsi50BearOk =
-      rsi50State?.consistentlyBelow50 &&   // ✅ FIXED
+      rsi50State?.consistentlyAbove50 &&   // ✅ FIXED
       htf?.htfRSIState !== "oversold" &&
       htf?.htfTrend !== "bullish";
 
