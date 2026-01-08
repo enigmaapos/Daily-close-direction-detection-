@@ -4362,20 +4362,23 @@ else if (structure.includes("resistance broken"))
 
 let strongZoneDefended = false;
 
-if (
-  momentumCollapseDone &&
-  momentumAttack === "bearish" &&
-  structure.startsWith("support holding")
-) {
-  strongZoneDefended = true;
-}
+if (momentumCollapseDone) {
 
-if (
-  momentumCollapseDone &&
-  momentumAttack === "bullish" &&
-  structure.startsWith("resistance failed")
-) {
-  strongZoneDefended = true;
+  // Bullish trend → support defense
+  if (
+    mainTrend === "bullish" &&
+    structure.startsWith("support holding")
+  ) {
+    strongZoneDefended = true;
+  }
+
+  // Bearish trend → resistance defense
+  if (
+    mainTrend === "bearish" &&
+    structure.startsWith("resistance holding")
+  ) {
+    strongZoneDefended = true;
+  }
 }
 
 
