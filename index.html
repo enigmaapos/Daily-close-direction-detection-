@@ -3680,6 +3680,10 @@ for(let i = k.length - 96; i < k.length - 1; i++){
   }
 }
 
+      /* ================= ACTIVE MOMENTUM ================= */
+let activeMomentum = rsiMomentumMemory[sym] || null;
+  
+
 
   const ema14 = ema(c.slice(-100), 14);
 const ema21 = ema(c.slice(-100), 21);
@@ -3988,8 +3992,6 @@ if (intradayRSIDiv?.triggerIndex != null) {
   }
 }
 
-/* ================= ACTIVE MOMENTUM ================= */
-let activeMomentum = rsiMomentumMemory[sym] || null;
 
 /* ================= MOMENTUM AGE ================= */
 let rsiMomentumAge =
