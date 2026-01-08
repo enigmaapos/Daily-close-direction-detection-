@@ -5253,17 +5253,6 @@ ${d.dailyRSI ? `
 ` : ""}
 
 
-${d.marketPhase ? `
-  <div class="muted ${d.marketPhase.cls}">
-    ${phaseIcon} Market Phase: <b>${d.marketPhase.phase}</b><br>
-    <span class="muted">${d.marketPhase.reason}</span><br>
-    <span class="muted">
-      Bias Acc: ${d.marketPhase.interpAcc}
-      · RAW: ${d.marketPhase.rawAcc}
-    </span>
-  </div>
-` : ""}
-
     <div class="muted neutral">
   ⏱ 4H Context:
 <b>${(d.htfTrend || "neutral").toUpperCase()}</b>
@@ -5391,6 +5380,17 @@ ${d.intradayRSIDiv ? (() => {
 
   <canvas class="bias-chart" width="320" height="160"></canvas>
 </div>
+
+${d.marketPhase ? `
+  <div class="muted ${d.marketPhase.cls}">
+    ${phaseIcon} Market Phase: <b>${d.marketPhase.phase}</b><br>
+    <span class="muted">${d.marketPhase.reason}</span><br>
+    <span class="muted">
+      Bias Acc: ${d.marketPhase.interpAcc}
+      · RAW: ${d.marketPhase.rawAcc}
+    </span>
+  </div>
+` : ""}
 
 
 <div class="muted ${aiVerdict.verdictClass}">
