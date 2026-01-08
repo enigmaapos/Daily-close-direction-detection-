@@ -4132,7 +4132,7 @@ if (bull) {
 /* ================= VOLUME CONFIRMATION (SUSTAINABILITY ONLY) ================= */
 let volumeAlign = "neutral";
 
-// Volume confirms continuation or defense
+// Volume confirms continuation
 if (
   volumeStructure.name.includes("accepted") &&
   bias.includes("Continuation")
@@ -4155,9 +4155,11 @@ if (
   volumeAlign = "confirmed";
 }
 
-// Weak volume = NOT conflict, just lack of expansion
+// Explicitly classify non-confirming volume states (no penalty)
 if (
-  volumeStructure.name.includes("weak")
+  volumeStructure.name.includes("unaccepted") ||
+  volumeStructure.name.includes("weak") ||
+  volumeStructure.name === "none"
 ) {
   volumeAlign = "neutral";
 }
