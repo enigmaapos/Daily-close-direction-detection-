@@ -4129,9 +4129,18 @@ if (bull) {
   }
 }
 
-  /* ================= VOLUME CONFIRMATION ================= */
+/* ================= VOLUME CONFIRMATION (SUSTAINABILITY ONLY) ================= */
 let volumeAlign = "neutral";
 
+// Volume confirms continuation or defense
+if (
+  volumeStructure.name.includes("accepted") &&
+  bias.includes("Continuation")
+) {
+  volumeAlign = "confirmed";
+}
+
+// Volume confirms defense
 if (
   volumeStructure.name === "support holding (confirmed)" &&
   bias === "Bullish Defense"
@@ -4146,28 +4155,17 @@ if (
   volumeAlign = "confirmed";
 }
 
+// Weak volume = NOT conflict, just lack of expansion
 if (
-  volumeStructure.name.includes("accepted") &&
-  bias.includes("Continuation")
+  volumeStructure.name.includes("weak")
 ) {
-  volumeAlign = "confirmed";
-}
-
-if (
-  volumeStructure.name.includes("weak") &&
-  bias.includes("Continuation")
-) {
-  volumeAlign = "conflict";
+  volumeAlign = "neutral";
 }
 
   
 /* ================= PROBABILITY MODIFIER ================= */
 if (volumeAlign === "confirmed") {
   prob += 5;
-}
-
-if (volumeAlign === "conflict") {
-  prob -= 10;
 }
 
 prob = Math.max(40, Math.min(prob, 95));
