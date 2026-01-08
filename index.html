@@ -1772,6 +1772,17 @@ function getAIFinalVerdict(d) {
     structure.includes("support broken") && trend === "bearish";
   const anyBreak = structure.includes("broken");
 
+  const htfRSI = d.htfRSIState || "normal";
+const htfDoji = d.candle12h?.color === "doji";
+
+const htfExhausted =
+  (trend === "bullish" && htfRSI === "overbought") ||
+  (trend === "bearish" && htfRSI === "oversold");
+
+const htfIndecision =
+  htfDoji && htfRSI !== "normal";
+  
+
   let verdict = AI_VERDICTS.AVOID;
   let reason = "Conditions are mixed and lack a statistical edge.";
 
@@ -3587,16 +3598,6 @@ function getSetupGradeClass(score) {
 
   return Math.max(20, Math.min(95, prob));
   }
-
-  const htfRSI = d.htfRSIState || "normal";
-const htfDoji = d.candle12h?.color === "doji";
-
-const htfExhausted =
-  (trend === "bullish" && htfRSI === "overbought") ||
-  (trend === "bearish" && htfRSI === "oversold");
-
-const htfIndecision =
-  htfDoji && htfRSI !== "normal";
   
 
 /* ================= ANALYZE ================= */
