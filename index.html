@@ -2485,81 +2485,94 @@ function findSwings(h, l, c, v){
   return false;
   }
 
-        function findLastTwoRSIHighs(rsiArr) {
-  const highs = [];
-
-  for (let i = 2; i < rsiArr.length - 2; i++) {
-    const v = rsiArr[i];
-    if (
-      v != null &&
-      v > rsiArr[i - 1] &&
-      v > rsiArr[i - 2] &&
-      v > rsiArr[i + 1] &&
-      v > rsiArr[i + 2]
-    ) {
-      highs.push({ index: i, value: v });
-    }
-  }
-
-  if (highs.length < 2) return null;
-  return highs.slice(-2);
-  }
-
   
 
-  function detect24hRSIMomentumShift(closes15m, rsi15m, mainTrend) {
+function detect24hRSIMomentumShift(closes15m, rsi15m, emaArr, mainTrend) {
   if (mainTrend !== "bullish" && mainTrend !== "bearish") return null;
   if (!rsi15m || rsi15m.length < 96) return null;
 
-  const startIndex = rsi15m.length - 96;
-  const recentRSI = rsi15m.slice(startIndex);
-  const recentCloses = closes15m.slice(startIndex);
+  const start = rsi15m.length - 96;
+  const rsi = rsi15m.slice(start);
+  const price = closes15m.slice(start);
+  const ema = emaArr.slice(start);
 
-  const swings = findLastTwoRSIHighs(recentRSI);
-  if (!swings) return null;
+  /* ================= FIND RSI SWINGS ================= */
+  const swings = [];
 
-  const [A, B] = swings; // A = older, B = newer
+  for (let i = 2; i < rsi.length - 2; i++) {
+    if (
+      rsi[i] != null &&
+      rsi[i] > rsi[i - 1] &&
+      rsi[i] > rsi[i - 2] &&
+      rsi[i] > rsi[i + 1] &&
+      rsi[i] > rsi[i + 2]
+    ) {
+      swings.push({ index: i, type: "high" });
+    }
 
-  const rsiA = A.value;
-  const rsiB = B.value;
+    if (
+      rsi[i] != null &&
+      rsi[i] < rsi[i - 1] &&
+      rsi[i] < rsi[i - 2] &&
+      rsi[i] < rsi[i + 1] &&
+      rsi[i] < rsi[i + 2]
+    ) {
+      swings.push({ index: i, type: "low" });
+    }
+  }
 
-  const priceA = recentCloses[A.index];
-  const priceB = recentCloses[B.index];
+  if (swings.length < 2) return null;
 
-  let bearish = false;
-  let bullish = false;
-
-  /* ================= 🔴 BEARISH MOMENTUM COLLAPSE ================= */
+  /* ================= BULLISH TREND: BEARISH MOMENTUM COLLAPSE ================= */
   if (mainTrend === "bullish") {
+    const highs = swings.filter(s => s.type === "high");
+    if (highs.length < 2) return null;
+
+    const A = highs[highs.length - 2].index;
+    const B = highs[highs.length - 1].index;
+
     if (
-      rsiA > rsiB &&                // RSI lower high
-      priceB >= priceA              // price holding / higher high
+      rsi[B] < rsi[A] &&          // RSI lower high
+      price[B] >= price[A] &&    // price holds / higher
+      price[B] >= ema[B]         // EMA support respected
     ) {
-      bearish = true;
+      return {
+        bearish: true,
+        bullish: false,
+        type: "rsi-divergence",
+        triggerIndex: start + B,
+        tf: "15m",
+        window: "24h"
+      };
     }
   }
 
-  /* ================= 🟢 BULLISH MOMENTUM RECOVERY ================= */
+  /* ================= BEARISH TREND: BULLISH MOMENTUM RECOVERY ================= */
   if (mainTrend === "bearish") {
+    const lows = swings.filter(s => s.type === "low");
+    if (lows.length < 2) return null;
+
+    const A = lows[lows.length - 2].index;
+    const B = lows[lows.length - 1].index;
+
     if (
-      rsiA < rsiB &&                // RSI higher low
-      priceB <= priceA              // price holding / lower low
+      rsi[B] > rsi[A] &&          // RSI higher low
+      price[B] <= price[A] &&    // price holds / lower
+      price[B] <= ema[B]         // EMA resistance respected
     ) {
-      bullish = true;
+      return {
+        bearish: false,
+        bullish: true,
+        type: "rsi-divergence",
+        triggerIndex: start + B,
+        tf: "15m",
+        window: "24h"
+      };
     }
   }
 
-  if (!bearish && !bullish) return null;
-
-  return {
-    bearish,
-    bullish,
-    type: bearish ? "momentum-collapse" : "momentum-recovery",
-    triggerIndex: startIndex + B.index,
-    tf: "15m",
-    window: "24h"
-  };
-  }
+  return null;
+}
 
   
 
