@@ -2485,94 +2485,110 @@ function findSwings(h, l, c, v){
   return false;
   }
 
-  
 
-function detect24hRSIMomentumShift(closes15m, rsi15m, emaArr, mainTrend) {
+  function detect24hRSIMomentumShift(closes15m, rsi15m, mainTrend) {
   if (mainTrend !== "bullish" && mainTrend !== "bearish") return null;
   if (!rsi15m || rsi15m.length < 96) return null;
 
-  const start = rsi15m.length - 96;
-  const rsi = rsi15m.slice(start);
-  const price = closes15m.slice(start);
-  const ema = emaArr.slice(start);
+  const startIndex = rsi15m.length - 96;
 
-  /* ================= FIND RSI SWINGS ================= */
-  const swings = [];
+  const recentRSI = rsi15m.slice(startIndex);
+  const recentCloses = closes15m.slice(startIndex);
 
-  for (let i = 2; i < rsi.length - 2; i++) {
-    if (
-      rsi[i] != null &&
-      rsi[i] > rsi[i - 1] &&
-      rsi[i] > rsi[i - 2] &&
-      rsi[i] > rsi[i + 1] &&
-      rsi[i] > rsi[i + 2]
-    ) {
-      swings.push({ index: i, type: "high" });
-    }
+  const cleanRSI = recentRSI.filter(v => v !== null);
+  if (cleanRSI.length < 20) return null;
 
-    if (
-      rsi[i] != null &&
-      rsi[i] < rsi[i - 1] &&
-      rsi[i] < rsi[i - 2] &&
-      rsi[i] < rsi[i + 1] &&
-      rsi[i] < rsi[i + 2]
-    ) {
-      swings.push({ index: i, type: "low" });
-    }
-  }
+  const rsiHigh  = Math.max(...cleanRSI);
+  const rsiLow   = Math.min(...cleanRSI);
+  const rsiRange = rsiHigh - rsiLow;
 
-  if (swings.length < 2) return null;
+  const priceHigh = Math.max(...recentCloses);
+  const priceLow  = Math.min(...recentCloses);
+  const priceRange = priceHigh - priceLow;
+  const lastPrice = recentCloses.at(-1);
 
-  /* ================= BULLISH TREND: BEARISH MOMENTUM COLLAPSE ================= */
+  let bearish = false;
+  let bullish = false;
+  let triggerIndex = null;
+
+  /* ================= 🔴 BEARISH MOMENTUM COLLAPSE ================= */
   if (mainTrend === "bullish") {
-    const highs = swings.filter(s => s.type === "high");
-    if (highs.length < 2) return null;
+    const priceHolding =
+      lastPrice > priceLow + priceRange * 0.5;
 
-    const A = highs[highs.length - 2].index;
-    const B = highs[highs.length - 1].index;
+    bearish =
+      rsiHigh >= 50 &&
+      rsiLow <= 50 &&
+      rsiRange >= 50 &&
+      priceHolding;
 
-    if (
-      rsi[B] < rsi[A] &&          // RSI lower high
-      price[B] >= price[A] &&    // price holds / higher
-      price[B] >= ema[B]         // EMA support respected
-    ) {
-      return {
-        bearish: true,
-        bullish: false,
-        type: "rsi-divergence",
-        triggerIndex: start + B,
-        tf: "15m",
-        window: "24h"
-      };
+    // 🔍 find LAST RSI cross below 50 while price held
+    if (bearish) {
+      for (let i = 1; i < recentRSI.length; i++) {
+        const prev = recentRSI[i - 1];
+        const curr = recentRSI[i];
+        const price = recentCloses[i];
+
+        if (
+          prev != null &&
+          curr != null &&
+          prev > 50 &&
+          curr <= 50 &&
+          price > priceLow + priceRange * 0.5
+        ) {
+          triggerIndex = startIndex + i;
+        }
+      }
     }
   }
 
-  /* ================= BEARISH TREND: BULLISH MOMENTUM RECOVERY ================= */
+  /* ================= 🟢 BULLISH MOMENTUM RECOVERY ================= */
   if (mainTrend === "bearish") {
-    const lows = swings.filter(s => s.type === "low");
-    if (lows.length < 2) return null;
+    const priceHolding =
+      lastPrice < priceLow + priceRange * 0.5;
 
-    const A = lows[lows.length - 2].index;
-    const B = lows[lows.length - 1].index;
+    bullish =
+      rsiLow <= 50 &&
+      rsiHigh >= 50 &&
+      rsiRange >= 50 &&
+      priceHolding;
 
-    if (
-      rsi[B] > rsi[A] &&          // RSI higher low
-      price[B] <= price[A] &&    // price holds / lower
-      price[B] <= ema[B]         // EMA resistance respected
-    ) {
-      return {
-        bearish: false,
-        bullish: true,
-        type: "rsi-divergence",
-        triggerIndex: start + B,
-        tf: "15m",
-        window: "24h"
-      };
+    // 🔍 find LAST RSI cross above 50 while price held
+    if (bullish) {
+      for (let i = 1; i < recentRSI.length; i++) {
+        const prev = recentRSI[i - 1];
+        const curr = recentRSI[i];
+        const price = recentCloses[i];
+
+        if (
+          prev != null &&
+          curr != null &&
+          prev < 50 &&
+          curr >= 50 &&
+          price < priceLow + priceRange * 0.5
+        ) {
+          triggerIndex = startIndex + i;
+        }
+      }
     }
   }
 
-  return null;
+  if (!bearish && !bullish) return null;
+
+    // 🔁 fallback: no clean cross, use last candle as trigger
+if (triggerIndex === null && (bearish || bullish)) {
+  triggerIndex = rsi15m.length - 1;
 }
+
+  return {
+    bearish,
+    bullish,
+    type: bearish ? "momentum-collapse" : "momentum-recovery",
+    triggerIndex,   // ✅ candle index where it last appeared
+    tf: "15m",
+    window: "24h"
+  };
+  }
 
   
 
