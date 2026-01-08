@@ -1531,10 +1531,20 @@ const HTF_TTL = 15 * 60 * 1000; // 15 minutes
     const low   = +c[3];
     const close = +c[4];
 
-    const color =
-      close > open ? "green" :
-      close < open ? "red" :
-      "doji";
+    const body = Math.abs(close - open);
+const range = high - low;
+
+let color = "doji";
+
+if (range > 0) {
+  if (body / range <= 0.2) {
+    color = "doji";
+  } else if (close > open) {
+    color = "green";
+  } else if (close < open) {
+    color = "red";
+  }
+}
 
     return {
       open,
