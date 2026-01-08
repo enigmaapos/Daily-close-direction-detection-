@@ -2626,23 +2626,17 @@ if (triggerIndex === null && (bearish || bullish)) {
   });
   }
 
-      function buildIntentLabel(attacker, structureResult, volumeResult) {
-  let label = `${attacker} ATTACK → ${structureResult}`;
-
-  if (volumeResult) {
-    label += ` (${volumeResult})`;
-  }
-
+      function buildIntentLabel(defender, outcome, context) {
+  let label = `${defender} DEFENSE → ${structureResult}`;
+  if (volumeResult) label += ` (${volumeResult})`;
   return label;
-      }
+}
 
   function normalizeTrendStructure(structure) {
   if (!structure) return null;
 
-  if (structure.includes("support holding")) return "SUPPORT HELD";
-  if (structure.includes("resistance holding")) return "RESISTANCE HELD";
-  if (structure.includes("support broken")) return "SUPPORT BROKEN";
-  if (structure.includes("resistance broken")) return "RESISTANCE BROKEN";
+  if (structure.includes("holding")) return "HELD";
+  if (structure.includes("broken")) return "FAILED";
 
   return null;
 }
@@ -2650,10 +2644,9 @@ if (triggerIndex === null && (bearish || bullish)) {
 function normalizeVolumeStructure(volStruct) {
   if (!volStruct) return null;
 
-  if (volStruct.includes("defended")) return "DEFENSE STRONG";
-  if (volStruct.includes("weak")) return "DEFENSE WEAK";
-  if (volStruct.includes("accepted")) return "ACCEPTED";
-  if (volStruct.includes("failed")) return "NO ACCEPTANCE";
+  if (volStruct.includes("defended")) return "STRONG";
+  if (volStruct.includes("weak")) return "WEAK";
+  if (volStruct.includes("unaccepted")) return "NO ACCEPTANCE";
 
   return null;
 }
