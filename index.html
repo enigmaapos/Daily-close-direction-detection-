@@ -4883,11 +4883,19 @@ else if (phase === "EARLY ACCUMULATION") {
 
   const text = intent;
 
+  const isBullishOutcome =
+    text.startsWith("BEARS DEFENSE → FAILED") ||
+    text.startsWith("BULLS ATTACK");
+
+  const isBearishOutcome =
+    text.startsWith("BULLS DEFENSE → FAILED") ||
+    text.startsWith("BEARS ATTACK");
+
   /* ================= DEFENSE STRONG ================= */
   if (text.includes("DEFENSE → HELD") && text.includes("STRONG")) {
     return {
       icon: "🛡",
-      cls: "bull", // successful defense in-trend
+      cls: "neutral",
       text
     };
   }
@@ -4905,7 +4913,7 @@ else if (phase === "EARLY ACCUMULATION") {
   if (text.includes("DEFENSE → FAILED")) {
     return {
       icon: "💥",
-      cls: "bear",
+      cls: isBullishOutcome ? "bull" : "bear",
       text
     };
   }
