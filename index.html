@@ -565,12 +565,11 @@ button.secondary{
   </select>
   
 
-  <select id="filterAttack">
-  <option value="all">All Attacks</option>
-  <option value="BULL">🐂 Bull Attacks</option>
-  <option value="BEAR">🐻 Bear Attacks</option>
-  <option value="NONE">No Attack</option>
-  </select>
+<select id="filterDefenseSide">
+  <option value="all">All Defenders</option>
+  <option value="BULLS">Bulls Defending</option>
+  <option value="BEARS">Bears Defending</option>
+</select>
 
     
     <select id="filterMomentum">
@@ -4670,7 +4669,7 @@ function applyFilters(){
   const vai = document.getElementById("filterVolAI")?.value || "all";
   const rrFilter = document.getElementById("filterRR")?.value || "all";
   const df = document.getElementById("filterDefense")?.value || "all";
-  const fa = document.getElementById("filterAttack")?.value || "all";
+  const fd = document.getElementById("filterDefenseSide")?.value || "all";
   const fm = document.getElementById("filterMomentum")?.value || "all";
 const r15 = document.getElementById("filterRsi15Context")?.value || "all";
   const filterHTFRSI =
@@ -4738,11 +4737,11 @@ if (filterHTFRSI !== "all") {
     }
 
     // ================= ATTACK INTENT FILTER =================
-    if (fa !== "all") {
-      if ((c.dataset.attack || "NONE") !== fa) {
-        ok = false;
-      }
-    }
+    if (fd !== "all") {
+  if ((c.dataset.defender || "NONE") !== fd) {
+    ok = false;
+  }
+}
 
     // ================= MOMENTUM SHIFT FILTER =================
     if (fm !== "all") {
@@ -4777,6 +4776,7 @@ if (filterHTFRSI !== "all") {
            document.getElementById("filterMomentum").value = "all";
            document.getElementById("filterHTFRSI").value = "all";
            document.getElementById("filter12hCandle").value = "all";
+           document.getElementById("filterDefenseSide")?.value || "all";
            
            
            
@@ -5048,12 +5048,12 @@ if (rrDisplay !== null) {
   delete card.dataset.tpprob;
     }
 
-  const attackSide =
-  d.breakIntent?.startsWith("BULL ATTACK") ? "BULL" :
-  d.breakIntent?.startsWith("BEAR ATTACK") ? "BEAR" :
+  const defenderSide =
+  d.breakIntent?.startsWith("BULLS DEFENSE") ? "BULLS" :
+  d.breakIntent?.startsWith("BEARS DEFENSE") ? "BEARS" :
   "NONE";
 
-card.dataset.attack = attackSide;
+card.dataset.defender = defenderSide;
 
     if (el.id === "searchGrid") {
   card.dataset.manual = "true";
@@ -6206,7 +6206,7 @@ async function runSearch(){
   "filterExecution",
   "filterRR",
     "filterDefense",
-    "filterAttack",
+    "filterDefenseSide",
     "filterMomentum",
     "filterRsi15Context",
     "filterHTFRSI",
