@@ -4363,21 +4363,25 @@ else if (structure.includes("resistance failed"))
 else if (structure.includes("resistance broken"))
   structureType = "resistance broken";
 
+
   /* ================= VOLUME STRUCTURE QUALITY ================= */
 let volumeQuality = "none";
 
-if (volumeStructure?.name?.includes("(accepted)")) {
+const vName = d.volumeStructure?.name || "";
+
+if (vName.includes("unaccepted")) {
+  volumeQuality = "unaccepted";
+}
+else if (vName.includes("accepted")) {
   volumeQuality = "accepted";
 }
-else if (volumeStructure?.name?.includes("(confirmed)")) {
+else if (vName.includes("confirmed")) {
   volumeQuality = "confirmed";
 }
-else if (volumeStructure?.name?.includes("weak")) {
+else if (vName.includes("weak")) {
   volumeQuality = "weak";
 }
-else if (volumeStructure?.name?.includes("unaccepted")) {
-  volumeQuality = "unaccepted";
-  }
+
 
   /* ================= STRONG ZONE DEFENSE ================= */
 
@@ -5058,12 +5062,7 @@ card.dataset.structureQuality =
   d.structure.includes("weak") ? "weak" :
   "none";
 
-  card.dataset.volumeQuality =
-  d.volumeStructure?.name?.includes("unaccepted") ? "unaccepted" :
-  d.volumeStructure?.name?.includes("accepted")   ? "accepted"   :
-  d.volumeStructure?.name?.includes("confirmed")  ? "confirmed"  :
-  d.volumeStructure?.name?.includes("weak")       ? "weak"       :
-  "none";
+  card.dataset.volumeQuality = volumeQuality;
   
 
     
