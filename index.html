@@ -771,12 +771,12 @@ document.addEventListener("keydown", unlockAudio, { once: true });
 });
 
 scanGreen.addEventListener("change", () => {
-  localStorage.setItem("scanGreen", scanGreen.checked);
+  localStorage.setItem("scanGreen", scanGreen);
   onScanControlChange();
 });
 
 scanRed.addEventListener("change", () => {
-  localStorage.setItem("scanRed", scanRed.checked);
+  localStorage.setItem("scanRed", scanRed);
   onScanControlChange();
 });
 
