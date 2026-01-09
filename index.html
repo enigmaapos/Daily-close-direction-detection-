@@ -4744,9 +4744,11 @@ const r15 = document.getElementById("filterRsi15Context")?.value || "all";
     if (ez !== "all" && c.dataset.execution !== ez) ok = false;
     if (vai !== "all" && c.dataset.volai !== vai) ok = false;
 
-   if (fv !== "all" && c.dataset.volumeQuality !== fv) {
+        if (fv !== "all") {
+  if ((c.dataset.volumeQuality || "none") !== fv) {
     ok = false;
   }
+        }
 
     
 if (
@@ -5060,7 +5062,12 @@ card.dataset.structureQuality =
   d.structure.includes("weak") ? "weak" :
   "none";
 
-  card.dataset.volumeQuality = volumeQuality;
+   card.dataset.volumeQuality =
+  d.volumeStructure?.name?.includes("unaccepted") ? "unaccepted" :
+  d.volumeStructure?.name?.includes("accepted")   ? "accepted"   :
+  d.volumeStructure?.name?.includes("confirmed")  ? "confirmed"  :
+  d.volumeStructure?.name?.includes("weak")       ? "weak"       :
+  "none";
   
 
     
