@@ -4733,7 +4733,7 @@ const r15 = document.getElementById("filterRsi15Context")?.value || "all";
   document.getElementById("filterHTFRSI")?.value || "all";
   const f12h =
   (document.getElementById("filter12hCandle")?.value || "all").toLowerCase();
-  const fv = document.getElementById("filterVolumeStructure")?.value || "all";
+  const fv = document.getElementById("filterVolumeQuality")?.value || "all";
 
   
   document.querySelectorAll(".card").forEach(c => {
@@ -4759,7 +4759,7 @@ const r15 = document.getElementById("filterRsi15Context")?.value || "all";
     if (ez !== "all" && c.dataset.execution !== ez) ok = false;
     if (vai !== "all" && c.dataset.volai !== vai) ok = false;
 
-   if (fv !== "all" && c.dataset.volstructure !== fv) {
+   if (fv !== "all" && c.dataset.volumeQuality !== fv) {
     ok = false;
   }
 
@@ -4840,7 +4840,7 @@ if (filterHTFRSI !== "all") {
            document.getElementById("filterHTFRSI").value = "all";
            document.getElementById("filter12hCandle").value = "all";
            document.getElementById("filterDefenseSide")?.value || "all";
-           document.getElementById("filterVolumeStructure")?.value || "all";
+           document.getElementById("filterVolumeQuality")?.value || "all";
            
 
            
@@ -5089,11 +5089,11 @@ card.dataset.structureQuality =
   d.structure.includes("weak") ? "weak" :
   "none";
 
-  card.dataset.volstructure =
-  volumeStructure?.name?.includes("unaccepted") ? "unaccepted" :
-  volumeStructure?.name?.includes("accepted")   ? "accepted"   :
-  volumeStructure?.name?.includes("confirmed")  ? "confirmed"  :
-  volumeStructure?.name?.includes("weak")       ? "weak"       :
+  card.dataset.volumeQuality =
+  d.volumeStructure?.name?.includes("unaccepted") ? "unaccepted" :
+  d.volumeStructure?.name?.includes("accepted")   ? "accepted"   :
+  d.volumeStructure?.name?.includes("confirmed")  ? "confirmed"  :
+  d.volumeStructure?.name?.includes("weak")       ? "weak"       :
   "none";
   
 
@@ -6286,7 +6286,7 @@ async function runSearch(){
     "filterRsi15Context",
     "filterHTFRSI",
     "filter12hCandle",
-    "filterVolumeStructure"
+    "filterVolumeQuality"
 ].forEach(id=>{
   document.getElementById(id)?.addEventListener("change", applyFilters);
 });
