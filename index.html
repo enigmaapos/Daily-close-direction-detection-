@@ -2603,15 +2603,28 @@ if (triggerIndex === null && (bearish || bullish)) {
 
   function isMomentumResolved({
   momentumAttack,
-  intradayRSIDiv,
-  rsi15Momentum
+  activeMomentum,
+  closes,
+  ema
 }) {
-  return (
-    momentumAttack !== null &&
-    intradayRSIDiv === null &&
-    !["accel", "reclaim"].includes(rsi15Momentum)
-  );
+  if (!activeMomentum) return false;
+
+  const i = activeMomentum.triggerIndex;
+  const priceNow = closes.at(-1);
+
+  // bearish collapse resolves if price breaks EMA
+  if (momentumAttack === "bearish") {
+    return priceNow < ema.at(-1);
+  }
+
+  // bullish recovery resolves if price breaks below EMA
+  if (momentumAttack === "bullish") {
+    return priceNow > ema.at(-1);
+  }
+
+  return false;
 }
+  
 
   function getPHTriggerTime(rsiMomentumAge) {
   if (rsiMomentumAge == null) return null;
