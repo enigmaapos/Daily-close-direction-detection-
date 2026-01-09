@@ -436,6 +436,15 @@ button.secondary{
 <option value="none">No Volume Structure</option>
   </select>
 
+  <select id="filterBreakIntent">
+  <option value="all">All Break Intent</option>
+  <option value="PROBING">Probing</option>
+  <option value="HELD">Defense Held</option>
+  <option value="WEAKENING">Defense Weakening</option>
+  <option value="FAILED">Defense Failed</option>
+  <option value="PRESSURE">Under Pressure</option>
+  </select>
+
   <select id="filterRsi15Context">
     <option value="all">All RSI 15m</option>
     <option value="MAX ZONE PUMP">MAX ZONE PUMP</option>
@@ -4719,6 +4728,9 @@ const r15 = document.getElementById("filterRsi15Context")?.value || "all";
   const f12h =
   (document.getElementById("filter12hCandle")?.value || "all").toLowerCase();
   const fv = document.getElementById("filterVolumeQuality")?.value || "all";
+  const intentFilter =
+    document.getElementById("filterBreakIntent")?.value || "all";
+  
 
   
   document.querySelectorAll(".card").forEach(c => {
@@ -4799,6 +4811,12 @@ if (filterHTFRSI !== "all") {
       if (fm !== rsiMomentumShift) ok = false;
     }
 
+      // ================= BREAK INTENT FILTER =================
+if (intentFilter !== "all") {
+  const breakIntent = card.dataset.breakIntent || "PROBING";
+  if (intentFilter !== breakIntent) ok = false;
+}
+
     c.style.display = ok ? "" : "none";
   });
     }
@@ -4828,6 +4846,8 @@ if (filterHTFRSI !== "all") {
            document.getElementById("filter12hCandle").value = "all";
            document.getElementById("filterDefenseSide").value = "all";
            document.getElementById("filterVolumeQuality").value = "all";
+           document.getElementById("filterBreakIntent").value = "all";
+  
            
 
            
@@ -5068,6 +5088,17 @@ card.dataset.structureQuality =
   d.volumeStructure?.name?.includes("confirmed")  ? "confirmed"  :
   d.volumeStructure?.name?.includes("weak")       ? "weak"       :
   "none";
+
+                      const intent = classifyBreakIntent(d);
+
+const intentKey =
+  intent.includes("FAILED")      ? "FAILED" :
+  intent.includes("WEAKENING")   ? "WEAKENING" :
+  intent.includes("HELD")        ? "HELD" :
+  intent.includes("PRESSURE")    ? "PRESSURE" :
+  "PROBING";
+
+card.dataset.breakIntent = intentKey;
   
 
     
@@ -6262,7 +6293,8 @@ async function runSearch(){
     "filterRsi15Context",
     "filterHTFRSI",
     "filter12hCandle",
-    "filterVolumeQuality"
+    "filterVolumeQuality",
+    "filterBreakIntent"
 ].forEach(id=>{
   document.getElementById(id)?.addEventListener("change", applyFilters);
 });
