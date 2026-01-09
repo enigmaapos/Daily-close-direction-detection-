@@ -4380,6 +4380,22 @@ else if (structure.includes("resistance failed"))
 else if (structure.includes("resistance broken"))
   structureType = "resistance broken";
 
+  /* ================= VOLUME STRUCTURE QUALITY ================= */
+let volumeQuality = "none";
+
+if (volumeStructure?.name?.includes("(accepted)")) {
+  volumeQuality = "accepted";
+}
+else if (volumeStructure?.name?.includes("(confirmed)")) {
+  volumeQuality = "confirmed";
+}
+else if (volumeStructure?.name?.includes("weak")) {
+  volumeQuality = "weak";
+}
+else if (volumeStructure?.name?.includes("unaccepted")) {
+  volumeQuality = "unaccepted";
+  }
+
   /* ================= STRONG ZONE DEFENSE ================= */
 
 let strongZoneDefended = false;
@@ -4747,8 +4763,6 @@ const r15 = document.getElementById("filterRsi15Context")?.value || "all";
     ok = false;
   }
 
-  c.style.display = ok ? "" : "none";
-});
     
 if (
   f12h !== "all" &&
@@ -4826,7 +4840,7 @@ if (filterHTFRSI !== "all") {
            document.getElementById("filterHTFRSI").value = "all";
            document.getElementById("filter12hCandle").value = "all";
            document.getElementById("filterDefenseSide")?.value || "all";
-           document.getElementById("filterVolumeStructure")?.value || "all";
+           
 
            
            
@@ -5073,6 +5087,8 @@ card.dataset.structureQuality =
   d.structure.includes("confirmed") ? "confirmed" :
   d.structure.includes("weak") ? "weak" :
   "none";
+
+  card.dataset.volstructure = volumeQuality;
 
     
 
