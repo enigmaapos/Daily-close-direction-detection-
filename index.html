@@ -4343,11 +4343,11 @@ prob = Math.max(40, Math.min(prob, 95));
 /* ================= STRUCTURE QUALITY ================= */
 let structureQuality = "unaccepted";
 
-if (structure.includes("(accepted)"))
+if (volumeStructure.includes("(accepted)"))
   structureQuality = "accepted";
-else if (structure.includes("(confirmed)"))
+else if (volumeStructure.includes("(confirmed)"))
   structureQuality = "confirmed";
-else if (structure.includes("weak"))
+else if (volumeStructure.includes("weak"))
   structureQuality = "weak";
   
 
