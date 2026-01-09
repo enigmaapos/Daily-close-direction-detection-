@@ -4364,22 +4364,20 @@ else if (structure.includes("resistance broken"))
   structureType = "resistance broken";
 
 
-  /* ================= VOLUME STRUCTURE QUALITY ================= */
+/* ================= VOLUME STRUCTURE QUALITY ================= */
 let volumeQuality = "none";
 
-const vName = d.volumeStructure?.name || "";
-
-if (vName.includes("unaccepted")) {
-  volumeQuality = "unaccepted";
-}
-else if (vName.includes("accepted")) {
+if (volumeStructure?.name?.includes("(accepted)")) {
   volumeQuality = "accepted";
 }
-else if (vName.includes("confirmed")) {
+else if (volumeStructure?.name?.includes("(confirmed)")) {
   volumeQuality = "confirmed";
 }
-else if (vName.includes("weak")) {
+else if (volumeStructure?.name?.includes("weak")) {
   volumeQuality = "weak";
+}
+else if (volumeStructure?.name?.includes("unaccepted")) {
+  volumeQuality = "unaccepted";
 }
 
 
