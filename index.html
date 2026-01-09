@@ -5242,24 +5242,6 @@ ${d.setupScore ? `
   </div>
 ` : ""}
 
-<div class="prob ${
-    d.bias.includes("Bull") ? "bull" :
-    d.bias.includes("Bear") ? "bear" : "neutral"
-  }">
-    ${d.bias} — ${d.prob}%
-  </div>
-
-  ${d.directionalBias ? `
-  <div class="muted ${
-    d.directionalBias.bias.includes("Bullish") ? "bull" :
-    d.directionalBias.bias.includes("Bearish") ? "bear" :
-    "neutral"
-  }">
-    🧭 Directional Bias: <b>${d.directionalBias.bias}</b>
-    <br>
-    <span class="muted">${d.directionalBias.reason}</span>
-  </div>
-` : ""}
 
   <b>${d.sym}</b>
   <div class="muted">Price: ${d.price.toFixed(4)}</div>
@@ -5342,6 +5324,25 @@ ${typeof d.ema70DistPct === "number" ? `
 ${d.structure === "none" && d.volumeStructure?.name !== "none" ? `
   <div class="muted neutral">
     ⏳ Volume pressure detected — waiting for structure confirmation
+  </div>
+` : ""}
+
+<div class="prob ${
+    d.bias.includes("Bull") ? "bull" :
+    d.bias.includes("Bear") ? "bear" : "neutral"
+  }">
+    ${d.bias} — ${d.prob}%
+  </div>
+
+  ${d.directionalBias ? `
+  <div class="muted ${
+    d.directionalBias.bias.includes("Bullish") ? "bull" :
+    d.directionalBias.bias.includes("Bearish") ? "bear" :
+    "neutral"
+  }">
+    🧭 Directional Bias: <b>${d.directionalBias.bias}</b>
+    <br>
+    <span class="muted">${d.directionalBias.reason}</span>
   </div>
 ` : ""}
 
