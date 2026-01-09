@@ -5407,100 +5407,6 @@ ${d.breakIntent ? (() => {
   return out;
 })() : ""}
 
-
-<div class="muted ${rsiShiftClass}">
-  🧭 24h RSI Momentum Shift (15m):
-  <b>
-    ${
-      d.intradayRSIDiv
-        ? d.intradayRSIDiv.bearish
-          ? "Bearish Momentum Collapse"
-          : d.intradayRSIDiv.bullish
-          ? "Bullish Momentum Recovery"
-          : "Momentum Unstable"
-        : "None"
-    }
-  </b>
-</div>
-
-${d.intradayRSIDiv ? (() => {
-  const triggerTimePH = getPHTriggerTime(d.intradayRSIDiv.age);
-
-  return `
-    <div class="muted">
-      📍 Trigger Index:
-      <b>${d.intradayRSIDiv.triggerIndex}</b>
-    </div>
-
-    <div class="muted">
-      ⏱ Age:
-      <b>${d.intradayRSIDiv.age} candles ago</b>
-    </div>
-
-    ${triggerTimePH ? `
-      <div class="muted">
-        🕒 Trigger Time (PH):
-        <b>${triggerTimePH}</b>
-      </div>
-    ` : ""}
-  `;
-})() : ""}
-     
-
-
-      <div class="bias-chart-wrap">
-      <div class="bias-accumulation">
-  <div>
-    🧠 Bias Accumulation:
-    <b id="biasAcc-${d.sym}">—</b>
-  </div>
-  <div class="muted">
-    RAW:
-    <span id="rawBiasAcc-${d.sym}">—</span>
-  </div>
-</div>
-
-  <canvas class="bias-chart" width="320" height="160"></canvas>
-</div>
-
-${d.marketPhase ? `
-  <div class="muted ${d.marketPhase.cls}">
-    ${phaseIcon} Market Phase: <b>${d.marketPhase.phase}</b><br>
-    <span class="muted">${d.marketPhase.reason}</span><br>
-    <span class="muted">
-      Bias Acc: ${d.marketPhase.interpAcc}
-      · RAW: ${d.marketPhase.rawAcc}
-    </span>
-  </div>
-` : ""}
-
-
-<div class="muted ${aiVerdict.verdictClass}">
-    🧠 AI Verdict: <b>${aiVerdict.verdict}</b>
-  </div>
-
-  <div class="muted ${aiVerdict.verdictClass}">
-    ${aiVerdict.tierLabel}
-  </div>
-
-  <div class="muted">
-    ${aiVerdict.reason}
-  </div>
-
-
-  ${d.S[0] ? `<div class="muted bear">S1: ${d.S[0].toFixed(4)}</div>` : ""}
-  ${d.S[1] ? `<div class="muted bear">S2: ${d.S[1].toFixed(4)}</div>` : ""}
-  ${d.R[0] ? `<div class="muted bull">R1: ${d.R[0].toFixed(4)}</div>` : ""}
-  ${d.R[1] ? `<div class="muted bull">R2: ${d.R[1].toFixed(4)}</div>` : ""}
-
-
-${(d.rsiMomentumShift && d.momentumCollapseDone) ? `
-  <div class="muted">
-    🧭 Prior Momentum Shift:
-    ${d.rsiMomentumShift.bearish ? "Bearish" : "Bullish"} (Resolved)
-  </div>
-` : ""}
-
 ${d.structureIntent ? (() => {
   let out = "";
 
@@ -5579,6 +5485,98 @@ ${d.structureIntent ? (() => {
 
   return out;
 })() : ""}
+
+<div class="muted ${rsiShiftClass}">
+  🧭 24h RSI Momentum Shift (15m):
+  <b>
+    ${
+      d.intradayRSIDiv
+        ? d.intradayRSIDiv.bearish
+          ? "Bearish Momentum Collapse"
+          : d.intradayRSIDiv.bullish
+          ? "Bullish Momentum Recovery"
+          : "Momentum Unstable"
+        : "None"
+    }
+  </b>
+</div>
+
+${(d.rsiMomentumShift && d.momentumCollapseDone) ? `
+  <div class="muted">
+    🧭 Prior Momentum Shift:
+    ${d.rsiMomentumShift.bearish ? "Bearish" : "Bullish"} (Resolved)
+  </div>
+` : ""}
+
+${d.intradayRSIDiv ? (() => {
+  const triggerTimePH = getPHTriggerTime(d.intradayRSIDiv.age);
+
+  return `
+    <div class="muted">
+      📍 Trigger Index:
+      <b>${d.intradayRSIDiv.triggerIndex}</b>
+    </div>
+
+    <div class="muted">
+      ⏱ Age:
+      <b>${d.intradayRSIDiv.age} candles ago</b>
+    </div>
+
+    ${triggerTimePH ? `
+      <div class="muted">
+        🕒 Trigger Time (PH):
+        <b>${triggerTimePH}</b>
+      </div>
+    ` : ""}
+  `;
+})() : ""}
+     
+
+
+      <div class="bias-chart-wrap">
+      <div class="bias-accumulation">
+  <div>
+    🧠 Bias Accumulation:
+    <b id="biasAcc-${d.sym}">—</b>
+  </div>
+  <div class="muted">
+    RAW:
+    <span id="rawBiasAcc-${d.sym}">—</span>
+  </div>
+</div>
+
+  <canvas class="bias-chart" width="320" height="160"></canvas>
+</div>
+
+${d.marketPhase ? `
+  <div class="muted ${d.marketPhase.cls}">
+    ${phaseIcon} Market Phase: <b>${d.marketPhase.phase}</b><br>
+    <span class="muted">${d.marketPhase.reason}</span><br>
+    <span class="muted">
+      Bias Acc: ${d.marketPhase.interpAcc}
+      · RAW: ${d.marketPhase.rawAcc}
+    </span>
+  </div>
+` : ""}
+
+
+<div class="muted ${aiVerdict.verdictClass}">
+    🧠 AI Verdict: <b>${aiVerdict.verdict}</b>
+  </div>
+
+  <div class="muted ${aiVerdict.verdictClass}">
+    ${aiVerdict.tierLabel}
+  </div>
+
+  <div class="muted">
+    ${aiVerdict.reason}
+  </div>
+
+
+  ${d.S[0] ? `<div class="muted bear">S1: ${d.S[0].toFixed(4)}</div>` : ""}
+  ${d.S[1] ? `<div class="muted bear">S2: ${d.S[1].toFixed(4)}</div>` : ""}
+  ${d.R[0] ? `<div class="muted bull">R1: ${d.R[0].toFixed(4)}</div>` : ""}
+  ${d.R[1] ? `<div class="muted bull">R2: ${d.R[1].toFixed(4)}</div>` : ""}
 
 
   <div class="muted ${
