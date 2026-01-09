@@ -2682,59 +2682,41 @@ function normalizeVolumeStructure(volStruct) {
 
 /* ================= BREAK INTENT CLASSIFIER (ALIGNED) ================= */
 function classifyBreakIntent(d) {
-  const trend = d.mainTrend;              // bullish | bearish
+  const trend = d.mainTrend;
   const dominantBull = d.bull;
   const momentum = d.rsiMomentumShift;
 
   const structureResult = normalizeTrendStructure(d.structure);
   const volumeResult = normalizeVolumeStructure(d.volumeStructure?.name);
 
-  // === FIXED ROLES ===
-  const trendAttacker = trend === "bullish" ? "BULLS" : "BEARS";
   const trendDefender = dominantBull ? "BULLS" : "BEARS";
-  /* ================= STRONG ZONE OVERRIDE ================= */
+
   if (d.strongZoneDefended) {
     return `${trendDefender} DEFENSE → STRONG (${structureResult || "ZONE HELD"})`;
   }
 
   if (!structureResult) {
-    return "NO CLEAR STRUCTURE";
+    return `${trendDefender} DEFENSE → PROBING`;
   }
 
-  /* ================= DEFENSE OUTCOME ================= */
-
-  // ✅ Defense held
-  if (
-    structureResult.includes("HELD") &&
-    volumeResult === "DEFENSE STRONG"
-  ) {
+  if (structureResult === "HELD" && volumeResult === "STRONG") {
     return `${trendDefender} DEFENSE → HELD (STRONG)`;
   }
 
-  // ⚠️ Defense weakening
-  if (
-    structureResult.includes("HELD") &&
-    volumeResult === "DEFENSE WEAK"
-  ) {
+  if (structureResult === "HELD" && volumeResult === "WEAK") {
     return `${trendDefender} DEFENSE → WEAKENING`;
   }
 
-  // ❌ Defense failed (structure broken)
-  if (
-    structureResult.includes("BROKEN")
-  ) {
-    return `${trendDefender} DEFENSE → FAILED (${structureResult})`;
+  if (structureResult === "FAILED") {
+    return `${trendDefender} DEFENSE → FAILED`;
   }
-
-  /* ================= MOMENTUM CONTEXT ================= */
 
   if (momentum?.bullish || momentum?.bearish) {
-    return `${trendDefender} DEFENSE → UNDER PRESSURE (Momentum Shift)`;
+    return `${trendDefender} DEFENSE → UNDER PRESSURE`;
   }
 
-  /* ================= FALLBACK ================= */
   return `${trendDefender} DEFENSE → PROBING`;
-}
+       }
     
 
     
@@ -4942,24 +4924,17 @@ else if (phase === "EARLY ACCUMULATION") {
 
   const text = intent;
 
-  const isBullishOutcome =
-    text.startsWith("BEARS DEFENSE → FAILED") ||
-    text.startsWith("BULLS ATTACK");
+  const isBullishOutcome = text.startsWith("BEARS DEFENSE → FAILED");
+  const isBearishOutcome = text.startsWith("BULLS DEFENSE → FAILED");
 
-  const isBearishOutcome =
-    text.startsWith("BULLS DEFENSE → FAILED") ||
-    text.startsWith("BEARS ATTACK");
-
-  /* ================= DEFENSE STRONG ================= */
   if (text.includes("DEFENSE → HELD") && text.includes("STRONG")) {
     return {
       icon: "🛡",
-      cls: "neutral",
+      cls: text.startsWith("BULLS") ? "bull" : "bear",
       text
     };
   }
 
-  /* ================= DEFENSE WEAKENING ================= */
   if (text.includes("DEFENSE → WEAKENING")) {
     return {
       icon: "⚠️",
@@ -4968,7 +4943,6 @@ else if (phase === "EARLY ACCUMULATION") {
     };
   }
 
-  /* ================= DEFENSE FAILED ================= */
   if (text.includes("DEFENSE → FAILED")) {
     return {
       icon: "💥",
@@ -4977,7 +4951,6 @@ else if (phase === "EARLY ACCUMULATION") {
     };
   }
 
-  /* ================= MOMENTUM PRESSURE ================= */
   if (text.includes("UNDER PRESSURE")) {
     return {
       icon: "🌀",
@@ -4986,11 +4959,7 @@ else if (phase === "EARLY ACCUMULATION") {
     };
   }
 
-  /* ================= PROBING / NO STRUCTURE ================= */
-  if (
-    text.includes("PROBING") ||
-    text.includes("NO CLEAR")
-  ) {
+  if (text.includes("PROBING") || text.includes("NO CLEAR")) {
     return {
       icon: "🧠",
       cls: "neutral",
@@ -4998,7 +4967,6 @@ else if (phase === "EARLY ACCUMULATION") {
     };
   }
 
-  /* ================= FALLBACK ================= */
   return {
     icon: "🧠",
     cls: "neutral",
