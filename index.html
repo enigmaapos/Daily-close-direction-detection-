@@ -5386,27 +5386,6 @@ ${(d.defenseFailure && d.defenseFailure !== "NONE") || d.trendStructureRisk
   : ""} 
 
 
-${d.breakIntent ? (() => {
-  const bi = formatBreakIntent(d.breakIntent);
-  if (!bi) return "";
-
-  let out = `
-    <div class="muted ${bi.cls}">
-      ${bi.icon} <b>Break Intent:</b> ${bi.text}
-    </div>
-  `;
-
-  if (d.strongZoneDefended) {
-    out += `
-      <div class="muted" style="color:#22c55e;font-weight:600">
-        🛡 Strong Zone Defended (Post-Momentum)
-      </div>
-    `;
-  }
-
-  return out;
-})() : ""}
-
 ${d.structureIntent ? (() => {
   let out = "";
 
@@ -5452,7 +5431,7 @@ ${d.structureIntent ? (() => {
         ? "bear"
         : "neutral"
     }">
-      🧭 <b>Pressure:</b> ${d.pressure}
+      🧭 <b>RSI Pressure:</b> ${d.pressure}
     </div>
   `;
 
@@ -5465,7 +5444,7 @@ ${d.structureIntent ? (() => {
         ? "neutral"
         : "muted"
     }">
-      🧠 <b>Structure Intent:</b> ${d.structureIntent}
+      🧠 <b>Trend Structure Intent:</b> ${d.structureIntent}
     </div>
   `;
 
@@ -5485,6 +5464,28 @@ ${d.structureIntent ? (() => {
 
   return out;
 })() : ""}
+
+${d.breakIntent ? (() => {
+  const bi = formatBreakIntent(d.breakIntent);
+  if (!bi) return "";
+
+  let out = `
+    <div class="muted ${bi.cls}">
+      ${bi.icon} <b>Volume Break Intent:</b> ${bi.text}
+    </div>
+  `;
+
+  if (d.strongZoneDefended) {
+    out += `
+      <div class="muted" style="color:#22c55e;font-weight:600">
+        🛡 Strong Zone Defended (Post-Momentum)
+      </div>
+    `;
+  }
+
+  return out;
+})() : ""}
+
 
 <div class="muted ${rsiShiftClass}">
   🧭 24h RSI Momentum Shift (15m):
