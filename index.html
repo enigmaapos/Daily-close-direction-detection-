@@ -4082,7 +4082,20 @@ const momentumCollapseDone = isMomentumResolved({
   rsi15Momentum
 });
 
-  const rsiMomentumShift = intradayRSIDiv;
+    let uiMomentum = null;
+
+if (activeMomentum) {
+  uiMomentum = {
+    direction: activeMomentum.bearish
+      ? "bearish"
+      : activeMomentum.bullish
+      ? "bullish"
+      : null,
+    age: rsiMomentumAge
+  };
+  }
+
+  const rsiMomentumShift = uiMomentum;
 
   const volumeStructure = {
   name: "none",
@@ -5515,10 +5528,10 @@ ${d.breakIntent ? (() => {
   </b>
 </div>
 
-${(d.rsiMomentumShift && d.momentumCollapseDone) ? `
+${momentumCollapseDone ? `
   <div class="muted">
     🧭 Prior Momentum Shift:
-    ${d.rsiMomentumShift.bearish ? "Bearish" : "Bullish"} (Resolved)
+    <b>${momentumAttack === "bearish" ? "Bearish" : "Bullish"} (Resolved)</b>
   </div>
 ` : ""}
 
