@@ -5259,6 +5259,48 @@ ${d.setupScore ? `
   (Net ${d.marketDom?.net ?? "—"}%)
 </div>
 
+
+<div class="prob ${
+    d.bias.includes("Bull") ? "bull" :
+    d.bias.includes("Bear") ? "bear" : "neutral"
+  }">
+    ${d.bias} — ${d.prob}%
+  </div>
+
+  ${d.directionalBias ? `
+  <div class="muted ${
+    d.directionalBias.bias.includes("Bullish") ? "bull" :
+    d.directionalBias.bias.includes("Bearish") ? "bear" :
+    "neutral"
+  }">
+    🧭 Directional Bias: <b>${d.directionalBias.bias}</b>
+    <br>
+    <span class="muted">${d.directionalBias.reason}</span>
+  </div>
+` : ""}
+
+  ${d.breakIntent ? (() => {
+  const bi = formatBreakIntent(d.breakIntent);
+  if (!bi) return "";
+
+  let out = `
+    <div class="muted ${bi.cls}">
+      ${bi.icon} <b>Volume Break Intent:</b> ${bi.text}
+    </div>
+  `;
+
+  if (d.strongZoneDefended) {
+    out += `
+      <div class="muted" style="color:#22c55e;font-weight:600">
+        🛡 Strong Zone Defended (Post-Momentum)
+      </div>
+    `;
+  }
+
+  return out;
+})() : ""}
+
+
   <div class="muted ${d.bull ? "bull" : "bear"}">
     Dominant Volume: <b>${d.bull ? "BUYERS" : "SELLERS"}</b>
   </div>
@@ -5326,46 +5368,6 @@ ${d.structure === "none" && d.volumeStructure?.name !== "none" ? `
     ⏳ Volume pressure detected — waiting for structure confirmation
   </div>
 ` : ""}
-
-<div class="prob ${
-    d.bias.includes("Bull") ? "bull" :
-    d.bias.includes("Bear") ? "bear" : "neutral"
-  }">
-    ${d.bias} — ${d.prob}%
-  </div>
-
-  ${d.directionalBias ? `
-  <div class="muted ${
-    d.directionalBias.bias.includes("Bullish") ? "bull" :
-    d.directionalBias.bias.includes("Bearish") ? "bear" :
-    "neutral"
-  }">
-    🧭 Directional Bias: <b>${d.directionalBias.bias}</b>
-    <br>
-    <span class="muted">${d.directionalBias.reason}</span>
-  </div>
-` : ""}
-
-  ${d.breakIntent ? (() => {
-  const bi = formatBreakIntent(d.breakIntent);
-  if (!bi) return "";
-
-  let out = `
-    <div class="muted ${bi.cls}">
-      ${bi.icon} <b>Volume Break Intent:</b> ${bi.text}
-    </div>
-  `;
-
-  if (d.strongZoneDefended) {
-    out += `
-      <div class="muted" style="color:#22c55e;font-weight:600">
-        🛡 Strong Zone Defended (Post-Momentum)
-      </div>
-    `;
-  }
-
-  return out;
-})() : ""}
 
 
 ${d.dailyRSI ? `
