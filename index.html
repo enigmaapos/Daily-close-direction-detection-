@@ -2661,19 +2661,10 @@ if (triggerIndex === null && (bearish || bullish)) {
   return label;
 }
 
-  function normalizeTrendStructure(structure) {
-  if (!structure) return null;
-
-  if (structure.includes("broken")) return "HELD";
-  if (structure.includes("weak")) return "FAILED";
-
-  return null;
-}
-
 function normalizeVolumeStructure(volStruct) {
   if (!volStruct) return null;
 
-  if (volStruct.includes("defended")) return "STRONG";
+  if (volStruct.includes("accepted")) return "STRONG";
   if (volStruct.includes("weak")) return "WEAK";
   if (volStruct.includes("unaccepted")) return "NO ACCEPTANCE";
 
