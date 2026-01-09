@@ -4347,22 +4347,6 @@ if (defenseFailure === "CRITICAL FAILURE") {
 prob = Math.max(40, Math.min(prob, 95));
 
 
-  /* ================= VOLUME STRUCTURE QUALITY ================= */
-let volumeQuality = "none";
-
-if (volumeStructure?.name?.includes("(accepted)")) {
-  volumeQuality = "accepted";
-}
-else if (volumeStructure?.name?.includes("(confirmed)")) {
-  volumeQuality = "confirmed";
-}
-else if (volumeStructure?.name?.includes("weak")) {
-  volumeQuality = "weak";
-}
-else if (volumeStructure?.name?.includes("unaccepted")) {
-  volumeQuality = "unaccepted";
-
-
 
 /* ================= STRUCTURE QUALITY ================= */
 let structureQuality = "unaccepted";
