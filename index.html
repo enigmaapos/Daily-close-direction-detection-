@@ -2661,6 +2661,15 @@ if (triggerIndex === null && (bearish || bullish)) {
   return label;
 }
 
+  function normalizeTrendStructure(structure) {
+  if (!structure) return null;
+
+  if (structure.includes("broken")) return "HELD";
+  if (structure.includes("holding")) return "FAILED";
+
+  return null;
+    }
+
 function normalizeVolumeStructure(volStruct) {
   if (!volStruct) return null;
 
@@ -2677,12 +2686,13 @@ function classifyBreakIntent(d) {
   const dominantBull = d.bull;
   const momentum = d.rsiMomentumShift;
 
+  const structureResult = normalizeTrendStructure(d.structure);
   const volumeResult = normalizeVolumeStructure(d.volumeStructure?.name);
 
   const trendDefender = dominantBull ? "BULLS" : "BEARS";
 
   if (d.strongZoneDefended) {
-    return `${trendDefender} DEFENSE → STRONG (${volumeResult || "ZONE HELD"})`;
+    return `${trendDefender} DEFENSE → STRONG (${structureResult || "ZONE HELD"})`;
   }
 
   if (!structureResult) {
