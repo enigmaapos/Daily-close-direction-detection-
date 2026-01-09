@@ -426,6 +426,15 @@ button.secondary{
   <option value="weak">Weak</option>
 </select>
 
+  <select id="filterVolumeStructure">
+  <option value="all">All Volume Structure</option>
+  <option value="accepted">Accepted</option>
+  <option value="confirmed">Confirmed</option>
+  <option value="weak">Weak</option>
+  <option value="unaccepted">Unaccepted</option>
+  <option value="none">None</option>
+  </select>
+
   <select id="filterRsi15Context">
     <option value="all">All RSI 15m</option>
     <option value="MAX ZONE PUMP">MAX ZONE PUMP</option>
@@ -4337,17 +4346,32 @@ if (defenseFailure === "CRITICAL FAILURE") {
 
 prob = Math.max(40, Math.min(prob, 95));
 
-  
- 
+
+  /* ================= VOLUME STRUCTURE QUALITY ================= */
+let volumeQuality = "none";
+
+if (volumeStructure?.name?.includes("(accepted)")) {
+  volumeQuality = "accepted";
+}
+else if (volumeStructure?.name?.includes("(confirmed)")) {
+  volumeQuality = "confirmed";
+}
+else if (volumeStructure?.name?.includes("weak")) {
+  volumeQuality = "weak";
+}
+else if (volumeStructure?.name?.includes("unaccepted")) {
+  volumeQuality = "unaccepted";
+}
+
 
 /* ================= STRUCTURE QUALITY ================= */
 let structureQuality = "unaccepted";
 
-if (volumeStructure.includes("(accepted)"))
+if (structure.includes("(accepted)"))
   structureQuality = "accepted";
-else if (volumeStructure.includes("(confirmed)"))
+else if (structure.includes("(confirmed)"))
   structureQuality = "confirmed";
-else if (volumeStructure.includes("weak"))
+else if (structure.includes("weak"))
   structureQuality = "weak";
   
 
@@ -4709,6 +4733,7 @@ const r15 = document.getElementById("filterRsi15Context")?.value || "all";
   document.getElementById("filterHTFRSI")?.value || "all";
   const f12h =
   (document.getElementById("filter12hCandle")?.value || "all").toLowerCase();
+  const fv = document.getElementById("filterVolumeStructure")?.value || "all";
 
   
   document.querySelectorAll(".card").forEach(c => {
@@ -4733,6 +4758,13 @@ const r15 = document.getElementById("filterRsi15Context")?.value || "all";
     if (ts !== "all" && c.dataset.tradeside !== ts) ok = false;
     if (ez !== "all" && c.dataset.execution !== ez) ok = false;
     if (vai !== "all" && c.dataset.volai !== vai) ok = false;
+
+   if (fv !== "all" && c.dataset.volstructure !== fv) {
+    ok = false;
+  }
+
+  c.style.display = ok ? "" : "none";
+});
     
 if (
   f12h !== "all" &&
@@ -4810,6 +4842,8 @@ if (filterHTFRSI !== "all") {
            document.getElementById("filterHTFRSI").value = "all";
            document.getElementById("filter12hCandle").value = "all";
            document.getElementById("filterDefenseSide")?.value || "all";
+           document.getElementById("filterVolumeStructure")?.value || "all";
+
            
            
            
@@ -5050,11 +5084,13 @@ card.dataset.aiverdict = aiVerdict.verdict;
     
 
 card.dataset.structureQuality =
-  d.volumeStructure.includes("unaccepted") ? "unaccepted" :
-  d.volumeStructure.includes("accepted") ? "accepted" :
-  d.volumeStructure.includes("confirmed") ? "confirmed" :
-  d.volumeStructure.includes("weak") ? "weak" :
+  d.structure.includes("unaccepted") ? "unaccepted" :
+  d.structure.includes("accepted") ? "accepted" :
+  d.structure.includes("confirmed") ? "confirmed" :
+  d.structure.includes("weak") ? "weak" :
   "none";
+
+    card.dataset.volstructure = volumeQuality;
 
 // ================= RR CALCULATION =================
 const rr =
@@ -6242,7 +6278,8 @@ async function runSearch(){
     "filterMomentum",
     "filterRsi15Context",
     "filterHTFRSI",
-    "filter12hCandle"
+    "filter12hCandle",
+    "filterVolumeStructure"
 ].forEach(id=>{
   document.getElementById(id)?.addEventListener("change", applyFilters);
 });
