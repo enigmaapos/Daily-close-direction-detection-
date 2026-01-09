@@ -5329,20 +5329,6 @@ ${d.candle12h ? `
   </div>
 ` : ""}
 
-  ${typeof d.ema200DistPct === "number" ? `
-  <div class="muted">
-    📏 EMA200 Distance:
-    <b>${d.ema200DistPct.toFixed(2)}%</b>
-  </div>
-` : ""}
-
-${typeof d.ema70DistPct === "number" ? `
-  <div class="muted">
-    📏 EMA70 Distance:
-    <b>${d.ema70DistPct.toFixed(2)}%</b>
-  </div>
-` : ""}
-
 
   <div class="muted ${
     structureBias === "bullish" ? "bull" :
@@ -5366,6 +5352,21 @@ ${typeof d.ema70DistPct === "number" ? `
 ${d.structure === "none" && d.volumeStructure?.name !== "none" ? `
   <div class="muted neutral">
     ⏳ Volume pressure detected — waiting for structure confirmation
+  </div>
+` : ""}
+
+
+${typeof d.ema200DistPct === "number" ? `
+  <div class="muted">
+    📏 EMA200 Distance:
+    <b>${d.ema200DistPct.toFixed(2)}%</b>
+  </div>
+` : ""}
+
+${typeof d.ema70DistPct === "number" ? `
+  <div class="muted">
+    📏 EMA70 Distance:
+    <b>${d.ema70DistPct.toFixed(2)}%</b>
   </div>
 ` : ""}
 
