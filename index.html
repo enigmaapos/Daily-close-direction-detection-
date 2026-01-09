@@ -2683,6 +2683,7 @@ function normalizeVolumeStructure(volStruct) {
 
 /* ================= BREAK INTENT CLASSIFIER (ALIGNED) ================= */
 function classifyBreakIntent(d) {
+  const trend = d.mainTrend;
   const dominantBull = d.bull;
   const momentum = d.rsiMomentumShift;
 
