@@ -4840,6 +4840,7 @@ if (filterHTFRSI !== "all") {
            document.getElementById("filterHTFRSI").value = "all";
            document.getElementById("filter12hCandle").value = "all";
            document.getElementById("filterDefenseSide")?.value || "all";
+           document.getElementById("filterVolumeStructure")?.value || "all";
            
 
            
@@ -5088,7 +5089,13 @@ card.dataset.structureQuality =
   d.structure.includes("weak") ? "weak" :
   "none";
 
-  card.dataset.volstructure = volumeQuality;
+  card.dataset.volstructure =
+  volumeStructure?.name?.includes("unaccepted") ? "unaccepted" :
+  volumeStructure?.name?.includes("accepted")   ? "accepted"   :
+  volumeStructure?.name?.includes("confirmed")  ? "confirmed"  :
+  volumeStructure?.name?.includes("weak")       ? "weak"       :
+  "none";
+  
 
     
 
