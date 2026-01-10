@@ -3455,11 +3455,14 @@ return {
   }
 
 
-  function getDirectionalBias(d){
-  // Only allowed in neutral / no-edge states
+  function getDirectionalBias(d) {
+
+  // Only evaluate when there is NO confirmed structure edge
   if (
-    d.structure !== "none" ||
-    d.aiVerdict?.verdict !== AI_VERDICTS.STRUCTURE_WEAK
+    d.structureQuality === "accepted" ||
+    d.structureQuality === "confirmed" ||
+    d.breakIntent?.includes("FAILED") || d.volumeQuality === "accepted" ||
+    d.volumeQuality === "confirmed" 
   ) {
     return null;
   }
@@ -3467,54 +3470,48 @@ return {
   let bullScore = 0;
   let bearScore = 0;
 
-  // ===== TREND PRESSURE =====
-  if (d.mainTrend === "bullish") bullScore++;
-  if (d.mainTrend === "bearish") bearScore++;
+  /* ================= TREND ALIGNMENT ================= */
+  if (d.mainTrend === "bullish") bullScore += 2;
+  if (d.mainTrend === "bearish") bearScore += 2;
 
-  if (d.emaShortBias === "bullish") bullScore++;
-  if (d.emaShortBias === "bearish") bearScore++;
+  if (d.emaShortBias === "bullish") bullScore += 1;
+  if (d.emaShortBias === "bearish") bearScore += 1;
 
-  // ===== VOLUME PRESSURE =====
-  if (d.bull === true) bullScore++;
-  if (d.bull === false) bearScore++;
+  /* ================= VOLUME & FLOW ================= */
+  if (d.bull === true) bullScore += 1;
+  if (d.bull === false) bearScore += 1;
 
-  if (d.volAI?.intent === "Bullish") bullScore++;
-  if (d.volAI?.intent === "Bearish") bearScore++;
+  if (d.volAI?.intent === "Bullish") bullScore += 1;
+  if (d.volAI?.intent === "Bearish") bearScore += 1;
 
-  // ===== MARKET CONTEXT =====
-  if (d.marketDom?.net > 0) bullScore++;
-  if (d.marketDom?.net < 0) bearScore++;
+  /* ================= MARKET PARTICIPATION ================= */
+  if (d.marketDom?.net > 0) bullScore += 1;
+  if (d.marketDom?.net < 0) bearScore += 1;
 
-  // ===== EXTENSION / EXHAUSTION =====
-  if (d.moveType === "RECOVERY" && d.moveStrength === "STRONG") {
-    bearScore++; // late push
-  }
+  /* ================= MOMENTUM CONTEXT ================= */
+  if (d.rsiMomentumShift?.bullish) bullScore += 1;
+  if (d.rsiMomentumShift?.bearish) bearScore += 1;
 
-  if (d.moveType === "DROP" && d.moveStrength === "STRONG") {
-    bullScore++; // late dump
-  }
-
-  // ===== DECISION =====
+  /* ================= DECISION ================= */
   if (bullScore >= bearScore + 2) {
     return {
       bias: "Bullish (Conditional)",
-      reason: "Bullish pressure present, but structure confirmation is required."
+      reason: "Bullish pressure building during neutral structure. Await confirmation."
     };
   }
 
   if (bearScore >= bullScore + 2) {
     return {
       bias: "Bearish (Conditional)",
-      reason: "Bearish pressure present, but structure confirmation is required."
+      reason: "Bearish pressure building during neutral structure. Await confirmation."
     };
   }
 
   return {
     bias: "Balanced / Indecision",
-    reason: "Bullish and bearish pressures are currently balanced."
+    reason: "Pressure is evenly distributed. Market is in pause or rotation."
   };
-}
-
+  }
   
 
   
