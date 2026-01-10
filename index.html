@@ -5846,7 +5846,7 @@ ${d.structureIntent ? (() => {
   let out = "";
 
   /* ================= STRUCTURE ZONES ================= */
-  for (const zone of d.analysis.zones) {
+  for (const zone of d.zones ?? []) {
 
     /* ---------- STRUCTURE ZONE (TEXT) ---------- */
     out += `
