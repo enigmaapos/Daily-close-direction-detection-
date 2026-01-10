@@ -5536,7 +5536,9 @@ ${d.setupScore ? `
 
 
   <b>${d.sym}</b>
-  <div class="muted">Price: ${d.price.toFixed(4)}</div>
+<div class="muted">
+  Price: ${d.price?.toFixed?.(4) ?? "—"}
+</div>
 
 <div class="muted ${d.change >= 0 ? "bull" : "bear"}">
   24h Change: ${(typeof d.change === "number" ? d.change : 0).toFixed(2)}%
