@@ -5377,7 +5377,12 @@ ${d.setupScore ? `
   </div>
 ` : ""}
 
-  ${d.breakIntent ? (() => {
+
+  <div class="muted ${d.bull ? "bull" : "bear"}">
+    Dominant Volume: <b>${d.bull ? "BUYERS" : "SELLERS"}</b>
+  </div>
+
+    ${d.breakIntent ? (() => {
   const bi = formatBreakIntent(d.breakIntent);
   if (!bi) return "";
 
@@ -5397,11 +5402,6 @@ ${d.setupScore ? `
 
   return out;
 })() : ""}
-
-
-  <div class="muted ${d.bull ? "bull" : "bear"}">
-    Dominant Volume: <b>${d.bull ? "BUYERS" : "SELLERS"}</b>
-  </div>
 
   ${d.volumeBreakout ? `
   <div class="muted ${
