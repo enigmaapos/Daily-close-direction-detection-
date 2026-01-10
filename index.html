@@ -4845,31 +4845,36 @@ const structureIntent = classifyStructureIntent({
 
     const zones = [];
 
-  for (const swing of swings) {
-    const zone = makeZone(swing.level, swing.type);
+if (!Array.isArray(swings)) {
+  console.warn("Invalid swings input:", swings);
+  return { zones: [] };
+}
 
-    const evaluated = evaluateZone({
-      zone,
-      candles,
-      context: {
-        structureEvent: swing.structureEvent,
-        protectedLevel: swing.protected,
-        structureAlignment
-      },
-      EMA: { EMA14, EMA21, EMA70, EMA200 },
-      VWAP,
-      pressure
-    });
+for (const swing of swings) {
+  const zone = makeZone(swing.level, swing.type);
 
-    const activated = activateZoneWithMomentum(evaluated, momentum);
+  const evaluated = evaluateZone({
+    zone,
+    candles,
+    context: {
+      structureEvent: swing.structureEvent,
+      protectedLevel: swing.protected,
+      structureAlignment
+    },
+    EMA: { EMA14, EMA21, EMA70, EMA200 },
+    VWAP,
+    pressure
+  });
 
-    if (
-      activated.state === "ACTIONABLE" ||
-      activated.state === "INSTITUTIONAL"
-    ) {
-      zones.push(activated);
-    }
+  const activated = activateZoneWithMomentum(evaluated, momentum);
+
+  if (
+    activated.state === "ACTIONABLE" ||
+    activated.state === "INSTITUTIONAL"
+  ) {
+    zones.push(activated);
   }
+}
 
 
   /* ================= BIAS SNAPSHOT ================= */
