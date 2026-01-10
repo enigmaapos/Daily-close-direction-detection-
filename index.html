@@ -5948,117 +5948,123 @@ ${d.S?.[1] != null ? `<div class="muted bear">S2: ${d.S[1].toFixed(4)}</div>` : 
 ${d.R?.[0] != null ? `<div class="muted bull">R1: ${d.R[0].toFixed(4)}</div>` : ""}
 ${d.R?.[1] != null ? `<div class="muted bull">R2: ${d.R[1].toFixed(4)}</div>` : ""}
 
-  <div class="muted ${
-    d.mainTrend === "bullish" ? "bull" :
-    d.mainTrend === "bearish" ? "bear" : "neutral"
-  }">
-    Main Trend: ${d.mainTrend.toUpperCase()}
-  </div>
+<div class="muted ${
+  d.mainTrend === "bullish" ? "bull" :
+  d.mainTrend === "bearish" ? "bear" : "neutral"
+}">
+  Main Trend: ${(typeof d.mainTrend === "string" ? d.mainTrend : "neutral").toUpperCase()}
+</div>
 
-  <div class="muted ${
-    d.emaShortBias === "bullish" ? "bull" :
-    d.emaShortBias === "bearish" ? "bear" : "neutral"
-  }">
-    Micro Trend: ${d.emaShortBias.toUpperCase()}
-    ${
-      d.emaShortCross === "bullish-cross" ? " ⬆ Cross" :
-      d.emaShortCross === "bearish-cross" ? " ⬇ Cross" : ""
-    }
-  </div>
+<div class="muted ${
+  d.emaShortBias === "bullish" ? "bull" :
+  d.emaShortBias === "bearish" ? "bear" : "neutral"
+}">
+  Micro Trend: ${(typeof d.emaShortBias === "string" ? d.emaShortBias : "neutral").toUpperCase()}
+  ${
+    d.emaShortCross === "bullish-cross" ? " ⬆ Cross" :
+    d.emaShortCross === "bearish-cross" ? " ⬇ Cross" : ""
+  }
+</div>
 
 <div class="muted neutral"
      title="Volume-based context only. Describes the likely near-term behavior, not a trade signal.">
-  🔮 Volume Implication: <b>${d.volAI.futureOutcome}</b>
+  🔮 Volume Implication:
+  <b>${d.volAI?.futureOutcome ?? "Unknown"}</b>
 </div>
 
-
-  ${d.volAI ? `
-    <div class="muted ${
-      d.volAI.bias === "Bullish" ? "bull" :
-      d.volAI.bias === "Bearish" ? "bear" : "neutral"
-    }">
-      🧠 24h Volume AI
-      <br>
-      <span class="muted">
-        ${d.volAI.color} candle · ${d.volAI.location} range
-      </span>
-      <br>
-      <span class="muted">
-        ${d.volAI.meaning}
-      </span>
-    </div>
-  ` : ""}
-
+${d.volAI ? `
+  <div class="muted ${
+    d.volAI.bias === "Bullish" ? "bull" :
+    d.volAI.bias === "Bearish" ? "bear" : "neutral"
+  }">
+    🧠 24h Volume AI
+    <br>
+    <span class="muted">
+      ${(d.volAI.color ?? "Unknown")} candle · ${(d.volAI.location ?? "Unknown")} range
+    </span>
+    <br>
+    <span class="muted">
+      ${d.volAI.meaning ?? "No interpretation available"}
+    </span>
+  </div>
+` : ""}
 
 <div class="muted ${
   d.changeState === "EXTREME" ? "bear" :
   d.changeState === "VERY_HIGH" ? "neutral" : "muted"
 }">
-  ⏱ 24h Expansion: <b>${d.change.toFixed(2)}%</b> (${d.changeState})
+  ⏱ 24h Expansion:
+  <b>${typeof d.change === "number" ? d.change.toFixed(2) : "—"}%</b>
+  (${d.changeState ?? "UNKNOWN"})
 </div>
 
 <div class="muted ${
   d.moveType === "RECOVERY" ? "bull" :
-  d.moveType === "DROP" ? "bear" :
-  "muted"
+  d.moveType === "DROP" ? "bear" : "muted"
 }">
-  ⏱ 24h Move: <b>${d.moveType}</b> (${d.moveStrength})
+  ⏱ 24h Move:
+  <b>${d.moveType ?? "UNKNOWN"}</b>
+  (${d.moveStrength ?? "—"})
 </div>
-
 
 <div class="muted">
   🌍 Market Participation:
   <b>${
-    d.marketDom && Math.abs(d.marketDom.net) < 5
+    typeof d.marketDom?.net === "number" && Math.abs(d.marketDom.net) < 5
       ? "LOW (Choppy)"
       : "ACTIVE"
   }</b>
   <br>
   🌊 Symbol Behavior:
-  <b class="behavior-${behavior}">${behavior}</b>
-</div>
-
-  ${flipAttempt ? `
-<div class="muted flip-attempt">
-  ⚠ Polarity Flip Attempt<br>
-  <b>
-    ${formatTime(flipAttempt.timeFrom)} ${flipAttempt.from}
-    →
-    ${formatTime(flipAttempt.timeTo)} ${flipAttempt.to}
+  <b class="behavior-${behavior ?? "neutral"}">
+    ${behavior ?? "neutral"}
   </b>
 </div>
+
+${flipAttempt ? `
+  <div class="muted flip-attempt">
+    ⚠ Polarity Flip Attempt<br>
+    <b>
+      ${formatTime?.(flipAttempt.timeFrom) ?? "—"} ${flipAttempt.from ?? ""}
+      →
+      ${formatTime?.(flipAttempt.timeTo) ?? "—"} ${flipAttempt.to ?? ""}
+    </b>
+  </div>
 ` : ""}
 
 ${flipAttemptCount > 0 ? `
-<div class="muted">
-  🔁 Polarity Flip Attempts (24h):
-  <b>${flipAttemptCount}</b>
-</div>
+  <div class="muted">
+    🔁 Polarity Flip Attempts (24h):
+    <b>${flipAttemptCount}</b>
+  </div>
 ` : ""}
 
-     ${rrDisplay ? `
+${rrDisplay ? `
   <div class="muted neutral">
     ⚖ Risk–Reward: <b>${rrDisplay}R</b>
   </div>
 ` : ""}
 
-  ${tpProb !== null ? `
+${typeof tpProb === "number" ? `
   <div class="muted ${
     tpProb >= 40 ? "bull" :
-    tpProb >= 30 ? "neutral" :
-    "bear"
+    tpProb >= 30 ? "neutral" : "bear"
   }">
     🎯 Estimated TP Hit: <b>${tpProb}%</b>
   </div>
 ` : ""}
 
-<div class="muted ${tradeSideClass}">
-    🎯 Trade Side: <b>${aiVerdict.tradeSide}</b>
-  </div>
+<div class="muted ${tradeSideClass ?? "neutral"}">
+  🎯 Trade Side:
+  <b>${d.aiVerdict?.tradeSide ?? "NONE"}</b>
+</div>
 
-  <div class="muted ${execClass}">
-    🧭 Execution Zone: <b>${executionZone}</b>
-  </div>
+<div class="muted ${execClass ?? "neutral"}">
+  🧭 Execution Zone:
+  <b>${executionZone ?? "UNDEFINED"}</b>
+</div>
+
+
 
 
 <div class="muted">
