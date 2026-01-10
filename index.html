@@ -2812,7 +2812,163 @@ function classifyStructureIntent({ pressure, reaction, score }) {
 
   return "CONFLICT";
 }
-  
+
+      const ZONE_PAD = 0.003;
+
+function makeZone(level, type) {
+  return {
+    type, // "DEMAND" | "SUPPLY"
+    low: level * (1 - ZONE_PAD),
+    high: level * (1 + ZONE_PAD),
+    score: 0,
+    state: "RAW"
+  };
+  }
+
+        function candleAcceptance(c) {
+  const range = c.high - c.low;
+  if (range === 0) return { accepted: false, rejected: false };
+
+  const clv = (c.close - c.low) / range;
+  const bodyRatio = Math.abs(c.close - c.open) / range;
+
+  return {
+    accepted: clv > 0.7 && bodyRatio > 0.5,
+    rejected: clv < 0.3 && bodyRatio < 0.3
+  };
+  }
+
+    function consecutiveCloses(candles, zone, direction) {
+  let count = 0;
+
+  for (let i = candles.length - 1; i >= 0; i--) {
+    const c = candles[i];
+
+    if (
+      direction === "ABOVE" &&
+      c.close > zone.high
+    ) count++;
+    else if (
+      direction === "BELOW" &&
+      c.close < zone.low
+    ) count++;
+    else break;
+  }
+
+  return count;
+  }
+
+      function emaIntegrity({ EMA14, EMA21, EMA70, EMA200 }) {
+  if (EMA14 > EMA21 && EMA21 > EMA70 && EMA70 > EMA200) return "BULL";
+  if (EMA14 < EMA21 && EMA21 < EMA70 && EMA70 < EMA200) return "BEAR";
+  return "FLAT";
+  }
+
+  function structureReaction(zone, candles) {
+  let failedBreaks = 0;
+  let inside = 0;
+
+  const recent = candles.slice(-20);
+
+  for (const c of recent) {
+    const inZone = c.close >= zone.low && c.close <= zone.high;
+    const fakeUp = c.high > zone.high && c.close < zone.high;
+    const fakeDown = c.low < zone.low && c.close > zone.low;
+
+    if (inZone) inside++;
+    if (fakeUp || fakeDown) failedBreaks++;
+  }
+
+  if (failedBreaks >= 3) return "DEFENDED";
+  if (inside >= 6) return "WEAKENING";
+  return "UNDECIDED";
+  }
+
+    function qualifyStructure(zone, context) {
+  const {
+    structureEvent, // "BOS" | "CHoCH" | "RANGE"
+    protectedLevel,
+    structureAlignment
+  } = context;
+
+  if (structureEvent === "BOS") zone.score += 3;
+  if (structureEvent === "CHoCH") zone.score += 2;
+  if (protectedLevel) zone.score += 2;
+  if (structureAlignment === "aligned") zone.score += 2;
+     }
+
+  function evaluateZone({
+  zone,
+  candles,
+  context,
+  EMA,
+  VWAP,
+  pressure
+}) {
+  // 1. STRUCTURE
+  qualifyStructure(zone, context);
+
+  if (zone.score < 3) {
+    zone.state = "REJECTED";
+    return zone;
+  }
+
+  // 2. CANDLE ACCEPTANCE
+  const last = candles.at(-1);
+  const { accepted, rejected } = candleAcceptance(last);
+
+  if (accepted) zone.score += 2;
+  if (rejected) zone.score -= 2;
+
+  // 3. TIME CONFIRMATION
+  const above = consecutiveCloses(candles, zone, "ABOVE");
+  const below = consecutiveCloses(candles, zone, "BELOW");
+
+  if (above >= 3 || below >= 3) zone.score += 2;
+
+  // 4. EMA / VWAP CONTEXT
+  const emaState = emaIntegrity(EMA);
+
+  if (zone.type === "DEMAND" && emaState === "BULL") zone.score += 1;
+  if (zone.type === "SUPPLY" && emaState === "BEAR") zone.score += 1;
+
+  if (zone.type === "DEMAND" && last.close < VWAP) zone.score -= 2;
+  if (zone.type === "SUPPLY" && last.close > VWAP) zone.score -= 2;
+
+  // 5. VOLUME / REACTION
+  const reaction = structureReaction(zone, candles);
+
+  if (reaction === "DEFENDED") zone.score += 2;
+  if (reaction === "WEAKENING") zone.score += 1;
+
+  if (pressure === "BUY" && zone.type === "SUPPLY") zone.score -= 1;
+  if (pressure === "SELL" && zone.type === "DEMAND") zone.score -= 1;
+
+  // 6. FINAL CLASSIFICATION
+  if (zone.score >= 8) zone.state = "INSTITUTIONAL";
+  else if (zone.score >= 5) zone.state = "ACTIONABLE";
+  else if (zone.score >= 3) zone.state = "DEVELOPING";
+  else zone.state = "IGNORE";
+
+  return zone;
+  }
+
+    
+  function activateZoneWithMomentum(zone, momentum) {
+  if (zone.state !== "ACTIONABLE" && zone.state !== "INSTITUTIONAL") return zone;
+
+  if (momentum.type === "momentum-recovery" && zone.type === "DEMAND") {
+    zone.entryBias = "LONG";
+  }
+
+  if (momentum.type === "momentum-collapse" && zone.type === "SUPPLY") {
+    zone.entryBias = "SHORT";
+  }
+
+  return zone;
+                 }
+
+    
 
   
 
@@ -4714,6 +4870,33 @@ const structureIntent = classifyStructureIntent({
   score: structureScore
 });
 
+    const zones = [];
+
+  for (const swing of swings) {
+    const zone = makeZone(swing.level, swing.type);
+
+    const evaluated = evaluateZone({
+      zone,
+      candles,
+      context: {
+        structureEvent: swing.structureEvent,
+        protectedLevel: swing.protected,
+        structureAlignment
+      },
+      EMA: { EMA14, EMA21, EMA70, EMA200 },
+      VWAP,
+      pressure
+    });
+
+    const activated = activateZoneWithMomentum(evaluated, momentum);
+
+    if (
+      activated.state === "ACTIONABLE" ||
+      activated.state === "INSTITUTIONAL"
+    ) {
+      zones.push(activated);
+    }
+  }
 
 
   /* ================= BIAS SNAPSHOT ================= */
@@ -4775,7 +4958,10 @@ moveStrength,directionalBias,setupScore,htf,htfNote,htfTrend: htf.htfTrend,
   resistanceReaction,
   supportReaction,
   resistanceZone: nearestResistanceZone,
-  supportZone: nearestSupportZone,marketPhase: marketPhaseInfo,biasAcc};
+  supportZone: nearestSupportZone,marketPhase: marketPhaseInfo,biasAcc,zones,
+    EMA: { EMA14, EMA21, EMA70, EMA200 },
+    VWAP,
+    momentum};
 }
 
 
@@ -5326,9 +5512,9 @@ flipAttemptCount = countPolarityFlipAttempts(rawSeries);
   d.marketPhase.phase === "EARLY ACCUMULATION" ? "↪️" :
   "⏸️";
 
-    
-    
-    
+  
+
+       
 
 card.innerHTML = `
   ${card.dataset.manual === "true"
@@ -5561,13 +5747,34 @@ ${d.structureIntent ? (() => {
   let out = "";
 
   /* ================= STRUCTURE ZONE ================= */
-  if (d.resistanceZone) {
+  for (const zone of analysis.zones) {
+    /* ================= STRUCTURE ZONE (TEXT) ================= */
     out += `
       <div class="muted">
-        📐 <b>Structure Zone:</b>
-        ${d.resistanceZone.low.toFixed(4)} – ${d.resistanceZone.high.toFixed(4)}
+        📐 <b>Structure Zone (${zone.type}):</b>
+        ${zone.low.toFixed(4)} – ${zone.high.toFixed(4)}
+        <br/>
+        🧠 <b>State:</b> ${zone.state}
+        ${zone.entryBias ? `<br/>🎯 <b>Bias:</b> ${zone.entryBias}` : ""}
+        <br/>
+        ⭐ <b>Score:</b> ${zone.score}
       </div>
     `;
+
+    /* ================= STRUCTURE ZONE (CHART) ================= */
+    drawZone({
+      low: zone.low,
+      high: zone.high,
+      color:
+        zone.state === "INSTITUTIONAL"
+          ? "rgba(255,0,0,0.35)"
+          : "rgba(255,165,0,0.25)"
+    });
+
+    drawLabel({
+      price: zone.high,
+      text: `${zone.state}${zone.entryBias ? " | " + zone.entryBias : ""} | ${zone.score}`
+    });
   }
 
   /* ================= STRUCTURE STRENGTH ================= */
