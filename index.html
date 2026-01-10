@@ -3910,14 +3910,14 @@ const volConfirmed = recentVol >= avgVol * 1.2;
 
 // HTF permission logic
 const htfBullOk =
-  htf?.htfTrend !== "bearish" &&
-  htf?.htfRSIState !== "overbought" &&
-  htf?.htfStructure?.resistance !== "holding";
-
-const htfBearOk =
   htf?.htfTrend !== "bullish" &&
   htf?.htfRSIState !== "oversold" &&
   htf?.htfStructure?.support !== "holding";
+
+const htfBearOk =
+  htf?.htfTrend !== "bearish" &&
+  htf?.htfRSIState !== "overbought" &&
+  htf?.htfStructure?.resistance !== "holding";
 
   
    const bullishBreakAccepted =
