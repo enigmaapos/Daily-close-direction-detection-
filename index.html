@@ -2959,8 +2959,21 @@ const { accepted, rejected } = last
 
     
   function activateZoneWithMomentum(zone, momentum) {
-  if (zone.state !== "ACTIONABLE" && zone.state !== "INSTITUTIONAL") return zone;
+  // 🔒 Hard guards
+  if (!zone || typeof zone !== "object") return null;
+  if (!zone.type || !zone.state) return null;
 
+  // Only actionable zones can be biased
+  if (zone.state !== "ACTIONABLE" && zone.state !== "INSTITUTIONAL") {
+    return zone;
+  }
+
+  // Momentum is optional
+  if (!momentum || typeof momentum.type !== "string") {
+    return zone;
+  }
+
+  // Bias logic
   if (momentum.type === "momentum-recovery" && zone.type === "DEMAND") {
     zone.entryBias = "LONG";
   }
@@ -2970,7 +2983,7 @@ const { accepted, rejected } = last
   }
 
   return zone;
-                 }
+}
 
     
 
@@ -4976,6 +4989,7 @@ if (
     zones.push(activated);
   }
 }
+
 
 
 
