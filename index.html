@@ -4825,8 +4825,13 @@ prob = applyHTFProbabilityAdjustment({
     /* ================= STRUCTURE EXTENSION ================= */
 
 // === Zones
-const resistanceZones = sw.R.map(makeZone);
-const supportZones    = sw.S.map(makeZone);
+const resistanceZones = sw.R
+  .map(makeZone)
+  .filter(z => z && typeof z.low === "number");
+
+const supportZones = sw.S
+  .map(makeZone)
+  .filter(z => z && typeof z.high === "number");
 
 const nearestResistanceZone =
   resistanceZones
