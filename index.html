@@ -4949,11 +4949,11 @@ for (const swing of swings) {
       structureAlignment: structureAlignment ?? "UNKNOWN"
     },
     EMA: {
-      EMA14: EMA14 ?? null,
-      EMA21: EMA21 ?? null,
-      EMA70: EMA70 ?? null,
-      EMA200: EMA200 ?? null
-    },
+  EMA14: Number.isFinite(ema14Last) ? ema14Last : null,
+  EMA21: Number.isFinite(ema21Last) ? ema21Last : null,
+  EMA70: Number.isFinite(ema70Last) ? ema70Last : null,
+  EMA200: Number.isFinite(ema200Last) ? ema200Last : null
+}
     VWAP: VWAP ?? null,
     pressure: pressure ?? null
   });
