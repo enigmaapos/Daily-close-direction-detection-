@@ -4020,7 +4020,8 @@ const postVolBreakRSIConfirm =
   
   const bull = domVBull;
 
-  const swings = findSwings(h,l,c,v);
+  let swings = findSwings(h, l, c, v);
+  
 const sw = {
   S: swings.supports || [],
   R: swings.resistances || []
@@ -4893,18 +4894,15 @@ const structureIntent = classifyStructureIntent({
 
     const zones = [];
 
-  const rawSwings = findSwings(h, l, c, v);
-
-const swings = [
-  ...(Array.isArray(rawSwings?.supports)
-    ? rawSwings.supports.map(level => ({
+swings = [
+  ...(Array.isArray(swings?.supports)
+    ? swings.supports.map(level => ({
         level,
         type: "low"
       }))
     : []),
-
-  ...(Array.isArray(rawSwings?.resistances)
-    ? rawSwings.resistances.map(level => ({
+  ...(Array.isArray(swings?.resistances)
+    ? swings.resistances.map(level => ({
         level,
         type: "high"
       }))
