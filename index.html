@@ -5842,37 +5842,36 @@ ${(d.defenseFailure && d.defenseFailure !== "NONE") || d.trendStructureRisk
   : ""} 
 
 
-${d.structureIntent ? (() => {
+${d.zones?.length ? (() => {
   let out = "";
 
   /* ================= STRUCTURE ZONES ================= */
-  for (const zone of d.zones ?? []) {
+  for (const zone of d.zones) {
 
-    /* ---------- STRUCTURE ZONE (TEXT) ---------- */
     out += `
       <div class="muted">
-        📐 <b>Structure Zone (${d.zone.type}):</b>
-        ${d.zone.low.toFixed(4)} – ${d.zone.high.toFixed(4)}<br/>
-        🧠 <b>State:</b> ${d.zone.state}
-        ${d.zone.entryBias ? `<br/>🎯 <b>Bias:</b> ${d.zone.entryBias}` : ""}
+        📐 <b>${zone.type} Zone:</b>
+        ${zone.low.toFixed(4)} – ${zone.high.toFixed(4)}<br/>
+        🧠 <b>State:</b> ${zone.state}
+        ${zone.entryBias ? `<br/>🎯 <b>Bias:</b> ${zone.entryBias}` : ""}
         <br/>
-        ⭐ <b>Score:</b> ${d.zone.score}
+        ⭐ <b>Score:</b> ${zone.score}
       </div>
     `;
 
-    /* ---------- STRUCTURE ZONE (CHART) ---------- */
+    /* ---------- DRAW ZONE ---------- */
     drawZone({
-      low: d.zone.low,
-      high: d.zone.high,
+      low: zone.low,
+      high: zone.high,
       color:
-        d.zone.state === "INSTITUTIONAL"
+        zone.type === "RESISTANCE"
           ? "rgba(255,0,0,0.35)"
-          : "rgba(255,165,0,0.25)"
+          : "rgba(0,200,100,0.35)"
     });
 
     drawLabel({
-      price: d.zone.high,
-      text: `${d.zone.state}${d.zone.entryBias ? " | " + d.zone.entryBias : ""} | ${d.zone.score}`
+      price: zone.high,
+      text: `${zone.type} | ${zone.state}${zone.entryBias ? " | " + zone.entryBias : ""} | ${zone.score}`
     });
   }
 
@@ -5940,7 +5939,11 @@ ${d.structureIntent ? (() => {
   `;
 
   return out;
-})() : ""}
+})() : `
+  <div class="muted">
+    🧱 <b>Structure:</b> NONE (No valid support or resistance)
+  </div>
+`}
 
 
 
