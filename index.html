@@ -2763,15 +2763,23 @@ function classifyBreakIntent(d) {
 const ZONE_PAD = 0.003;
 
 
-  function makeZone(level, type) {
+  function makeZone(level, swingType) {
+  const type =
+    swingType === "low" ? "DEMAND" :
+    swingType === "high" ? "SUPPLY" :
+    null;
+
+  if (!type) return null;
+
   return {
-    type, // "DEMAND" | "SUPPLY"
+    type,
     low: level * (1 - ZONE_PAD),
     high: level * (1 + ZONE_PAD),
     score: 0,
     state: "RAW"
   };
-  }
+}
+  
 
 function calculateVWAP(candles) {
   let pv = 0, v = 0;
@@ -2869,10 +2877,13 @@ function classifyStructureIntent({ pressure, reaction, score }) {
   }
 
       function emaIntegrity({ EMA14, EMA21, EMA70, EMA200 }) {
+  if (![EMA14, EMA21, EMA70, EMA200].every(n => typeof n === "number"))
+    return "FLAT";
+
   if (EMA14 > EMA21 && EMA21 > EMA70 && EMA70 > EMA200) return "BULL";
   if (EMA14 < EMA21 && EMA21 < EMA70 && EMA70 < EMA200) return "BEAR";
   return "FLAT";
-  }
+}
 
   
     function qualifyStructure(zone, context) {
@@ -2906,8 +2917,10 @@ function classifyStructureIntent({ pressure, reaction, score }) {
 
   // 2. CANDLE ACCEPTANCE
   const last = candles.at(-1);
-  const { accepted, rejected } = candleAcceptance(last);
-
+const { accepted, rejected } = last
+  ? candleAcceptance(last)
+  : { accepted: false, rejected: false };
+    
   if (accepted) zone.score += 2;
   if (rejected) zone.score -= 2;
 
@@ -4832,7 +4845,7 @@ const pressure =
   "NEUTRAL";
 
 // === VWAP
-const vwap = calculateVWAP(candles);
+VWAP: typeof vwap === "number" ? vwap : null
 const aboveVWAP = vwap !== null && price > vwap;
 
 // === Reactions
@@ -4842,12 +4855,22 @@ const supportReaction    = structureReaction(nearestSupportZone, candles);
 // === Structure Score
 let structureScore = 0;
 if (nearestResistanceZone || nearestSupportZone) structureScore++;
-if (resistanceReaction !== "UNDECIDED" || supportReaction !== "UNDECIDED") structureScore++;
+  if (
+  resistanceReaction !== "UNDECIDED" &&
+  resistanceReaction !== "NO_STRUCTURE"
+) structureScore++;
+
+if (
+  supportReaction !== "UNDECIDED" &&
+  supportReaction !== "NO_STRUCTURE"
+) structureScore++;
+  
 if (
   (pressure === "BUY" && aboveVWAP) ||
   (pressure === "SELL" && !aboveVWAP)
 ) structureScore++;
 if (htf.htfTrend === mainTrend) structureScore++;
+
 
 // === Intent
 const activeReaction =
@@ -4861,12 +4884,11 @@ const structureIntent = classifyStructureIntent({
   score: structureScore
 });
 
-    const zones = [];
-
-if (!Array.isArray(swings)) {
-  console.warn("Invalid swings input:", swings);
-  return { zones: [] };
-}
+    const zones = Array.isArray(d.analysis?.zones)
+  ? d.analysis.zones
+  : Array.isArray(d.zones)
+  ? d.zones
+  : [];
 
 for (const swing of swings) {
   // 🔒 Validate swing object
