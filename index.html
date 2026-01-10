@@ -5842,84 +5842,107 @@ ${(d.defenseFailure && d.defenseFailure !== "NONE") || d.trendStructureRisk
   : ""} 
 
 
-${d.structureIntent ? (() => {
-  let out = "";
 
-  /* ================= STRUCTURE ZONE ================= */
-  if (d.resistanceZone) {
-    out += `
-      <div class="muted">
-        📐 <b>Structure Zone:</b>
-        ${d.resistanceZone.low.toFixed(4)} – ${d.resistanceZone.high.toFixed(4)}
-      </div>
-    `;
-  }
 
-  /* ================= STRUCTURE STRENGTH ================= */
-  out += `
-    <div class="muted">
-      Strength:
-      ${"●".repeat(d.structureScore)}
-      ${"○".repeat(5 - d.structureScore)}
-      <span class="muted">(${d.structureScore}/5)</span>
-    </div>
-  `;
-
-  /* ================= STRUCTURE REACTION ================= */
-  out += `
-    <div class="muted ${
-      d.resistanceReaction === "DEFENDED"
-        ? "bull"
-        : d.resistanceReaction === "WEAKENING"
-        ? "neutral"
-        : ""
-    }">
-      🧱 <b>Reaction:</b> ${d.resistanceReaction}
-    </div>
-  `;
-
-  /* ================= PRESSURE ================= */
-  out += `
-    <div class="muted ${
-      d.pressure === "BUY"
-        ? "bull"
-        : d.pressure === "SELL"
-        ? "bear"
-        : "neutral"
-    }">
-      🧭 <b>RSI Pressure:</b> ${d.pressure}
-    </div>
-  `;
-
-  /* ================= STRUCTURE INTENT ================= */
-  out += `
-    <div class="${
-      d.structureScore >= 4
-        ? "bull"
-        : d.structureScore >= 2
-        ? "neutral"
-        : "muted"
-    }">
-      🧠 <b>Trend Structure Intent:</b> ${d.structureIntent}
-    </div>
-  `;
-
-  /* ================= CONFIDENCE ================= */
-  out += `
-    <div class="muted">
-      Confidence:
-      ${
-        d.structureScore >= 4
-          ? "HIGH"
-          : d.structureScore >= 2
-          ? "MEDIUM"
-          : "LOW"
-      }
-    </div>
-  `;
-
-  return out;
-})() : ""}
+  ${d.structureIntent ? (() => {  
+  let out = "";  
+  
+  /* ================= STRUCTURE ZONES ================= */  
+  for (const zone of d.analysis.zones) {  
+  
+    /* ---------- STRUCTURE ZONE (TEXT) ---------- */  
+    out += `  
+      <div class="muted">  
+        📐 <b>Structure Zone (${zone.type}):</b>  
+        ${zone.low.toFixed(4)} – ${zone.high.toFixed(4)}<br/>  
+        🧠 <b>State:</b> ${zone.state}  
+        ${zone.entryBias ? `<br/>🎯 <b>Bias:</b> ${zone.entryBias}` : ""}  
+        <br/>  
+        ⭐ <b>Score:</b> ${zone.score}  
+      </div>  
+    `;  
+  
+    /* ---------- STRUCTURE ZONE (CHART) ---------- */  
+    drawZone({  
+      low: zone.low,  
+      high: zone.high,  
+      color:  
+        zone.state === "INSTITUTIONAL"  
+          ? "rgba(255,0,0,0.35)"  
+          : "rgba(255,165,0,0.25)"  
+    });  
+  
+    drawLabel({  
+      price: zone.high,  
+      text: `${zone.state}${zone.entryBias ? " | " + zone.entryBias : ""} | ${zone.score}`  
+    });  
+  }  
+  
+  /* ================= STRUCTURE STRENGTH ================= */  
+  out += `  
+    <div class="muted">  
+      Strength:  
+      ${"●".repeat(d.structureScore)}  
+      ${"○".repeat(5 - d.structureScore)}  
+      <span class="muted">(${d.structureScore}/5)</span>  
+    </div>  
+  `;  
+  
+  /* ================= STRUCTURE REACTION ================= */  
+  out += `  
+    <div class="muted ${  
+      d.resistanceReaction === "DEFENDED"  
+        ? "bull"  
+        : d.resistanceReaction === "WEAKENING"  
+        ? "neutral"  
+        : ""  
+    }">  
+      🧱 <b>Reaction:</b> ${d.resistanceReaction}  
+    </div>  
+  `;  
+  
+  /* ================= PRESSURE ================= */  
+  out += `  
+    <div class="muted ${  
+      d.pressure === "BUY"  
+        ? "bull"  
+        : d.pressure === "SELL"  
+        ? "bear"  
+        : "neutral"  
+    }">  
+      🧭 <b>RSI Pressure:</b> ${d.pressure}  
+    </div>  
+  `;  
+  
+  /* ================= STRUCTURE INTENT ================= */  
+  out += `  
+    <div class="${  
+      d.structureScore >= 4  
+        ? "bull"  
+        : d.structureScore >= 2  
+        ? "neutral"  
+        : "muted"  
+    }">  
+      🧠 <b>Trend Structure Intent:</b> ${d.structureIntent}  
+    </div>  
+  `;  
+  
+  /* ================= CONFIDENCE ================= */  
+  out += `  
+    <div class="muted">  
+      Confidence:  
+      ${  
+        d.structureScore >= 4  
+          ? "HIGH"  
+          : d.structureScore >= 2  
+          ? "MEDIUM"  
+          : "LOW"  
+      }  
+    </div>  
+  `;  
+  
+  return out;  
+})() : ""}  
 
 
 
