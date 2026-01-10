@@ -5276,7 +5276,8 @@ const id = `card-${scope}-${d.sym}`;
   
 
   const fundingInfo = getFundingInfo(d.fundingRate);
-
+    
+const v = aiVerdict || {};
   const aiVerdict = (d && d.aiVerdict) ? d.aiVerdict : null;
 const executionZone = aiVerdict ? aiVerdict.executionZone : null;
 
@@ -5923,17 +5924,17 @@ ${d.marketPhase ? `
 ` : ""}
 
 
-<div class="muted ${aiVerdict.verdictClass}">
-    🧠 AI Verdict: <b>${aiVerdict.verdict}</b>
-  </div>
+<div class="muted ${v.verdictClass ?? "neutral"}">
+  🧠 AI Verdict: <b>${v.verdict ?? "No Signal"}</b>
+</div>
 
-  <div class="muted ${aiVerdict.verdictClass}">
-    ${aiVerdict.tierLabel}
-  </div>
+<div class="muted ${v.verdictClass ?? "neutral"}">
+  ${v.tierLabel ?? "Unrated"}
+</div>
 
-  <div class="muted">
-    ${aiVerdict.reason}
-  </div>
+<div class="muted">
+  ${v.reason ?? "Insufficient data"}
+</div>
 
 
   ${d.S[0] ? `<div class="muted bear">S1: ${d.S[0].toFixed(4)}</div>` : ""}
