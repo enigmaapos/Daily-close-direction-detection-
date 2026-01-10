@@ -5842,7 +5842,8 @@ ${(d.defenseFailure && d.defenseFailure !== "NONE") || d.trendStructureRisk
   : ""} 
 
 
-${d.zones?.length ? (() => {
+
+${Array.isArray(d.zones) && d.zones.length ? (() => {
   let out = "";
 
   /* ================= STRUCTURE ZONES ================= */
@@ -5859,14 +5860,14 @@ ${d.zones?.length ? (() => {
       </div>
     `;
 
-    /* ---------- DRAW ZONE ---------- */
+    /* ---------- CHART DRAW ---------- */
     drawZone({
       low: zone.low,
       high: zone.high,
       color:
         zone.type === "RESISTANCE"
           ? "rgba(255,0,0,0.35)"
-          : "rgba(0,200,100,0.35)"
+          : "rgba(0,180,120,0.35)"
     });
 
     drawLabel({
@@ -5941,7 +5942,7 @@ ${d.zones?.length ? (() => {
   return out;
 })() : `
   <div class="muted">
-    🧱 <b>Structure:</b> NONE (No valid support or resistance)
+    🧱 <b>Structure:</b> NO VALID SUPPORT / RESISTANCE
   </div>
 `}
 
