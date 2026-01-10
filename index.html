@@ -4175,9 +4175,9 @@ if (bull) {
   else if (sw.S.length && !sb) {
 
     const rsi50BullOk =
-      rsi50State?.consistentlyAbove50 &&
-      htf?.htfRSIState !== "oversold" &&
-      htf?.htfTrend !== "bullish";
+      rsi50State?.consistentlyBelow50 &&
+      htf?.htfRSIState !== "overbought" &&
+      htf?.htfTrend !== "bearish";
 
     if (rsi50BullOk) {
       volumeStructure.name  = "support holding (confirmed)";
@@ -4213,9 +4213,9 @@ if (bull) {
   else if (sw.R.length && !rb) {
 
     const rsi50BearOk =
-      rsi50State?.consistentlyBelow50 &&
-      htf?.htfRSIState !== "overbought" &&
-      htf?.htfTrend !== "bearish";
+      rsi50State?.consistentlyAbove50 &&
+      htf?.htfRSIState !== "oversold" &&
+      htf?.htfTrend !== "bullish";
 
     if (rsi50BearOk) {
       volumeStructure.name  = "resistance failed (confirmed)";
