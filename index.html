@@ -2910,7 +2910,7 @@ function classifyStructureIntent({ pressure, reaction, score }) {
   // 1. STRUCTURE
   qualifyStructure(zone, context);
 
-  if (zone.score < 3) {
+  if (zone.score < 1) {
     zone.state = "REJECTED";
     return zone;
   }
@@ -4970,8 +4970,8 @@ for (const swing of swings) {
 
   if (
   activated &&
-  activated.state !== "IGNORE" &&
-  activated.state !== "REJECTED"
+  (activated.state === "ACTIONABLE" ||
+   activated.state === "INSTITUTIONAL")
 ) {
   zones.push(activated);
 }
