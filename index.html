@@ -5282,9 +5282,11 @@ const executionZone = aiVerdict ? aiVerdict.executionZone : null;
 
 
 
-  const execClass = getExecutionClass(
+  const tradeSide = aiVerdict ? aiVerdict.tradeSide : null;
+
+const execClass = getExecutionClass(
   executionZone,
-  aiVerdict.tradeSide
+  tradeSide
 );
 
   const tradeSideClass =
