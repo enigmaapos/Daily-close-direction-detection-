@@ -355,6 +355,32 @@ button.secondary{
 .bias-accumulation .bull { color: var(--bull); }
 .bias-accumulation .bear { color: var(--bear); }
 .bias-accumulation .neutral { color: var(--neutral); }
+
+  .filter-panel {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
+  padding: 12px;
+}
+
+.filter-group {
+  background: #111;
+  border-radius: 10px;
+  padding: 10px;
+  border: 1px solid #222;
+}
+
+.filter-group h4 {
+  font-size: 12px;
+  color: #aaa;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+}
+
+.filter-group select {
+  width: 100%;
+  margin-bottom: 6px;
+}
 </style>
 </head>
 
@@ -386,6 +412,184 @@ button.secondary{
 </select>
   </label>
   </div>
+
+  <!-- ================= FILTER PANEL ================= -->
+<div class="filter-panel">
+
+  <!-- ===== VOLUME & MOMENTUM ===== -->
+  <div class="filter-group">
+    <h4>Volume & Momentum</h4>
+
+    <select id="filterVol">
+      <option value="all">All Volume</option>
+      <option value="bull">Bull Volume</option>
+      <option value="bear">Bear Volume</option>
+    </select>
+
+    <select id="filterVolBreak">
+      <option value="all">All Volume Breaks</option>
+      <option value="yes">24h Volume Breakout</option>
+      <option value="no">No Volume Breakout</option>
+    </select>
+
+    <select id="filterVolumeQuality">
+      <option value="all">All Volume Structure</option>
+      <option value="accepted">Accepted</option>
+      <option value="confirmed">Confirmed</option>
+      <option value="weak">Weak</option>
+      <option value="unaccepted">Unaccepted</option>
+      <option value="none">No Volume Structure</option>
+    </select>
+
+    <select id="filterMomentum">
+      <option value="all">All Momentum</option>
+      <option value="none">No Momentum Shift</option>
+      <option value="bullish">Bullish Shift</option>
+      <option value="bearish">Bearish Shift</option>
+    </select>
+  </div>
+
+  <!-- ===== STRUCTURE ===== -->
+  <div class="filter-group">
+    <h4>Structure</h4>
+
+    <select id="filterStructure">
+      <option value="all">All Structure Directions</option>
+      <option value="support holding">Support Holding</option>
+      <option value="support broken">Support Broken</option>
+      <option value="resistance failed">Resistance Failed</option>
+      <option value="resistance broken">Resistance Broken</option>
+    </select>
+
+    <select id="filterStructureQuality">
+      <option value="all">All Structure Quality</option>
+      <option value="accepted">Accepted</option>
+      <option value="confirmed">Confirmed</option>
+      <option value="unaccepted">Unaccepted</option>
+      <option value="weak">Weak</option>
+      <option value="none">No Structure</option>
+    </select>
+
+    <select id="filterBreakIntent">
+      <option value="all">All Break Intent</option>
+      <option value="PROBING">Probing</option>
+      <option value="HELD">Defense Held</option>
+      <option value="WEAKENING">Defense Weakening</option>
+      <option value="FAILED">Defense Failed</option>
+      <option value="PRESSURE">Under Pressure</option>
+    </select>
+  </div>
+
+  <!-- ===== RSI CONTEXT ===== -->
+  <div class="filter-group">
+    <h4>RSI Context</h4>
+
+    <select id="filterRsi15Context">
+      <option value="all">All RSI 15m</option>
+      <option value="MAX ZONE PUMP">MAX ZONE PUMP</option>
+      <option value="MAX ZONE DUMP">MAX ZONE DUMP</option>
+      <option value="BALANCE ZONE PUMP">BALANCE ZONE PUMP</option>
+      <option value="BALANCE ZONE DUMP">BALANCE ZONE DUMP</option>
+      <option value="LOWEST ZONE PUMP">LOWEST ZONE PUMP</option>
+      <option value="LOWEST ZONE DUMP">LOWEST ZONE DUMP</option>
+    </select>
+
+    <select id="filterDailyRSI">
+      <option value="all">All Daily RSI</option>
+      <option value="MAX ZONE PUMP">MAX ZONE PUMP</option>
+      <option value="MAX ZONE DUMP">MAX ZONE DUMP</option>
+      <option value="BALANCE ZONE PUMP">BALANCE ZONE PUMP</option>
+      <option value="BALANCE ZONE DUMP">BALANCE ZONE DUMP</option>
+      <option value="LOWEST ZONE PUMP">LOWEST ZONE PUMP</option>
+      <option value="LOWEST ZONE DUMP">LOWEST ZONE DUMP</option>
+    </select>
+
+    <select id="filterHTFRSI">
+      <option value="all">All HTF RSI</option>
+      <option value="normal">Normal</option>
+      <option value="overbought">Overbought</option>
+      <option value="oversold">Oversold</option>
+    </select>
+  </div>
+
+  <!-- ===== TRADE & DEFENSE ===== -->
+  <div class="filter-group">
+    <h4>Trade & Defense</h4>
+
+    <select id="filterTradeSide">
+      <option value="all">All Trade Sides</option>
+      <option value="LONG">LONG</option>
+      <option value="SHORT">SHORT</option>
+      <option value="WAIT">WAIT</option>
+    </select>
+
+    <select id="filterExecution">
+      <option value="all">All Execution Zones</option>
+      <option value="ENTRY ZONE">ENTRY ZONE</option>
+      <option value="LATE ZONE">LATE ZONE</option>
+      <option value="PULLBACK ZONE">PULLBACK ZONE</option>
+      <option value="NO TRADE ZONE">NO TRADE ZONE</option>
+    </select>
+
+    <select id="filterDefense">
+      <option value="all">All Defense States</option>
+      <option value="ACTIVE">Defense Active</option>
+      <option value="EARLY WARNING">Early Warning</option>
+      <option value="CRITICAL FAILURE">Critical Failure</option>
+    </select>
+
+    <select id="filterDefenseSide">
+      <option value="all">All Defenders</option>
+      <option value="BULLS">Bulls Defending</option>
+      <option value="BEARS">Bears Defending</option>
+    </select>
+  </div>
+
+  <!-- ===== AI & QUALITY ===== -->
+  <div class="filter-group">
+    <h4>AI & Quality</h4>
+
+    <select id="filterProb">
+      <option value="0">Any Probability</option>
+      <option value="60">≥ 60%</option>
+      <option value="70">≥ 70%</option>
+      <option value="80">≥ 80%</option>
+    </select>
+
+    <select id="filterRR">
+      <option value="all">All Setups</option>
+      <option value="present">With Risk/Reward</option>
+    </select>
+
+    <select id="filterAIVerdict">
+      <option value="all">All AI Verdicts</option>
+      <option>STRONG CONTINUATION</option>
+      <option>CONTROLLED CONTINUATION</option>
+      <option>WAIT FOR PULLBACK</option>
+      <option>COUNTER-TREND BREAKOUT</option>
+      <option>TRAP RISK</option>
+      <option>STRUCTURE WEAK / NO EDGE</option>
+      <option>AVOID / NO TRADE</option>
+    </select>
+  </div>
+
+  <!-- ===== SORT ===== -->
+  <div class="filter-group">
+    <h4>Sorting</h4>
+
+    <select id="sortField">
+      <option value="change">24h Change</option>
+      <option value="prob">Probability</option>
+      <option value="price">Price</option>
+    </select>
+
+    <select id="sortOrder">
+      <option value="desc">Descending</option>
+      <option value="asc">Ascending</option>
+    </select>
+  </div>
+
+</div>
 
 
 <!-- FILTERS ROW -->
