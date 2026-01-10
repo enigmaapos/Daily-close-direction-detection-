@@ -5504,11 +5504,13 @@ flipAttempt = detectPolarityFlipAttempt(rawSeries);
 flipAttemptCount = countPolarityFlipAttempts(rawSeries);
 
 
-    const phaseIcon =
-  d.marketPhase.phase === "CONTINUATION UP" ? "📈" :
-  d.marketPhase.phase === "CONTINUATION DOWN" ? "📉" :
-  d.marketPhase.phase === "EARLY DISTRIBUTION" ? "↩️" :
-  d.marketPhase.phase === "EARLY ACCUMULATION" ? "↪️" :
+    const phase = d.marketPhase?.phase ?? "UNKNOWN";
+
+const phaseIcon =
+  phase === "CONTINUATION UP" ? "📈" :
+  phase === "CONTINUATION DOWN" ? "📉" :
+  phase === "EARLY DISTRIBUTION" ? "↩️" :
+  phase === "EARLY ACCUMULATION" ? "↪️" :
   "⏸️";
 
   
