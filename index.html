@@ -5280,9 +5280,8 @@ const id = `card-${scope}-${d.sym}`;
   const aiVerdict = (d && d.aiVerdict) ? d.aiVerdict : null;
 const executionZone = aiVerdict ? aiVerdict.executionZone : null;
 
+  const tradeSide = aiVerdict?.tradeSide ?? null;
 
-
-  const tradeSide = aiVerdict ? aiVerdict.tradeSide : null;
 
 const execClass = getExecutionClass(
   executionZone,
@@ -5302,7 +5301,7 @@ const execClass = getExecutionClass(
   label: "No Active Volume Structure"
 };
 
-                      const behavior = getSymbolBehavior(d); 
+    const behavior = getSymbolBehavior(d); 
 
   
   card.dataset.bias = d.bias;
@@ -5348,7 +5347,7 @@ card.dataset.aiverdict = aiVerdict ? aiVerdict.verdict : "none";
   d.volumeStructure?.name?.includes("weak")       ? "weak"       :
   "none";
 
-                      const intent = classifyBreakIntent(d);
+      const intent = classifyBreakIntent(d);
 
 const intentKey =
   intent.includes("FAILED")      ? "FAILED" :
@@ -5363,8 +5362,6 @@ card.dataset.breakIntent = intentKey;
     
 
 // ================= RR CALCULATION =================
-const tradeSide = aiVerdict?.tradeSide ?? null;
-
 const rr =
   (tradeSide === "LONG" || tradeSide === "SHORT")
     ? calculateRR(d, tradeSide)
