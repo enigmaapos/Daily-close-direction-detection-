@@ -3984,15 +3984,15 @@ if (mainTrend === "bullish") {
     }
   }
 
-  // === SUPPORT DEFENSE ===
+  // === SUPPORT WEAKENING (WEAKNESS OF SUPPORT POSSIBLE REVERSAL) ===
   else if (sw.S.length && !sb) {
 
-    const rsi50BullOk =
+    const rsi50BearOk =
       rsi50State?.consistentlyBelow50 &&
       htf?.htfRSIState !== "overbought" &&
       htf?.htfTrend !== "bearish";
 
-    if (rsi50BullOk) {
+    if (rsi50BearOk) {
       bias = "Bullish Defense";
       prob = 75;
       structure = "support weakening (confirmed)";
@@ -4033,15 +4033,15 @@ else if (mainTrend === "bearish") {
     }
   }
 
-  // === RESISTANCE DEFENSE ===
+  // === RESISTANCE WEAKENING (WEAKNESS OF RESISTANCE POSSIBLE REVERSAL) ===
   else if (sw.R.length && !rb) {
 
-    const rsi50BearOk =
+    const rsi50BullOk =
       rsi50State?.consistentlyAbove50 &&
       htf?.htfRSIState !== "oversold" &&
       htf?.htfTrend !== "bullish";
 
-    if (rsi50BearOk) {
+    if (rsi50BullOk) {
       bias = "Bearish Defense";
       prob = 75;
       structure = "resistance weakening (confirmed)";
@@ -4171,15 +4171,15 @@ if (bull) {
     }
   }
 
-  // === BUYERS DEFENDING SUPPORT ===
+  // === BUYERS WEAKENING SUPPORT (WEAKNESS OF VOLUME SUPPORT DEFENDER) ===
   else if (sw.S.length && !sb) {
 
-    const rsi50BullOk =
+    const rsi50BearOk =
       rsi50State?.consistentlyBelow50 &&
       htf?.htfRSIState !== "overbought" &&
       htf?.htfTrend !== "bearish";
 
-    if (rsi50BullOk) {
+    if (rsi50BearOk) {
       volumeStructure.name  = "support weakening (confirmed)";
       volumeStructure.label = "🟢 Buy-Side Defense (Buyers defending support)";
     } else {
@@ -4209,15 +4209,15 @@ if (bull) {
     }
   }
 
-  // === SELLERS DEFENDING RESISTANCE ===
+  // === SELLERS WEAKENING RESISTANCE (WEAKNESS OF VOLUME RESISTANCE DEFENDER) ===
   else if (sw.R.length && !rb) {
 
-    const rsi50BearOk =
+    const rsi50BullOk =
       rsi50State?.consistentlyAbove50 &&
       htf?.htfRSIState !== "oversold" &&
       htf?.htfTrend !== "bullish";
 
-    if (rsi50BearOk) {
+    if (rsi50BullOk) {
       volumeStructure.name  = "resistance weakening (confirmed)";
       volumeStructure.label = "🔴 Sell-Side Defense (Sellers defending resistance)";
     } else {
