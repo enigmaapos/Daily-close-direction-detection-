@@ -5289,10 +5289,11 @@ const execClass = getExecutionClass(
   tradeSide
 );
 
-  const tradeSideClass =
-  aiVerdict.tradeSide === "LONG"
+
+    const tradeSideClass =
+  aiVerdict?.tradeSide === "LONG"
     ? "bull"
-    : aiVerdict.tradeSide === "SHORT"
+    : aiVerdict?.tradeSide === "SHORT"
     ? "bear"
     : "neutral";
 
