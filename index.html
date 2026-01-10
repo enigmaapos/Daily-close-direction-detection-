@@ -5851,28 +5851,28 @@ ${d.structureIntent ? (() => {
     /* ---------- STRUCTURE ZONE (TEXT) ---------- */
     out += `
       <div class="muted">
-        📐 <b>Structure Zone (${zone.type}):</b>
-        ${zone.low.toFixed(4)} – ${zone.high.toFixed(4)}<br/>
-        🧠 <b>State:</b> ${zone.state}
-        ${zone.entryBias ? `<br/>🎯 <b>Bias:</b> ${zone.entryBias}` : ""}
+        📐 <b>Structure Zone (${d.zone.type}):</b>
+        ${d.zone.low.toFixed(4)} – ${d.zone.high.toFixed(4)}<br/>
+        🧠 <b>State:</b> ${d.zone.state}
+        ${d.zone.entryBias ? `<br/>🎯 <b>Bias:</b> ${d.zone.entryBias}` : ""}
         <br/>
-        ⭐ <b>Score:</b> ${zone.score}
+        ⭐ <b>Score:</b> ${d.zone.score}
       </div>
     `;
 
     /* ---------- STRUCTURE ZONE (CHART) ---------- */
     drawZone({
-      low: zone.low,
-      high: zone.high,
+      low: d.zone.low,
+      high: d.zone.high,
       color:
-        zone.state === "INSTITUTIONAL"
+        d.zone.state === "INSTITUTIONAL"
           ? "rgba(255,0,0,0.35)"
           : "rgba(255,165,0,0.25)"
     });
 
     drawLabel({
-      price: zone.high,
-      text: `${zone.state}${zone.entryBias ? " | " + zone.entryBias : ""} | ${zone.score}`
+      price: d.zone.high,
+      text: `${d.zone.state}${d.zone.entryBias ? " | " + d.zone.entryBias : ""} | ${d.zone.score}`
     });
   }
 
