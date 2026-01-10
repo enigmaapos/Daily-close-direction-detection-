@@ -4850,8 +4850,10 @@ const pressure =
   "NEUTRAL";
 
 // === VWAP
-VWAP: typeof vwap === "number" ? vwap : null
-const aboveVWAP = vwap !== null && price > vwap;
+const VWAP = typeof vwapValue === "number" ? vwapValue : null;
+// or wherever your VWAP comes from
+
+const aboveVWAP = VWAP !== null && price > VWAP;
 
 // === Reactions
 const resistanceReaction = structureReaction(nearestResistanceZone, candles);
