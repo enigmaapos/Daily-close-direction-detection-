@@ -3859,6 +3859,16 @@ const avgVol =
   const lastClose = c.at(-1);
 const prevClose = c.at(-2);
 
+const bullishEMAAcceptance =
+  price > ema70Last &&
+  price > ema200Last &&
+  ema70Last > ema200Last;
+
+const bearishEMAAcceptance =
+  price < ema70Last &&
+  price < ema200Last &&
+  ema70Last < ema200Last;
+
 
 const brokeAboveResistanceZone =
   rZone &&
@@ -3889,7 +3899,8 @@ const htfBearOk =
   
    const bullishBreakAccepted =
   rb &&
-  brokeAboveResistanceZone &&   // ✅ ZONE CONFIRMATION
+  brokeAboveResistanceZone &&      // structure confirmation
+  bullishEMAAcceptance &&          // EMA acceptance (THIS is what you meant)
   volConfirmed &&
   rsi15 !== null &&
   rsi15Rising &&
@@ -3902,7 +3913,8 @@ const htfBearOk =
 
 const bearishBreakAccepted =
   sb &&
-  brokeBelowSupportZone &&      // ✅ ZONE CONFIRMATION
+  brokeBelowSupportZone &&         // structure confirmation
+  bearishEMAAcceptance &&          // EMA acceptance
   volConfirmed &&
   rsi15 !== null &&
   !rsi15Rising &&
