@@ -3913,14 +3913,20 @@ const volConfirmed = recentVol >= avgVol * 1.2;
 
 // HTF permission logic
 const htfBullOk =
-  htf?.htfTrend !== "bullish" &&
-  htf?.htfRSIState !== "oversold" &&
-  htf?.htfStructure?.support !== "holding";
+  htf?.htfTrend === "bullish" &&
+  (
+    htf?.htfRSIState === "oversold" ||
+    htf?.htfRSIState === "normal"
+  ) &&
+  htf?.htfStructure?.support !== "broken";
 
 const htfBearOk =
-  htf?.htfTrend !== "bearish" &&
-  htf?.htfRSIState !== "overbought" &&
-  htf?.htfStructure?.resistance !== "holding";
+  htf?.htfTrend === "bearish" &&
+  (
+    htf?.htfRSIState === "overbought" ||
+    htf?.htfRSIState === "normal"
+  ) &&
+  htf?.htfStructure?.resistance !== "broken";
 
   
    const bullishBreakAccepted =
@@ -3992,8 +3998,8 @@ if (mainTrend === "bullish") {
 
     const rsi50BearOk =
       rsi50State?.consistentlyBelow50 &&
-      htf?.htfRSIState !== "overbought" &&
-      htf?.htfTrend !== "bearish";
+      htf?.htfRSIState == "overbought" &&
+      htf?.htfTrend == "bearish";
 
     if (rsi50BearOk) {
       bias = "Bullish Defense";
@@ -4041,8 +4047,8 @@ else if (mainTrend === "bearish") {
 
     const rsi50BullOk =
       rsi50State?.consistentlyAbove50 &&
-      htf?.htfRSIState !== "oversold" &&
-      htf?.htfTrend !== "bullish";
+      htf?.htfRSIState == "oversold" &&
+      htf?.htfTrend == "bullish";
 
     if (rsi50BullOk) {
       bias = "Bearish Defense";
@@ -4179,8 +4185,8 @@ if (bull) {
 
     const rsi50BearOk =
       rsi50State?.consistentlyBelow50 &&
-      htf?.htfRSIState !== "overbought" &&
-      htf?.htfTrend !== "bearish";
+      htf?.htfRSIState == "overbought" &&
+      htf?.htfTrend == "bearish";
 
     if (rsi50BearOk) {
       volumeStructure.name  = "support weakening (confirmed)";
@@ -4217,8 +4223,8 @@ if (bull) {
 
     const rsi50BullOk =
       rsi50State?.consistentlyAbove50 &&
-      htf?.htfRSIState !== "oversold" &&
-      htf?.htfTrend !== "bullish";
+      htf?.htfRSIState == "oversold" &&
+      htf?.htfTrend == "bullish";
 
     if (rsi50BullOk) {
       volumeStructure.name  = "resistance weakening (confirmed)";
