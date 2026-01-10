@@ -5556,11 +5556,11 @@ ${d.setupScore ? `
 
 
 <div class="prob ${
-    d.bias.includes("Bull") ? "bull" :
-    d.bias.includes("Bear") ? "bear" : "neutral"
-  }">
-    ${d.bias} — ${d.prob}%
-  </div>
+  d.bias?.includes?.("Bull") ? "bull" :
+  d.bias?.includes?.("Bear") ? "bear" : "neutral"
+}">
+  ${d.bias ?? "Neutral"} — ${d.prob ?? "—"}%
+</div>
 
   ${d.directionalBias ? `
   <div class="muted ${
