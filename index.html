@@ -5842,38 +5842,17 @@ ${(d.defenseFailure && d.defenseFailure !== "NONE") || d.trendStructureRisk
   : ""} 
 
 
-
-${Array.isArray(d.zones) && d.zones.length ? (() => {
+${d.structureIntent ? (() => {
   let out = "";
 
-  /* ================= STRUCTURE ZONES ================= */
-  for (const zone of d.zones) {
-
+  /* ================= STRUCTURE ZONE ================= */
+  if (d.resistanceZone) {
     out += `
       <div class="muted">
-        📐 <b>${zone.type} Zone:</b>
-        ${zone.low.toFixed(4)} – ${zone.high.toFixed(4)}<br/>
-        🧠 <b>State:</b> ${zone.state}
-        ${zone.entryBias ? `<br/>🎯 <b>Bias:</b> ${zone.entryBias}` : ""}
-        <br/>
-        ⭐ <b>Score:</b> ${zone.score}
+        📐 <b>Structure Zone:</b>
+        ${d.resistanceZone.low.toFixed(4)} – ${d.resistanceZone.high.toFixed(4)}
       </div>
     `;
-
-    /* ---------- CHART DRAW ---------- */
-    drawZone({
-      low: zone.low,
-      high: zone.high,
-      color:
-        zone.type === "RESISTANCE"
-          ? "rgba(255,0,0,0.35)"
-          : "rgba(0,180,120,0.35)"
-    });
-
-    drawLabel({
-      price: zone.high,
-      text: `${zone.type} | ${zone.state}${zone.entryBias ? " | " + zone.entryBias : ""} | ${zone.score}`
-    });
   }
 
   /* ================= STRUCTURE STRENGTH ================= */
@@ -5940,11 +5919,7 @@ ${Array.isArray(d.zones) && d.zones.length ? (() => {
   `;
 
   return out;
-})() : `
-  <div class="muted">
-    🧱 <b>Structure:</b> NO VALID SUPPORT / RESISTANCE
-  </div>
-`}
+})() : ""}
 
 
 
