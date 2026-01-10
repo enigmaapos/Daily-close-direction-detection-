@@ -4969,12 +4969,12 @@ for (const swing of swings) {
 );
 
   if (
-    activated &&
-    (activated.state === "ACTIONABLE" ||
-      activated.state === "INSTITUTIONAL")
-  ) {
-    zones.push(activated);
-  }
+  activated &&
+  activated.state !== "IGNORE" &&
+  activated.state !== "REJECTED"
+) {
+  zones.push(activated);
+}
 }
 
 
@@ -5848,7 +5848,7 @@ ${(d.defenseFailure && d.defenseFailure !== "NONE") || d.trendStructureRisk
   let out = "";  
   
   /* ================= STRUCTURE ZONES ================= */  
-  for (const zone of d.analysis.zones) {  
+  for (const zone of d.zones ?? []) {  
   
     /* ---------- STRUCTURE ZONE (TEXT) ---------- */  
     out += `  
