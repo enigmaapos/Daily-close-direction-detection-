@@ -4891,11 +4891,7 @@ const structureIntent = classifyStructureIntent({
   score: structureScore
 });
 
-    const zones = Array.isArray(data.analysis?.zones)
-  ? data.analysis.zones
-  : Array.isArray(data.zones)
-  ? data.zones
-  : [];
+    const zones = [];
 
 for (const swing of swings) {
   // 🔒 Validate swing object
