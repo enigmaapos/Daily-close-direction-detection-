@@ -2779,13 +2779,27 @@ function calculateVWAP(candles) {
   return v ? pv / v : null;
 }
 
+  
 function structureReaction(zone, candles) {
+  // 🛡️ HARD GUARD — prevents all crashes
+  if (
+    !zone ||
+    typeof zone.low !== "number" ||
+    typeof zone.high !== "number" ||
+    !Array.isArray(candles) ||
+    candles.length === 0
+  ) {
+    return "NO_STRUCTURE";
+  }
+
   let failedBreaks = 0;
   let inside = 0;
 
   const recent = candles.slice(-20);
 
   for (const c of recent) {
+    if (!c) continue;
+
     const inZone = c.close >= zone.low && c.close <= zone.high;
     const fakeUp = c.high > zone.high && c.close < zone.high;
     const fakeDown = c.low < zone.low && c.close > zone.low;
@@ -2797,7 +2811,7 @@ function structureReaction(zone, candles) {
   if (failedBreaks >= 3) return "DEFENDED";
   if (inside >= 6) return "WEAKENING";
   return "UNDECIDED";
-  }
+}
 
 
 function classifyStructureIntent({ pressure, reaction, score }) {
