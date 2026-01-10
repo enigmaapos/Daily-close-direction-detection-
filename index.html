@@ -4893,6 +4893,24 @@ const structureIntent = classifyStructureIntent({
 
     const zones = [];
 
+  const rawSwings = findSwings(h, l, c, v);
+
+const swings = [
+  ...(Array.isArray(rawSwings?.supports)
+    ? rawSwings.supports.map(level => ({
+        level,
+        type: "low"
+      }))
+    : []),
+
+  ...(Array.isArray(rawSwings?.resistances)
+    ? rawSwings.resistances.map(level => ({
+        level,
+        type: "high"
+      }))
+    : [])
+];
+
 for (const swing of swings) {
   // 🔒 Validate swing object
   if (
