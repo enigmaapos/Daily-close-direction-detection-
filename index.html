@@ -5433,23 +5433,28 @@ const volumeStructClass =
 
 /* ================= EXECUTION ALERT ================= */
 const now = Date.now();
-const alertKey = `${d.sym}-${aiVerdict.tradeSide}`;
+
+// Normalize AI fields safely
+const tradeSide = aiVerdict?.tradeSide ?? null;
+const executionZone = aiVerdict?.executionZone ?? null;
+
+const alertKey = `${d.sym}-${tradeSide || "none"}`;
 
 const isManual = card.dataset.manual === "true";
 const isFavGrid = el.id === "favGrid";
 
-// 🔑 NEW unified ENTRY ZONE check
+// 🔑 Unified ENTRY ZONE check (null-safe)
 const isEntryZone =
-  typeof aiVerdict.executionZone === "string" &&
-  aiVerdict.executionZone.startsWith("ENTRY ZONE");
+  typeof executionZone === "string" &&
+  executionZone.startsWith("ENTRY ZONE");
 
 const isLongExecution =
-  aiVerdict.tradeSide === "LONG" &&
+  tradeSide === "LONG" &&
   isEntryZone &&
   el.id === "redGrid";     // 🔴 Bullish grid
 
 const isShortExecution =
-  aiVerdict.tradeSide === "SHORT" &&
+  tradeSide === "SHORT" &&
   isEntryZone &&
   el.id === "greenGrid";   // 🟢 Bearish grid
 
@@ -5463,7 +5468,7 @@ if (
     !execAlertCooldown[alertKey] ||
     now - execAlertCooldown[alertKey] > EXEC_ALERT_COOLDOWN
   ) {
-    executionAlert.play().catch(()=>{});
+    executionAlert.play().catch(() => {});
     execAlertCooldown[alertKey] = now;
   }
 }
