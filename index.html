@@ -5434,9 +5434,6 @@ const volumeStructClass =
 /* ================= EXECUTION ALERT ================= */
 const now = Date.now();
 
-// Normalize AI fields safely
-const executionZone = aiVerdict?.executionZone ?? null;
-
 const alertKey = `${d.sym}-${tradeSide || "none"}`;
 
 const isManual = card.dataset.manual === "true";
