@@ -4968,13 +4968,13 @@ for (const swing of swings) {
   activeMomentum ?? null
 );
 
-  if (
-  activated &&
-  (activated.state === "ACTIONABLE" ||
-   activated.state === "INSTITUTIONAL")
-) {
-  zones.push(activated);
-}
+if (
+    activated &&
+    (activated.state === "ACTIONABLE" ||
+      activated.state === "INSTITUTIONAL")
+  ) {
+    zones.push(activated);
+  }
 }
 
 
