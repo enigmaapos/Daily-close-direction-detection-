@@ -2758,12 +2758,16 @@ function classifyBreakIntent(d) {
 
 const ZONE_PAD = 0.003;
 
-function makeZone(level) {
+
+  function makeZone(level, type) {
   return {
+    type, // "DEMAND" | "SUPPLY"
     low: level * (1 - ZONE_PAD),
-    high: level * (1 + ZONE_PAD)
+    high: level * (1 + ZONE_PAD),
+    score: 0,
+    state: "RAW"
   };
-}
+  }
 
 function calculateVWAP(candles) {
   let pv = 0, v = 0;
@@ -2776,27 +2780,25 @@ function calculateVWAP(candles) {
 }
 
 function structureReaction(zone, candles) {
-  if (!zone) return "UNDECIDED";
-
   let failedBreaks = 0;
-  let closesInside = 0;
+  let inside = 0;
 
   const recent = candles.slice(-20);
 
   for (const c of recent) {
     const inZone = c.close >= zone.low && c.close <= zone.high;
-    const brokeAbove = c.high > zone.high && c.close < zone.high;
-    const brokeBelow = c.low < zone.low && c.close > zone.low;
+    const fakeUp = c.high > zone.high && c.close < zone.high;
+    const fakeDown = c.low < zone.low && c.close > zone.low;
 
-    if (inZone) closesInside++;
-    if (brokeAbove || brokeBelow) failedBreaks++;
+    if (inZone) inside++;
+    if (fakeUp || fakeDown) failedBreaks++;
   }
 
   if (failedBreaks >= 3) return "DEFENDED";
-  if (closesInside >= 6) return "WEAKENING";
-
+  if (inside >= 6) return "WEAKENING";
   return "UNDECIDED";
-}
+  }
+
 
 function classifyStructureIntent({ pressure, reaction, score }) {
   if (score < 3) return "NO CLEAR STRUCTURE";
@@ -2813,17 +2815,7 @@ function classifyStructureIntent({ pressure, reaction, score }) {
   return "CONFLICT";
 }
 
-      const ZONE_PAD = 0.003;
 
-function makeZone(level, type) {
-  return {
-    type, // "DEMAND" | "SUPPLY"
-    low: level * (1 - ZONE_PAD),
-    high: level * (1 + ZONE_PAD),
-    score: 0,
-    state: "RAW"
-  };
-  }
 
         function candleAcceptance(c) {
   const range = c.high - c.low;
@@ -2864,26 +2856,7 @@ function makeZone(level, type) {
   return "FLAT";
   }
 
-  function structureReaction(zone, candles) {
-  let failedBreaks = 0;
-  let inside = 0;
-
-  const recent = candles.slice(-20);
-
-  for (const c of recent) {
-    const inZone = c.close >= zone.low && c.close <= zone.high;
-    const fakeUp = c.high > zone.high && c.close < zone.high;
-    const fakeDown = c.low < zone.low && c.close > zone.low;
-
-    if (inZone) inside++;
-    if (fakeUp || fakeDown) failedBreaks++;
-  }
-
-  if (failedBreaks >= 3) return "DEFENDED";
-  if (inside >= 6) return "WEAKENING";
-  return "UNDECIDED";
-  }
-
+  
     function qualifyStructure(zone, context) {
   const {
     structureEvent, // "BOS" | "CHoCH" | "RANGE"
