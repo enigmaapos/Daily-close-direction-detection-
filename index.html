@@ -3856,11 +3856,19 @@ const avgVol =
   
   const rsi15Momentum = getRSI15Momentum(rsi15Arr);
 
-  const closeAboveResistance =
-  rZone && c.at(-1) > rZone.high;
+  const lastClose = c.at(-1);
+const prevClose = c.at(-2);
 
-const closeBelowSupport =
-  sZone && c.at(-1) < sZone.low;
+
+const brokeAboveResistanceZone =
+  rZone &&
+  lastClose > rZone.high &&
+  prevClose > rZone.high;
+
+const brokeBelowSupportZone =
+  sZone &&
+  lastClose < sZone.low &&
+  prevClose < sZone.low;
 
     const recentVol = v.at(-1);
 const volConfirmed = recentVol >= avgVol * 1.2;
@@ -3881,7 +3889,7 @@ const htfBearOk =
   
    const bullishBreakAccepted =
   rb &&
-  closeAboveResistance &&
+  brokeAboveResistanceZone &&   // ✅ ZONE CONFIRMATION
   volConfirmed &&
   rsi15 !== null &&
   rsi15Rising &&
@@ -3894,7 +3902,7 @@ const htfBearOk =
 
 const bearishBreakAccepted =
   sb &&
-  closeBelowSupport &&
+  brokeBelowSupportZone &&      // ✅ ZONE CONFIRMATION
   volConfirmed &&
   rsi15 !== null &&
   !rsi15Rising &&
@@ -3908,100 +3916,107 @@ const bearishBreakAccepted =
 let bias = "Neutral";
 let prob = 50;
 let structure = "none";
+  
 
-/* ================= BULLISH ENVIRONMENT ================= */
+  /* ================= BULLISH ENVIRONMENT ================= */
 if (mainTrend === "bullish") {
 
-  if (rb) {
-  if (bullishBreakAccepted) {
-    bias = BIAS.BULL_CONT;
-    prob = 90;
-    structure = "resistance broken (accepted)";
+  // === RESISTANCE BREAK ATTEMPT ===
+  if (rb && brokeAboveResistanceZone) {
+
+    if (bullishBreakAccepted) {
+      bias = BIAS.BULL_CONT;
+      prob = 90;
+      structure = "resistance broken (accepted)";
+    }
+
+    // 🔵 CONTINUATION PRESSURE (NOT A TRAP)
+    else if (
+      bull &&
+      rsi50State?.consistentlyAbove50 &&
+      htf?.htfTrend !== "bearish"
+    ) {
+      bias = BIAS.BULL_PRESSURE;
+      prob = 65;
+      structure = "resistance broken (unaccepted)";
+    }
+
+    // 🔴 TRUE TRAP
+    else {
+      bias = BIAS.BULL_TRAP;
+      prob = 45;
+      structure = "resistance broken (unaccepted)";
+    }
   }
 
-  // 🔵 CONTINUATION PRESSURE (NOT A TRAP)
-  else if (
-    bull &&                             // buyers dominant
-    rsi50State?.consistentlyAbove50 &&  // momentum supports bulls
-    htf?.htfTrend !== "bearish"         // HTF not against
-  ) {
-    bias = BIAS.BULL_PRESSURE;
-    prob = 65;
-    structure = "resistance broken (unaccepted)";
-  }
-
-  // 🔴 TRUE TRAP
-  else {
-    bias = BIAS.BULL_TRAP;
-    prob = 45;
-    structure = "resistance broken (unaccepted)";
-  }
-  }
-
+  // === SUPPORT DEFENSE ===
   else if (sw.S.length && !sb) {
 
-  const rsi50BullOk =
-    rsi50State?.consistentlyBelow50 &&   // buyers still in control
-    htf?.htfRSIState !== "overbought" &&
-    htf?.htfTrend !== "bearish";
+    const rsi50BullOk =
+      rsi50State?.consistentlyBelow50 &&
+      htf?.htfRSIState !== "overbought" &&
+      htf?.htfTrend !== "bearish";
 
-  if (rsi50BullOk) {
-    bias = "Bullish Defense";
-    prob = 75;
-    structure = "support holding (confirmed)";
-  } else {
-    bias = "Bullish Defense Weakening";
-    prob = 55;
-    structure = "support weak (buyers weakening)";
+    if (rsi50BullOk) {
+      bias = "Bullish Defense";
+      prob = 75;
+      structure = "support holding (confirmed)";
+    } else {
+      bias = "Bullish Defense Weakening";
+      prob = 55;
+      structure = "support weak (buyers weakening)";
+    }
   }
-}
 }
 
 /* ================= BEARISH ENVIRONMENT ================= */
 else if (mainTrend === "bearish") {
 
-if (sb) {
-  if (bearishBreakAccepted) {
-    bias = BIAS.BEAR_CONT;
-    prob = 90;
-    structure = "support broken (accepted)";
+  // === SUPPORT BREAK ATTEMPT ===
+  if (sb && brokeBelowSupportZone) {
+
+    if (bearishBreakAccepted) {
+      bias = BIAS.BEAR_CONT;
+      prob = 90;
+      structure = "support broken (accepted)";
+    }
+
+    else if (
+      !bull &&
+      rsi50State?.consistentlyBelow50 &&
+      htf?.htfTrend !== "bullish"
+    ) {
+      bias = BIAS.BEAR_PRESSURE;
+      prob = 65;
+      structure = "support broken (unaccepted)";
+    }
+
+    else {
+      bias = BIAS.BEAR_TRAP;
+      prob = 45;
+      structure = "support broken (unaccepted)";
+    }
   }
 
-  else if (
-    !bull &&                            // sellers dominant
-    rsi50State?.consistentlyBelow50 &&
-    htf?.htfTrend !== "bullish"
-  ) {
-    bias = BIAS.BEAR_PRESSURE;
-    prob = 65;
-    structure = "support broken (unaccepted)";
-  }
-
-  else {
-    bias = BIAS.BEAR_TRAP;
-    prob = 45;
-    structure = "support broken (unaccepted)";
-  }
-}
-
+  // === RESISTANCE DEFENSE ===
   else if (sw.R.length && !rb) {
 
-  const rsi50BearOk =
-    rsi50State?.consistentlyAbove50 &&   // sellers still in control
-    htf?.htfRSIState !== "oversold" &&
-    htf?.htfTrend !== "bullish";
+    const rsi50BearOk =
+      rsi50State?.consistentlyAbove50 &&
+      htf?.htfRSIState !== "oversold" &&
+      htf?.htfTrend !== "bullish";
 
-  if (rsi50BearOk) {
-    bias = "Bearish Defense";
-    prob = 75;
-    structure = "resistance failed (confirmed)";
-  } else {
-    bias = "Bearish Defense Weakening";
-    prob = 55;
-    structure = "resistance weak (sellers weakening)";
+    if (rsi50BearOk) {
+      bias = "Bearish Defense";
+      prob = 75;
+      structure = "resistance failed (confirmed)";
+    } else {
+      bias = "Bearish Defense Weakening";
+      prob = 55;
+      structure = "resistance weak (sellers weakening)";
+    }
   }
 }
-  }
 
 /* ================= NO STRUCTURE ================= */
 else {
@@ -4104,13 +4119,14 @@ if (activeMomentum) {
 };
 
       
-/* ================= VOLUME STRUCTURE (DESCRIPTIVE | HTF-AWARE) ================= */
+/* ================= VOLUME STRUCTURE (DESCRIPTIVE | HTF-AWARE | ZONE-CONFIRMED) ================= */
 
 if (bull) {
   // 🟢 BUYERS dominant
 
-  // Price pushed above resistance
-  if (rb) {
+  // === RESISTANCE BREAK ATTEMPT (ZONE REQUIRED) ===
+  if (rb && brokeAboveResistanceZone) {
+
     if (bullishBreakAccepted) {
       volumeStructure.name  = "resistance broken (accepted)";
       volumeStructure.label = "🟢 Buy-Side Acceptance (Resistance Broken)";
@@ -4120,7 +4136,7 @@ if (bull) {
     }
   }
 
-  // Buyers defending support
+  // === BUYERS DEFENDING SUPPORT ===
   else if (sw.S.length && !sb) {
 
     const rsi50BullOk =
@@ -4133,15 +4149,22 @@ if (bull) {
       volumeStructure.label = "🟢 Buy-Side Defense (Buyers defending support)";
     } else {
       volumeStructure.name  = "support weak (buyers defending)";
-      volumeStructure.label = "🟡 Buy-Side Weakening (Buyers defending support (weakening))";
+      volumeStructure.label = "🟡 Buy-Side Weakening (Buyers defending support)";
     }
+  }
+
+  // === NO VALID STRUCTURE EVENT ===
+  else {
+    volumeStructure.name  = "none";
+    volumeStructure.label = "No Active Volume Structure";
   }
 
 } else {
   // 🔴 SELLERS dominant
 
-  // Price pushed below support
-  if (sb) {
+  // === SUPPORT BREAK ATTEMPT (ZONE REQUIRED) ===
+  if (sb && brokeBelowSupportZone) {
+
     if (bearishBreakAccepted) {
       volumeStructure.name  = "support broken (accepted)";
       volumeStructure.label = "🔴 Sell-Side Acceptance (Support Broken)";
@@ -4151,7 +4174,7 @@ if (bull) {
     }
   }
 
-  // Sellers defending resistance
+  // === SELLERS DEFENDING RESISTANCE ===
   else if (sw.R.length && !rb) {
 
     const rsi50BearOk =
@@ -4164,8 +4187,14 @@ if (bull) {
       volumeStructure.label = "🔴 Sell-Side Defense (Sellers defending resistance)";
     } else {
       volumeStructure.name  = "resistance weak (sellers defending)";
-      volumeStructure.label = "🟡 Sell-Side Weakening (Sellers defending resistance (weakening))";
+      volumeStructure.label = "🟡 Sell-Side Weakening (Sellers defending resistance)";
     }
+  }
+
+  // === NO VALID STRUCTURE EVENT ===
+  else {
+    volumeStructure.name  = "none";
+    volumeStructure.label = "No Active Volume Structure";
   }
 }
 
