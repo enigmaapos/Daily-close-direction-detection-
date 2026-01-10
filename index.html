@@ -5435,7 +5435,6 @@ const volumeStructClass =
 const now = Date.now();
 
 // Normalize AI fields safely
-const tradeSide = aiVerdict?.tradeSide ?? null;
 const executionZone = aiVerdict?.executionZone ?? null;
 
 const alertKey = `${d.sym}-${tradeSide || "none"}`;
