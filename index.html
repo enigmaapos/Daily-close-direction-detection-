@@ -5943,11 +5943,10 @@ ${d.marketPhase ? `
   </div>
 
 
-  ${d.S[0] ? `<div class="muted bear">S1: ${d.S[0].toFixed(4)}</div>` : ""}
-  ${d.S[1] ? `<div class="muted bear">S2: ${d.S[1].toFixed(4)}</div>` : ""}
-  ${d.R[0] ? `<div class="muted bull">R1: ${d.R[0].toFixed(4)}</div>` : ""}
-  ${d.R[1] ? `<div class="muted bull">R2: ${d.R[1].toFixed(4)}</div>` : ""}
-
+  ${d.S?.[0] != null ? `<div class="muted bear">S1: ${d.S[0].toFixed(4)}</div>` : ""}
+${d.S?.[1] != null ? `<div class="muted bear">S2: ${d.S[1].toFixed(4)}</div>` : ""}
+${d.R?.[0] != null ? `<div class="muted bull">R1: ${d.R[0].toFixed(4)}</div>` : ""}
+${d.R?.[1] != null ? `<div class="muted bull">R2: ${d.R[1].toFixed(4)}</div>` : ""}
 
   <div class="muted ${
     d.mainTrend === "bullish" ? "bull" :
