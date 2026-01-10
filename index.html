@@ -4869,30 +4869,67 @@ if (!Array.isArray(swings)) {
 }
 
 for (const swing of swings) {
+  // 🔒 Validate swing object
+  if (
+    !swing ||
+    typeof swing !== "object" ||
+    typeof swing.level !== "number" ||
+    !Number.isFinite(swing.level) ||
+    (swing.type !== "high" && swing.type !== "low")
+  ) {
+    console.warn("Skipping invalid swing:", swing);
+    continue;
+  }
+
+  // 🔒 Safe defaults
+  const structureEvent = swing.structureEvent ?? null;
+  const protectedLevel =
+    typeof swing.protected === "number" && Number.isFinite(swing.protected)
+      ? swing.protected
+      : null;
+
   const zone = makeZone(swing.level, swing.type);
+
+  if (!zone) {
+    console.warn("Zone creation failed:", swing);
+    continue;
+  }
 
   const evaluated = evaluateZone({
     zone,
     candles,
     context: {
-      structureEvent: swing.structureEvent,
-      protectedLevel: swing.protected,
-      structureAlignment
+      structureEvent,
+      protectedLevel,
+      structureAlignment: structureAlignment ?? "UNKNOWN"
     },
-    EMA: { EMA14, EMA21, EMA70, EMA200 },
-    VWAP,
-    pressure
+    EMA: {
+      EMA14: EMA14 ?? null,
+      EMA21: EMA21 ?? null,
+      EMA70: EMA70 ?? null,
+      EMA200: EMA200 ?? null
+    },
+    VWAP: VWAP ?? null,
+    pressure: pressure ?? null
   });
+
+  if (!evaluated || typeof evaluated !== "object") {
+    console.warn("Zone evaluation failed:", zone);
+    continue;
+  }
 
   const activated = activateZoneWithMomentum(evaluated, momentum);
 
   if (
-    activated.state === "ACTIONABLE" ||
-    activated.state === "INSTITUTIONAL"
+    activated &&
+    (activated.state === "ACTIONABLE" ||
+      activated.state === "INSTITUTIONAL")
   ) {
     zones.push(activated);
   }
 }
+
+return { zones };
 
 
   /* ================= BIAS SNAPSHOT ================= */
