@@ -5363,17 +5363,19 @@ card.dataset.breakIntent = intentKey;
     
 
 // ================= RR CALCULATION =================
+const tradeSide = aiVerdict?.tradeSide ?? null;
+
 const rr =
-  (aiVerdict.tradeSide === "LONG" || aiVerdict.tradeSide === "SHORT")
-    ? calculateRR(d, aiVerdict.tradeSide)
+  (tradeSide === "LONG" || tradeSide === "SHORT")
+    ? calculateRR(d, tradeSide)
     : null;
 
 const rrDisplay =
   rr !== null && rr >= 1.2 ? rr : null;
 
-    const tpProb =
+const tpProb =
   rrDisplay ? estimateTPProbability(d, rrDisplay) : null;
-
+    
 // ================= RR DATASET =================
 if (rrDisplay !== null) {
   card.dataset.rr = rrDisplay;
