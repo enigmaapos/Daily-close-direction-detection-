@@ -3995,7 +3995,7 @@ if (mainTrend === "bullish") {
     if (rsi50BullOk) {
       bias = "Bullish Defense";
       prob = 75;
-      structure = "support holding (confirmed)";
+      structure = "support weakening (confirmed)";
     } else {
       bias = "Bullish Defense Weakening";
       prob = 55;
@@ -4044,7 +4044,7 @@ else if (mainTrend === "bearish") {
     if (rsi50BearOk) {
       bias = "Bearish Defense";
       prob = 75;
-      structure = "resistance failed (confirmed)";
+      structure = "resistance weakening (confirmed)";
     } else {
       bias = "Bearish Defense Weakening";
       prob = 55;
@@ -4180,10 +4180,10 @@ if (bull) {
       htf?.htfTrend !== "bearish";
 
     if (rsi50BullOk) {
-      volumeStructure.name  = "support holding (confirmed)";
+      volumeStructure.name  = "support weakening (confirmed)";
       volumeStructure.label = "🟢 Buy-Side Defense (Buyers defending support)";
     } else {
-      volumeStructure.name  = "support weak (buyers defending)";
+      volumeStructure.name  = "support weak (buyers weakening)";
       volumeStructure.label = "🟡 Buy-Side Weakening (Buyers defending support)";
     }
   }
@@ -4218,10 +4218,10 @@ if (bull) {
       htf?.htfTrend !== "bullish";
 
     if (rsi50BearOk) {
-      volumeStructure.name  = "resistance failed (confirmed)";
+      volumeStructure.name  = "resistance weakening (confirmed)";
       volumeStructure.label = "🔴 Sell-Side Defense (Sellers defending resistance)";
     } else {
-      volumeStructure.name  = "resistance weak (sellers defending)";
+      volumeStructure.name  = "resistance weak (sellers weakening)";
       volumeStructure.label = "🟡 Sell-Side Weakening (Sellers defending resistance)";
     }
   }
