@@ -3467,6 +3467,7 @@ return {
 
   // === AI MUST AGREE STRUCTURE IS WEAK / NEUTRAL ===
   if (
+    d.structure !== "none" ||
     d.aiVerdict?.verdict &&
     d.aiVerdict.verdict !== AI_VERDICTS.STRUCTURE_WEAK
   ) {
