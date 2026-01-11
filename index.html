@@ -5591,15 +5591,10 @@ ${(d.defenseFailure && d.defenseFailure !== "NONE") || d.trendStructureRisk
   let out = "";
 
   /* ================= ACTIVE ZONE ================= */
-  const activeZone =
-    d.pressure === "BUY"
-      ? d.resistanceZone
-      : d.supportZone;
+  const isBuy = d.pressure === "BUY";
 
-  const activeZoneLabel =
-    d.pressure === "BUY"
-      ? "Resistance"
-      : "Support";
+  const activeZone = isBuy ? d.resistanceZone : d.supportZone;
+  const activeZoneLabel = isBuy ? "Resistance" : "Support";
 
   if (activeZone) {
     out += `
@@ -5621,10 +5616,16 @@ ${(d.defenseFailure && d.defenseFailure !== "NONE") || d.trendStructureRisk
   `;
 
   /* ================= ACTIVE REACTION ================= */
-  const activeReaction =
-    d.pressure === "BUY"
-      ? d.resistanceReaction
-      : d.supportReaction;
+  const activeReaction = isBuy
+    ? d.resistanceReaction
+    : d.supportReaction;
+
+  const reactionLabel =
+    activeReaction === "DEFENDED"
+      ? `${activeZoneLabel} Defended`
+      : activeReaction === "WEAKENING"
+      ? `${activeZoneLabel} Under Attack`
+      : activeReaction;
 
   out += `
     <div class="muted ${
@@ -5634,7 +5635,7 @@ ${(d.defenseFailure && d.defenseFailure !== "NONE") || d.trendStructureRisk
         ? "neutral"
         : ""
     }">
-      🧱 <b>Reaction:</b> ${activeReaction}
+      🧱 <b>Reaction:</b> ${reactionLabel}
     </div>
   `;
 
@@ -5652,6 +5653,13 @@ ${(d.defenseFailure && d.defenseFailure !== "NONE") || d.trendStructureRisk
   `;
 
   /* ================= STRUCTURE INTENT ================= */
+  const intentLabel =
+    activeReaction === "DEFENDED"
+      ? `${activeZoneLabel} Holding`
+      : activeReaction === "WEAKENING"
+      ? `${activeZoneLabel} Break Attempt`
+      : d.structureIntent;
+
   out += `
     <div class="${
       d.structureScore >= 4
@@ -5660,7 +5668,7 @@ ${(d.defenseFailure && d.defenseFailure !== "NONE") || d.trendStructureRisk
         ? "neutral"
         : "muted"
     }">
-      🧠 <b>Trend Structure Intent:</b> ${d.structureIntent}
+      🧠 <b>Trend Structure Intent:</b> ${intentLabel}
     </div>
   `;
 
