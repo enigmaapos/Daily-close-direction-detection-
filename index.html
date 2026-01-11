@@ -5875,20 +5875,20 @@ ${d.structureIntent ? (() => {
     `;
 
     /* ---------- STRUCTURE ZONE (CHART) ---------- */
-    drawZone({
-      low: zone.low,
-      high: zone.high,
-      color:
-        zone.state === "INSTITUTIONAL"
-          ? "rgba(255,0,0,0.35)"
-          : "rgba(255,165,0,0.25)"
-    });
+    //drawZone({
+      //low: zone.low,
+      //high: zone.high,
+      //color:
+        //zone.state === "INSTITUTIONAL"
+          //? "rgba(255,0,0,0.35)"
+          //: "rgba(255,165,0,0.25)"
+    //});
 
-    drawLabel({
-      price: zone.high,
-      text: `${zone.state}${zone.entryBias ? " | " + zone.entryBias : ""} | ${zone.score}`
-    });
-  }
+    //drawLabel({
+      //price: zone.high,
+      //text: `${zone.state}${zone.entryBias ? " | " + zone.entryBias : ""} | ${zone.score}`
+    //});
+  //}
 
   /* ================= STRUCTURE STRENGTH ================= */
   out += `
