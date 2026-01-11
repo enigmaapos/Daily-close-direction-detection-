@@ -5471,76 +5471,7 @@ ${d.candle12h ? `
 ` : ""}
 
 
-  <div class="muted ${
-    structureBias === "bullish" ? "bull" :
-    structureBias === "bearish" ? "bear" : "neutral"
-  }">
-   Trend Structure: ${d.structure}
-  </div>
-
-  <div class="muted ${volumeStructClass}">
-    Volume Structure: <b>${volumeStruct.name}</b>
-  </div>
-
-  <div class="muted neutral">
-    ${volumeStruct.label}
-  </div>
-
-  <div class="muted volume-hint">
-    ℹ Volume structure reflects pressure behavior, not trend direction
-  </div>
-
-${d.structure === "none" && d.volumeStructure?.name !== "none" ? `
-  <div class="muted neutral">
-    ⏳ Volume pressure detected — waiting for structure confirmation
-  </div>
-` : ""}
-
-
-${typeof d.ema200DistPct === "number" ? `
-  <div class="muted">
-    📏 EMA200 Distance:
-    <b>${d.ema200DistPct.toFixed(2)}%</b>
-  </div>
-` : ""}
-
-${typeof d.ema70DistPct === "number" ? `
-  <div class="muted">
-    📏 EMA70 Distance:
-    <b>${d.ema70DistPct.toFixed(2)}%</b>
-  </div>
-` : ""}
-
-
-${d.dailyRSI ? `
-    <div class="muted ${
-      d.dailyRSI.value >= 50 ? "bull" :
-      d.dailyRSI.value < 50 ? "bear" : "neutral"
-    }">
-      📅 Daily RSI14: ${d.dailyRSI.value}
-      <br>
-      <span class="muted">
-        ${d.dailyRSI.label} (Δ ${d.dailyRSI.diff})
-      </span>
-    </div>
-  ` : ""}
-
-
-  ${d.rsi15Context ? `
-  <div class="muted ${
-    d.rsi15Context.value >= 50 ? "bull" :
-    d.rsi15Context.value < 50 ? "bear" : "neutral"
-  }">
-    ⏱ 15m RSI14: ${d.rsi15Context.value}
-    <br>
-    <span class="muted">
-      ${d.rsi15Context.label} (Δ ${d.rsi15Context.diff})
-    </span>
-  </div>
-` : ""}
-
-
-    <div class="muted neutral">
+<div class="muted neutral">
   ⏱ 4H Context:
 <b>${(d.htfTrend || "neutral").toUpperCase()}</b>
   RSI ${["normal","overbought","oversold"].includes(d.htfRSIState)
@@ -5699,6 +5630,73 @@ ${(d.defenseFailure && d.defenseFailure !== "NONE") || d.trendStructureRisk
 
 
 
+  <div class="muted ${
+    structureBias === "bullish" ? "bull" :
+    structureBias === "bearish" ? "bear" : "neutral"
+  }">
+   Trend Structure: ${d.structure}
+  </div>
+
+  <div class="muted ${volumeStructClass}">
+    Volume Structure: <b>${volumeStruct.name}</b>
+  </div>
+
+  <div class="muted neutral">
+    ${volumeStruct.label}
+  </div>
+
+  <div class="muted volume-hint">
+    ℹ Volume structure reflects pressure behavior, not trend direction
+  </div>
+
+${d.structure === "none" && d.volumeStructure?.name !== "none" ? `
+  <div class="muted neutral">
+    ⏳ Volume pressure detected — waiting for structure confirmation
+  </div>
+` : ""}
+
+
+${typeof d.ema200DistPct === "number" ? `
+  <div class="muted">
+    📏 EMA200 Distance:
+    <b>${d.ema200DistPct.toFixed(2)}%</b>
+  </div>
+` : ""}
+
+${typeof d.ema70DistPct === "number" ? `
+  <div class="muted">
+    📏 EMA70 Distance:
+    <b>${d.ema70DistPct.toFixed(2)}%</b>
+  </div>
+` : ""}
+
+
+${d.dailyRSI ? `
+    <div class="muted ${
+      d.dailyRSI.value >= 50 ? "bull" :
+      d.dailyRSI.value < 50 ? "bear" : "neutral"
+    }">
+      📅 Daily RSI14: ${d.dailyRSI.value}
+      <br>
+      <span class="muted">
+        ${d.dailyRSI.label} (Δ ${d.dailyRSI.diff})
+      </span>
+    </div>
+  ` : ""}
+
+
+  ${d.rsi15Context ? `
+  <div class="muted ${
+    d.rsi15Context.value >= 50 ? "bull" :
+    d.rsi15Context.value < 50 ? "bear" : "neutral"
+  }">
+    ⏱ 15m RSI14: ${d.rsi15Context.value}
+    <br>
+    <span class="muted">
+      ${d.rsi15Context.label} (Δ ${d.rsi15Context.diff})
+    </span>
+  </div>
+` : ""}
 
 
 <div class="muted ${rsiShiftClass}">
