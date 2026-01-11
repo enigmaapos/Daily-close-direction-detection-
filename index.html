@@ -2985,6 +2985,45 @@ const { accepted, rejected } = last
   return zone;
 }
 
+    function isZoneStructurallyRelevant({
+  zone,
+  mainTrend,         // "bullish" | "bearish"
+  structureEvent,    // "BOS" | "CHoCH" | null
+  reaction           // reaction of THIS zone
+}) {
+  if (!zone) return false;
+  if (zone.state === "IGNORE" || zone.state === "REJECTED") return false;
+
+  // === BULLISH ENVIRONMENT ===
+  if (mainTrend === "bullish") {
+    if (zone.type === "DEMAND") {
+      return reaction === "DEFENDED" || reaction === "WEAKENING";
+    }
+
+    // Show resistance ONLY if reversal attempt
+    if (zone.type === "SUPPLY" && structureEvent === "CHoCH") {
+      return true;
+    }
+
+    return false;
+  }
+
+  // === BEARISH ENVIRONMENT ===
+  if (mainTrend === "bearish") {
+    if (zone.type === "SUPPLY") {
+      return reaction === "DEFENDED" || reaction === "WEAKENING";
+    }
+
+    if (zone.type === "DEMAND" && structureEvent === "CHoCH") {
+      return true;
+    }
+
+    return false;
+  }
+
+  return false;
+}
+
     
 
   
@@ -4909,7 +4948,8 @@ const structureIntent = classifyStructureIntent({
 const structureAlignment =
   htf?.htfTrend === mainTrend ? "aligned" : "counter";
 
-    const zones = [];
+  
+  const zones = [];
 
 swings = [
   ...(Array.isArray(swings?.supports)
@@ -4982,13 +5022,28 @@ for (const swing of swings) {
 );
 
 if (
-    activated &&
-    (activated.state === "ACTIONABLE" ||
-      activated.state === "INSTITUTIONAL")
+  activated &&
+  (activated.state === "ACTIONABLE" ||
+   activated.state === "INSTITUTIONAL")
+) {
+  const reaction = structureReaction(activated, candles);
+
+  if (
+    isZoneStructurallyRelevant({
+      zone: activated,
+      mainTrend,
+      structureEvent,
+      reaction
+    })
   ) {
+    activated.reaction = reaction;
     zones.push(activated);
   }
 }
+
+  const activeZone =
+  zones
+    .sort((a, b) => b.score - a.score)[0] ?? null;
 
 
 
@@ -5052,7 +5107,7 @@ moveStrength,directionalBias,setupScore,htf,htfNote,htfTrend: htf.htfTrend,
   resistanceReaction,
   supportReaction,
   resistanceZone: nearestResistanceZone,
-  supportZone: nearestSupportZone,marketPhase: marketPhaseInfo,biasAcc,zones,
+  supportZone: nearestSupportZone,marketPhase: marketPhaseInfo,biasAcc,zones,activeZone,
     EMA: {
     EMA14: ema14Last ?? null,
     EMA21: ema21Last ?? null,
@@ -5861,18 +5916,21 @@ ${d.structureIntent ? (() => {
 
   /* ================= STRUCTURE ZONES ================= */
   for (const zone of d.zones ?? []) {
+  if (!zone) continue;
 
-    /* ---------- STRUCTURE ZONE (TEXT) ---------- */
-    out += `
-      <div class="muted">
-        📐 <b>Structure Zone (${zone.type}):</b>
-        ${zone.low.toFixed(4)} – ${zone.high.toFixed(4)}<br/>
-        🧠 <b>State:</b> ${zone.state}
-        ${zone.entryBias ? `<br/>🎯 <b>Bias:</b> ${zone.entryBias}` : ""}
-        <br/>
-        ⭐ <b>Score:</b> ${zone.score}
-      </div>
-    `;
+  const isActive = d.activeZone && zone === d.activeZone;
+
+  out += `
+    <div class="muted ${isActive ? "bull" : ""}">
+      📐 <b>${isActive ? "ACTIVE " : ""}Structure Zone (${zone.type}):</b>
+      ${zone.low.toFixed(4)} – ${zone.high.toFixed(4)}<br/>
+      🧠 <b>State:</b> ${zone.state}
+      ${zone.entryBias ? `<br/>🎯 <b>Bias:</b> ${zone.entryBias}` : ""}
+      <br/>
+      ⭐ <b>Score:</b> ${zone.score}
+    </div>
+  `;
+
 
     /* ---------- STRUCTURE ZONE (CHART) ---------- */
     //drawZone({
