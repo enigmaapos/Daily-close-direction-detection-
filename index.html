@@ -4877,6 +4877,12 @@ prob = applyHTFProbabilityAdjustment({
 
     /* ================= STRUCTURE EXTENSION ================= */
 
+  const activeZone =
+  zones.length
+    ? [...zones].sort((a, b) => b.score - a.score)[0]
+    : null;
+  
+
 // === Zones
 const resistanceZones = sw.R
   .map(makeZone)
@@ -5041,11 +5047,7 @@ if (
   }
 }
 
-  const activeZone =
-  zones.length
-    ? [...zones].sort((a, b) => b.score - a.score)[0]
-    : null;
-
+  
 
 
 
