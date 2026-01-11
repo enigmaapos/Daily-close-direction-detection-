@@ -5909,6 +5909,7 @@ ${(d.defenseFailure && d.defenseFailure !== "NONE") || d.trendStructureRisk
       return out;
     })()
   : ""} 
+  
 
 
 ${d.structureIntent ? (() => {
@@ -5916,36 +5917,17 @@ ${d.structureIntent ? (() => {
 
   /* ================= STRUCTURE ZONES ================= */
   for (const zone of d.zones ?? []) {
-  if (!zone) continue;
 
-  const isActive = d.activeZone && zone === d.activeZone;
-
-  out += `
-    <div class="muted ${isActive ? "bull" : ""}">
-      📐 <b>${isActive ? "ACTIVE " : ""}Structure Zone (${zone.type}):</b>
-      ${zone.low.toFixed(4)} – ${zone.high.toFixed(4)}<br/>
-      🧠 <b>State:</b> ${zone.state}
-      ${zone.entryBias ? `<br/>🎯 <b>Bias:</b> ${zone.entryBias}` : ""}
-      <br/>
-      ⭐ <b>Score:</b> ${zone.score}
-    </div>
-  `;
-
-
-    /* ---------- STRUCTURE ZONE (CHART) ---------- */
-    //drawZone({
-      //low: zone.low,
-      //high: zone.high,
-      //color:
-        //zone.state === "INSTITUTIONAL"
-          //? "rgba(255,0,0,0.35)"
-          //: "rgba(255,165,0,0.25)"
-    //});
-
-    //drawLabel({
-      //price: zone.high,
-      //text: `${zone.state}${zone.entryBias ? " | " + zone.entryBias : ""} | ${zone.score}`
-    //});
+    out += `
+      <div class="muted">
+        📐 <b>Structure Zone (${zone.type}):</b>
+        ${zone.low.toFixed(4)} – ${zone.high.toFixed(4)}<br/>
+        🧠 <b>State:</b> ${zone.state}
+        ${zone.entryBias ? `<br/>🎯 <b>Bias:</b> ${zone.entryBias}` : ""}
+        <br/>
+        ⭐ <b>Score:</b> ${zone.score}
+      </div>
+    `;
   }
 
   /* ================= STRUCTURE STRENGTH ================= */
