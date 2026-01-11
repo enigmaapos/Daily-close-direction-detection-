@@ -5590,12 +5590,22 @@ ${(d.defenseFailure && d.defenseFailure !== "NONE") || d.trendStructureRisk
   ${d.structureIntent ? (() => {
   let out = "";
 
-  /* ================= STRUCTURE ZONE ================= */
-  if (d.resistanceZone) {
+  /* ================= ACTIVE ZONE ================= */
+  const activeZone =
+    d.pressure === "BUY"
+      ? d.resistanceZone
+      : d.supportZone;
+
+  const activeZoneLabel =
+    d.pressure === "BUY"
+      ? "Resistance"
+      : "Support";
+
+  if (activeZone) {
     out += `
       <div class="muted">
-        📐 <b>Structure Zone:</b>
-        ${d.resistanceZone.low.toFixed(4)} – ${d.resistanceZone.high.toFixed(4)}
+        📐 <b>${activeZoneLabel} Zone:</b>
+        ${activeZone.low.toFixed(4)} – ${activeZone.high.toFixed(4)}
       </div>
     `;
   }
@@ -5610,16 +5620,21 @@ ${(d.defenseFailure && d.defenseFailure !== "NONE") || d.trendStructureRisk
     </div>
   `;
 
-  /* ================= STRUCTURE REACTION ================= */
+  /* ================= ACTIVE REACTION ================= */
+  const activeReaction =
+    d.pressure === "BUY"
+      ? d.resistanceReaction
+      : d.supportReaction;
+
   out += `
     <div class="muted ${
-      d.resistanceReaction === "DEFENDED"
+      activeReaction === "DEFENDED"
         ? "bull"
-        : d.resistanceReaction === "WEAKENING"
+        : activeReaction === "WEAKENING"
         ? "neutral"
         : ""
     }">
-      🧱 <b>Reaction:</b> ${d.resistanceReaction}
+      🧱 <b>Reaction:</b> ${activeReaction}
     </div>
   `;
 
@@ -5665,6 +5680,7 @@ ${(d.defenseFailure && d.defenseFailure !== "NONE") || d.trendStructureRisk
 
   return out;
 })() : ""}
+
 
 
 
