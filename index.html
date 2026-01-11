@@ -3876,8 +3876,16 @@ const sw = {
   const rb=sw.R.some(x=>price>x);
 
   // === STRUCTURE ZONES ===
-const rZone = sw.R.length ? makeZone(sw.R[0]) : null;
-const sZone = sw.S.length ? makeZone(sw.S[0]) : null;
+  const nearestR = sw.R
+  .map(l => ({ l, d: Math.abs(l - price) }))
+  .sort((a,b)=>a.d-b.d)[0]?.l;
+
+  const nearestS = sw.S
+  .map(l => ({ l, d: Math.abs(l - price) }))
+  .sort((a,b)=>a.d-b.d)[0]?.l;
+
+const rZone = nearestR ? makeZone(nearestR) : null;
+  const sZone = nearestS ? makeZone(nearestS) : null;
 
   const reactionR = rZone ? structureReaction(rZone, candles) : null;
 const reactionS = sZone ? structureReaction(sZone, candles) : null;
