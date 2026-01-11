@@ -5046,6 +5046,13 @@ if (
     zones.push(activated);
   }
 }
+} 
+
+  const activeZone =
+  zones.length
+    ? [...zones].sort((a, b) => b.score - a.score)[0]
+    : null;
+  
 
   
 
