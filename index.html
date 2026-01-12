@@ -4785,10 +4785,11 @@ await seedBiasFrom15mHistory(sym, htf.htfTrend);
 
   const rawSeries = compressRawBias15m(sym).slice(-96);
 
+const flipAttempt = detectPolarityFlipAttempt(rawSeries);
+const flipAttemptCount = countPolarityFlipAttempts(rawSeries);
+
 const currentPolarity =
   polarityFromValue(rawSeries.at(-1)?.y);
-
-const flipAttempt = detectPolarityFlipAttempt(rawSeries);
 
 const fromPolarity = flipAttempt
   ? polarityFromValue(flipAttempt.from)
@@ -4824,10 +4825,10 @@ moveStrength,directionalBias,setupScore,htf,htfNote,htfTrend: htf.htfTrend,
   resistanceZone: nearestResistanceZone,
   supportZone: nearestSupportZone,marketPhase: marketPhaseInfo,biasAcc,currentPolarity,
   flipAttempt,
+  flipAttemptCount,
   fromPolarity,
   toPolarity,
-  hasFlipAttempt,
-  flipAttemptCount};
+  hasFlipAttempt};
 }
 
 
