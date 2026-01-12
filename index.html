@@ -5559,24 +5559,24 @@ ${(d.defenseFailure && d.defenseFailure !== "NONE") || d.trendStructureRisk
   : ""} 
 
 
-${hasFlipAttempt ? `
+${d.hasFlipAttempt ? `
   <div class="muted flip-attempt">
     ⚠ <b>Polarity Flip Attempt</b><br>
-    🧭 ${fromPolarity === "bullish" ? "Bullish Polarity" : "Bearish Polarity"}
+    🧭 ${d.fromPolarity === "bullish" ? "Bullish Polarity" : "Bearish Polarity"}
     →
-    ${toPolarity === "bullish" ? "Bullish Polarity" : "Bearish Polarity"}
+    ${d.toPolarity === "bullish" ? "Bullish Polarity" : "Bearish Polarity"}
     <br>
-    ⏱ ${formatTime?.(flipAttempt.timeFrom) ?? "—"}
+    ⏱ ${formatTime?.(d.flipAttempt.timeFrom) ?? "—"}
     →
-    ${formatTime?.(flipAttempt.timeTo) ?? "—"}
+    ${formatTime?.(d.flipAttempt.timeTo) ?? "—"}
   </div>
 ` : ""}
 
-${flipAttemptCount > 0 && currentPolarity !== "neutral" ? `
+${d.flipAttemptCount > 0 && d.currentPolarity !== "neutral" ? `
   <div class="muted">
-    🔁 ${currentPolarity === "bullish" ? "Bullish" : "Bearish"}
+    🔁 ${d.currentPolarity === "bullish" ? "Bullish" : "Bearish"}
     Polarity Flip Attempts (24h):
-    <b>${flipAttemptCount}</b>
+    <b>${d.flipAttemptCount}</b>
   </div>
 ` : ""}
 
