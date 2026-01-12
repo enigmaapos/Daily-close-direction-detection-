@@ -5360,6 +5360,15 @@ const phaseIcon =
   reason: "Insufficient data"
 };
 
+  const normalizedPolarity = polarity?.toLowerCase();
+const fromPolarity = flipAttempt?.from?.toLowerCase();
+const toPolarity = flipAttempt?.to?.toLowerCase();
+
+const hasFlipAttempt =
+  flipAttempt &&
+  fromPolarity &&
+  toPolarity;
+
   
        
 
@@ -5524,25 +5533,23 @@ ${(d.defenseFailure && d.defenseFailure !== "NONE") || d.trendStructureRisk
   : ""} 
 
 
-  ${flipAttempt ? `
+${hasFlipAttempt ? `
   <div class="muted flip-attempt">
     ⚠ <b>Polarity Flip Attempt</b><br>
-    🧭 ${flipAttempt.from === "bullish" ? "Bullish Polarity" : "Bearish Polarity"}
+    🧭 ${fromPolarity === "bullish" ? "Bullish Polarity" : "Bearish Polarity"}
     →
-    ${flipAttempt.to === "bullish" ? "Bullish Polarity" : "Bearish Polarity"}
+    ${toPolarity === "bullish" ? "Bullish Polarity" : "Bearish Polarity"}
     <br>
-    ⏱
-    ${formatTime?.(flipAttempt.timeFrom) ?? "—"}
+    ⏱ ${formatTime?.(flipAttempt.timeFrom) ?? "—"}
     →
     ${formatTime?.(flipAttempt.timeTo) ?? "—"}
   </div>
 ` : ""}
 
-${flipAttemptCount > 0 && polarity !== "neutral" ? `
+${flipAttemptCount > 0 && (normalizedPolarity === "bullish" || normalizedPolarity === "bearish") ? `
   <div class="muted">
-    🧭 <b>${polarity === "bullish" ? "Bullish Polarity" : "Bearish Polarity"}</b>
-    <br/>
-    🔁 Control Under Pressure — Flip Attempts (24h): <b>${flipAttemptCount}</b>
+    🔁 ${normalizedPolarity === "bullish" ? "Bullish" : "Bearish"} Polarity Flip Attempts (24h):
+    <b>${flipAttemptCount}</b>
   </div>
 ` : ""}
 
