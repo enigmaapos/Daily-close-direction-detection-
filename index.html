@@ -4785,13 +4785,23 @@ await seedBiasFrom15mHistory(sym, htf.htfTrend);
 
   const rawSeries = compressRawBias15m(sym).slice(-96);
 
-  const polarity =
-    rawSeries.at(-1)?.y > 0 ? "bullish" :
-    rawSeries.at(-1)?.y < 0 ? "bearish" :
-    "neutral";
+const currentPolarity =
+  polarityFromValue(rawSeries.at(-1)?.y);
 
-  const flipAttempt = detectPolarityFlipAttempt(rawSeries);
-  const flipAttemptCount = countPolarityFlipAttempts(rawSeries);
+const flipAttempt = detectPolarityFlipAttempt(rawSeries);
+
+const fromPolarity = flipAttempt
+  ? polarityFromValue(flipAttempt.from)
+  : null;
+
+const toPolarity = flipAttempt
+  ? polarityFromValue(flipAttempt.to)
+  : null;
+
+const hasFlipAttempt =
+  flipAttempt &&
+  fromPolarity !== "neutral" &&
+  toPolarity !== "neutral";
   
 
   return {sym,price,change,bull,prob,bias,structure,structureType,volumeStructure,structureQuality,volumeQuality,volumeAlign,defenseFailure,trendStructureRisk,S:sw.S,R:sw.R,dailyRSI,rsi15Context,rsi15,rsi15Momentum,volumeBreakout,
@@ -4812,9 +4822,12 @@ moveStrength,directionalBias,setupScore,htf,htfNote,htfTrend: htf.htfTrend,
   resistanceReaction,
   supportReaction,
   resistanceZone: nearestResistanceZone,
-  supportZone: nearestSupportZone,marketPhase: marketPhaseInfo,biasAcc,polarity,
-    flipAttempt,
-    flipAttemptCount};
+  supportZone: nearestSupportZone,marketPhase: marketPhaseInfo,biasAcc,currentPolarity,
+  flipAttempt,
+  fromPolarity,
+  toPolarity,
+  hasFlipAttempt,
+  flipAttemptCount};
 }
 
 
@@ -5373,25 +5386,13 @@ const phaseIcon =
 };
 
     const {
-  polarity,
+  currentPolarity,
   flipAttempt,
+  fromPolarity,
+  toPolarity,
+  hasFlipAttempt,
   flipAttemptCount
 } = d;
-    
-  const currentPolarity = polarityFromValue(rawSeries.at(-1)?.y);
-
-const fromPolarity = flipAttempt
-  ? polarityFromValue(flipAttempt.from)
-  : null;
-
-const toPolarity = flipAttempt
-  ? polarityFromValue(flipAttempt.to)
-  : null;
-
-const hasFlipAttempt =
-  flipAttempt &&
-  fromPolarity !== "neutral" &&
-  toPolarity !== "neutral";
 
   
        
@@ -5570,9 +5571,10 @@ ${hasFlipAttempt ? `
   </div>
 ` : ""}
 
-${flipAttemptCount > 0 && (normalizedPolarity === "bullish" || normalizedPolarity === "bearish") ? `
+${flipAttemptCount > 0 && currentPolarity !== "neutral" ? `
   <div class="muted">
-    🔁 ${normalizedPolarity === "bullish" ? "Bullish" : "Bearish"} Polarity Flip Attempts (24h):
+    🔁 ${currentPolarity === "bullish" ? "Bullish" : "Bearish"}
+    Polarity Flip Attempts (24h):
     <b>${flipAttemptCount}</b>
   </div>
 ` : ""}
