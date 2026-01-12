@@ -1403,6 +1403,12 @@ const FLIP_REGISTRY = {};
     console.error("Flip symbol load failed:", sym);
   }
   }
+
+      function polarityFromValue(v) {
+  if (v > 0) return "bullish";
+  if (v < 0) return "bearish";
+  return "neutral";
+      }
   
 
 
