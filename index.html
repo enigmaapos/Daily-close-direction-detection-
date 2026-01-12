@@ -5522,7 +5522,15 @@ ${(d.defenseFailure && d.defenseFailure !== "NONE") || d.trendStructureRisk
       return out;
     })()
   : ""} 
-  
+
+
+  ${flipAttemptCount > 0 && polarity !== "neutral" ? `
+  <div class="muted">
+    🔁 ${polarity === "bullish" ? "Bullish Control Under Pressure" : "Bearish Control Under Pressure"}
+    <br/>
+    Polarity Flip Attempts (24h): <b>${flipAttemptCount}</b>
+  </div>
+` : ""}
 
 
 
@@ -5875,12 +5883,6 @@ ${flipAttempt ? `
   </div>
 ` : ""}
 
-${flipAttemptCount > 0 ? `
-  <div class="muted">
-    🔁 Polarity Flip Attempts (24h):
-    <b>${flipAttemptCount}</b>
-  </div>
-` : ""}
 
 ${rrDisplay ? `
   <div class="muted neutral">
