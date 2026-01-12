@@ -5524,11 +5524,25 @@ ${(d.defenseFailure && d.defenseFailure !== "NONE") || d.trendStructureRisk
   : ""} 
 
 
-  ${flipAttemptCount > 0 && polarity !== "neutral" ? `
+  ${flipAttempt ? `
+  <div class="muted flip-attempt">
+    ⚠ <b>Polarity Flip Attempt</b><br>
+    🧭 ${flipAttempt.from === "bullish" ? "Bullish Polarity" : "Bearish Polarity"}
+    →
+    ${flipAttempt.to === "bullish" ? "Bullish Polarity" : "Bearish Polarity"}
+    <br>
+    ⏱
+    ${formatTime?.(flipAttempt.timeFrom) ?? "—"}
+    →
+    ${formatTime?.(flipAttempt.timeTo) ?? "—"}
+  </div>
+` : ""}
+
+${flipAttemptCount > 0 && polarity !== "neutral" ? `
   <div class="muted">
-    🔁 ${polarity === "bullish" ? "Bullish Control Under Pressure" : "Bearish Control Under Pressure"}
+    🧭 <b>${polarity === "bullish" ? "Bullish Polarity" : "Bearish Polarity"}</b>
     <br/>
-    Polarity Flip Attempts (24h): <b>${flipAttemptCount}</b>
+    🔁 Control Under Pressure — Flip Attempts (24h): <b>${flipAttemptCount}</b>
   </div>
 ` : ""}
 
@@ -5871,17 +5885,6 @@ ${d.volAI ? `
     ${behavior ?? "neutral"}
   </b>
 </div>
-
-${flipAttempt ? `
-  <div class="muted flip-attempt">
-    ⚠ Polarity Flip Attempt<br>
-    <b>
-      ${formatTime?.(flipAttempt.timeFrom) ?? "—"} ${flipAttempt.from ?? ""}
-      →
-      ${formatTime?.(flipAttempt.timeTo) ?? "—"} ${flipAttempt.to ?? ""}
-    </b>
-  </div>
-` : ""}
 
 
 ${rrDisplay ? `
