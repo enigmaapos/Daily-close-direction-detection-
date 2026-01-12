@@ -5711,6 +5711,23 @@ ${d.structure === "none" && d.volumeStructure?.name !== "none" ? `
   </div>
 ` : ""}
 
+${d.volAI ? `
+  <div class="muted ${
+    d.volAI.bias === "Bullish" ? "bull" :
+    d.volAI.bias === "Bearish" ? "bear" : "neutral"
+  }">
+    🧠 24h Volume AI
+    <br>
+    <span class="muted">
+      ${(d.volAI.color ?? "Unknown")} candle · ${(d.volAI.location ?? "Unknown")} range
+    </span>
+    <br>
+    <span class="muted">
+      ${d.volAI.meaning ?? "No interpretation available"}
+    </span>
+  </div>
+` : ""}
+
 
 ${typeof d.ema200DistPct === "number" ? `
   <div class="muted">
@@ -5871,22 +5888,6 @@ ${d.R?.[1] != null ? `<div class="muted bull">R2: ${d.R[1].toFixed(4)}</div>` : 
   <b>${d.volAI?.futureOutcome ?? "Unknown"}</b>
 </div>
 
-${d.volAI ? `
-  <div class="muted ${
-    d.volAI.bias === "Bullish" ? "bull" :
-    d.volAI.bias === "Bearish" ? "bear" : "neutral"
-  }">
-    🧠 24h Volume AI
-    <br>
-    <span class="muted">
-      ${(d.volAI.color ?? "Unknown")} candle · ${(d.volAI.location ?? "Unknown")} range
-    </span>
-    <br>
-    <span class="muted">
-      ${d.volAI.meaning ?? "No interpretation available"}
-    </span>
-  </div>
-` : ""}
 
 <div class="muted ${
   d.changeState === "EXTREME" ? "bear" :
