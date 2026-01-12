@@ -5743,6 +5743,13 @@ ${typeof d.ema70DistPct === "number" ? `
   </div>
 ` : ""}
 
+${typeof d.ema200Touched === "boolean" ? `
+  <div class="muted ${d.ema200Touched ? "bullish" : ""}">
+    🧲 EMA200 Touched (24h):
+    <b>${d.ema200Touched ? "YES ✅" : "NO ❌"}</b>
+  </div>
+` : ""}
+
 
 ${d.dailyRSI ? `
     <div class="muted ${
