@@ -629,6 +629,20 @@ button.secondary{
   <option value="red">12H Red</option>
   <option value="doji">12H Doji</option>
   </select>
+
+      <select id="filterDivergence">
+  <option value="all">All</option>
+  <option value="none">No Divergence</option>
+  <option value="bullish">Bullish Divergence</option>
+  <option value="bearish">Bearish Divergence</option>
+      </select>
+
+      <select id="filterDivergenceIntent">
+  <option value="all">All</option>
+  <option value="reversal">Reversal</option>
+  <option value="continuation">Continuation</option>
+  <option value="trap">Trap</option>
+      </select>
     </div>
 
 
@@ -5065,6 +5079,8 @@ const r15 = document.getElementById("filterRsi15Context")?.value || "all";
     document.getElementById("filterBreakIntent")?.value || "all";
   const e = filterEMA200.value;
   const az = document.getElementById("filterActiveZone")?.value || "all";
+  const div = document.getElementById("filterDivergence")?.value || "all";
+const di  = document.getElementById("filterDivergenceIntent")?.value || "all";
   
 
   
@@ -5157,6 +5173,22 @@ if (intentFilter !== "all") {
   if (intentFilter !== breakIntent) ok = false;
 }
 
+       // ================= DIVERGENCE FILTER =================
+if (div !== "all") {
+  const hasDiv = c.dataset.div === "yes";
+  const divType = c.dataset.divType || "none";
+
+  if (div === "none" && hasDiv) ok = false;
+  if (div === "bullish" && divType !== "bullish") ok = false;
+  if (div === "bearish" && divType !== "bearish") ok = false;
+}
+
+// ---- Divergence intent ----
+if (di !== "all") {
+  const divIntent = c.dataset.divIntent || "none";
+  if (divIntent !== di) ok = false;
+}
+
     c.style.display = ok ? "" : "none";
   });
     }
@@ -5189,6 +5221,8 @@ if (intentFilter !== "all") {
            document.getElementById("filterBreakIntent").value = "all";
   filterEMA200.value = "all";
            document.getElementById("filterActiveZone").value = "all";
+           document.getElementById("filterDivergence").value = "all";
+           document.getElementById("filterDivergenceIntent").value = "all";
   
            
 
@@ -5448,6 +5482,11 @@ card.dataset.breakIntent = intentKey;
     
     card.dataset.activeZone =
   d.pressure === "BUY" ? "resistance" : "support";
+
+    card.dataset.divergence = d.hasRSIDivergence ? "yes" : "no";
+card.dataset.divergenceType = d.rsiDivergenceType || "none"; // bullish | bearish
+card.dataset.divergenceIntent = d.divergenceIntent || "none";
+card.dataset.trapRisk = d.trapRisk || "LOW";
 
         
 
@@ -6729,7 +6768,9 @@ async function runSearch(){
     "filterVolumeQuality",
     "filterBreakIntent",
   "filterEMA200",
-    "filterActiveZone"
+    "filterActiveZone",
+    "filterDivergence",
+    "filterDivergenceIntent"
 ].forEach(id=>{
   document.getElementById(id)?.addEventListener("change", applyFilters);
 });
