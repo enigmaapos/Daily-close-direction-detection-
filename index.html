@@ -5017,6 +5017,13 @@ if (divergence) {
 
   trapRisk = reaction === "REJECT" ? "VERY_HIGH" : "HIGH";
 }
+
+  if (divergence && prob >= 65) {
+  prob -= 10;
+  structure += " | divergence pressure";
+  }
+
+  prob = Math.max(40, Math.min(prob, 95));
   
   
 
