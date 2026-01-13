@@ -5253,9 +5253,9 @@ card.dataset.breakIntent = intentKey;
   card.dataset.ema200Touched = d.ema200Touched ? "1" : "0";
     
     card.dataset.activeZone =
-  d.supportZone ? "support" :
-  d.resistanceZone ? "resistance" :
-  "none";
+  d.pressure === "BUY" ? "resistance" : "support";
+
+        
 
 
     
