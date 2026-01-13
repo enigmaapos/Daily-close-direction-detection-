@@ -495,7 +495,7 @@ button.secondary{
 
   <!-- ===== RSI CONTEXT ===== -->
   <div class="filter-group">
-    <h4>RSI Context</h4>
+    <h4>RSI & EMA Context</h4>
 
     <select id="filterRsi15Context">
       <option value="all">All RSI 15m</option>
@@ -523,6 +523,10 @@ button.secondary{
       <option value="overbought">Overbought</option>
       <option value="oversold">Oversold</option>
     </select>
+    
+<select id="filterEMA200">
+    <option value="oversold">EMA200 Touched (24h)</option>
+</select>
   </div>
 
   <!-- ===== TRADE & DEFENSE ===== -->
@@ -4857,6 +4861,7 @@ const r15 = document.getElementById("filterRsi15Context")?.value || "all";
   const fv = document.getElementById("filterVolumeQuality")?.value || "all";
   const intentFilter =
     document.getElementById("filterBreakIntent")?.value || "all";
+  const e = filterEMA200.checked;
   
 
   
@@ -4882,6 +4887,9 @@ const r15 = document.getElementById("filterRsi15Context")?.value || "all";
     if (ts !== "all" && c.dataset.tradeside !== ts) ok = false;
     if (ez !== "all" && c.dataset.execution !== ez) ok = false;
     if (vai !== "all" && c.dataset.volai !== vai) ok = false;
+    if (e && c.dataset.ema200Touched !== "1") {
+      visible = false;
+    }
 
         if (fv !== "all") {
   if ((c.dataset.volumeQuality || "none") !== fv) {
@@ -4974,6 +4982,7 @@ if (intentFilter !== "all") {
            document.getElementById("filterDefenseSide").value = "all";
            document.getElementById("filterVolumeQuality").value = "all";
            document.getElementById("filterBreakIntent").value = "all";
+  filterEMA200.checked;
   
            
 
@@ -5229,7 +5238,7 @@ const intentKey =
   "PROBING";
 
 card.dataset.breakIntent = intentKey;
-  
+  card.dataset.ema200Touched = d.ema200Touched ? "1" : "0";
 
     
 
@@ -6482,7 +6491,8 @@ async function runSearch(){
     "filterHTFRSI",
     "filter12hCandle",
     "filterVolumeQuality",
-    "filterBreakIntent"
+    "filterBreakIntent",
+  "filterEMA200"
 ].forEach(id=>{
   document.getElementById(id)?.addEventListener("change", applyFilters);
 });
