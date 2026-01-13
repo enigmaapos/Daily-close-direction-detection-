@@ -2834,6 +2834,71 @@ function classifyStructureIntent({ pressure, reaction, score }) {
 
   return "CONFLICT";
 }
+
+
+  function detectBullishRSIPriceDivergence(closes, rsi) {
+  if (closes.length < 96 || rsi.length < 96) return null;
+
+  const prices = closes.slice(-96);
+  const rsis = rsi.slice(-96);
+
+  let A = null;
+  let B = null;
+
+  // Point A: weak RSI, higher price (earlier)
+  for (let i = 0; i < rsis.length - 12; i++) {
+    if (rsis[i] == null) continue;
+    if (rsis[i] <= 40) {
+      A = { i, rsi: rsis[i], price: prices[i] };
+      break;
+    }
+  }
+
+  if (!A) return null;
+
+  // Point B: lower price, stronger RSI (later)
+  for (let i = A.i + 6; i < rsis.length; i++) {
+    if (rsis[i] == null) continue;
+    if (prices[i] < A.price && rsis[i] > A.rsi) {
+      B = { i, rsi: rsis[i], price: prices[i] };
+      break;
+    }
+  }
+
+  return B ? { type: "bullish", A, B } : null;
+  }
+
+  function detectBearishRSIPriceDivergence(closes, rsi) {
+  if (closes.length < 96 || rsi.length < 96) return null;
+
+  const prices = closes.slice(-96);
+  const rsis = rsi.slice(-96);
+
+  let A = null;
+  let B = null;
+
+  // Point A: strong RSI, lower price (earlier)
+  for (let i = 0; i < rsis.length - 12; i++) {
+    if (rsis[i] == null) continue;
+    if (rsis[i] >= 60) {
+      A = { i, rsi: rsis[i], price: prices[i] };
+      break;
+    }
+  }
+
+  if (!A) return null;
+
+  // Point B: higher price, weaker RSI (later)
+  for (let i = A.i + 6; i < rsis.length; i++) {
+    if (rsis[i] == null) continue;
+    if (prices[i] > A.price && rsis[i] < A.rsi) {
+      B = { i, rsi: rsis[i], price: prices[i] };
+      break;
+    }
+  }
+
+  return B ? { type: "bearish", A, B } : null;
+       }
   
 
     
@@ -4815,6 +4880,34 @@ const hasFlipAttempt =
   flipAttempt &&
   fromPolarity !== "neutral" &&
   toPolarity !== "neutral";
+
+  let divergence = null;
+
+  if (mainTrend === "bullish") {
+    // ⚠️ Look for distribution
+    divergence =
+      detectBearishRSIPriceDivergence(closes15m, rsi15m);
+  }
+
+  if (mainTrend === "bearish") {
+    // ⚠️ Look for absorption
+    divergence =
+      detectBullishRSIPriceDivergence(closes15m, rsi15m);
+  }
+
+    // ---- Interpret intent
+  if (divergence) {
+    d.structureIntent =
+      divergence.type === "bearish"
+        ? "Distribution"
+        : "Accumulation";
+
+    d.trapRisk = "HIGH";
+  } else {
+    d.structureIntent = "None";
+    d.trapRisk = "LOW";
+      }
+  
   
 
   return {sym,price,change,bull,prob,bias,structure,structureType,volumeStructure,structureQuality,volumeQuality,volumeAlign,defenseFailure,trendStructureRisk,S:sw.S,R:sw.R,dailyRSI,rsi15Context,rsi15,rsi15Momentum,volumeBreakout,
@@ -4840,7 +4933,7 @@ moveStrength,directionalBias,setupScore,htf,htfNote,htfTrend: htf.htfTrend,
   flipAttemptCount,
   fromPolarity,
   toPolarity,
-  hasFlipAttempt};
+  hasFlipAttempt,divergence};
 }
 
 
@@ -5850,7 +5943,20 @@ ${d.intradayRSIDiv ? (() => {
     ` : ""}
   `;
 })() : ""}
-     
+
+
+     ${d.hasDivergence ? `
+      <div class="${d.divergenceType === "bearish" ? "bear" : "bull"}">
+        ⚠️ <b>${d.structureIntent}</b><br>
+        A: RSI ${d.divergence.A.rsi.toFixed(1)} |
+           Price ${d.divergence.A.price}<br>
+        B: RSI ${d.divergence.B.rsi.toFixed(1)} |
+           Price ${d.divergence.B.price}
+      </div>
+    ` : `
+      <div class="muted">No divergence detected</div>
+    `}
+  
 
 
       <div class="bias-chart-wrap">
