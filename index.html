@@ -4989,14 +4989,19 @@ if (htfEnv === "bullish" || htfEnv === "bearish") {
 }
 
 if (divergence) {
+  divergenceType = divergence.type;
+
+  divergenceIntent =
+    divergence.type === "bearish"
+      ? "Distribution"
+      : "Accumulation";
+
   const reaction =
     divergence.type === "bearish"
       ? resistanceReaction
       : supportReaction;
 
-  if (reaction === "REJECT") {
-    trapRisk = "VERY_HIGH";
-  }
+  trapRisk = reaction === "REJECT" ? "VERY_HIGH" : "HIGH";
 }
   
   
@@ -5028,6 +5033,7 @@ moveStrength,directionalBias,setupScore,htf,htfNote,htfTrend: htf.htfTrend,
   trapRisk,
   hasRSIDivergence: !!divergence,
   rsiDivergenceType: divergenceType,
+  divergenceIntent,
   rsiDivergence: divergence};
 }
 
@@ -6044,7 +6050,7 @@ ${d.intradayRSIDiv ? (() => {
      ${d.hasRSIDivergence ? `
   <div class="muted rsi-div 
     ${d.rsiDivergenceType === "bearish" ? "bear" : "bull"}
-    ${d.trapRisk === "HIGH" ? "trap" : ""}
+    ${d.trapRisk !== "LOW" ? "trap" : ""}
   ">
     🔀 <b>
       ${d.rsiDivergenceType === "bearish"
