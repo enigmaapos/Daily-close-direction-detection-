@@ -2901,7 +2901,51 @@ function classifyStructureIntent({ pressure, reaction, score }) {
        }
   
 
-    
+    function detectRSIPriceDivergence(closes, rsi, type) {
+  if (!closes || !rsi || closes.length < 100 || rsi.length < 100) return null;
+
+  const lookback = 96; // 24h
+  const c = closes.slice(-lookback);
+  const r = rsi.slice(-lookback);
+
+  // --- Find Point A (earlier extreme)
+  let idxA = 0;
+  let idxB = 0;
+
+  if (type === "bearish") {
+    // RSI HIGHER + PRICE LOWER (A)
+    idxA = r.indexOf(Math.max(...r.slice(0, lookback / 2)));
+
+    // RSI LOWER + PRICE HIGHER (B)
+    idxB = r.indexOf(Math.max(...r.slice(lookback / 2))) + lookback / 2;
+
+    if (r[idxB] >= r[idxA]) return null;
+    if (c[idxB] <= c[idxA]) return null;
+  }
+
+  if (type === "bullish") {
+    // RSI LOWER + PRICE HIGHER (A)
+    idxA = r.indexOf(Math.min(...r.slice(0, lookback / 2)));
+
+    // RSI HIGHER + PRICE LOWER (B)
+    idxB = r.indexOf(Math.min(...r.slice(lookback / 2))) + lookback / 2;
+
+    if (r[idxB] <= r[idxA]) return null;
+    if (c[idxB] >= c[idxA]) return null;
+  }
+
+  return {
+    type,
+    pointA: {
+      rsi: +r[idxA].toFixed(2),
+      price: +c[idxA].toFixed(4)
+    },
+    pointB: {
+      rsi: +r[idxB].toFixed(2),
+      price: +c[idxB].toFixed(4)
+    }
+  };
+  }
 
   
 
@@ -3806,6 +3850,25 @@ if (rsi15Arr && rsi15Arr.length >= 20) {
     dir: d15.direction,
     value: +rsi15Arr.at(-1).toFixed(2)
   };
+}
+
+  // ================= RSI ↔ PRICE DIVERGENCE =================
+let divergence = null;
+let divergenceType = "none";
+
+// Decide environment
+const htfEnv = htf?.htfTrend || "neutral";
+
+if (htfEnv === "bullish") {
+  divergence = detectRSIPriceDivergence(c, rsi15Arr, "bearish");
+}
+
+if (htfEnv === "bearish") {
+  divergence = detectRSIPriceDivergence(c, rsi15Arr, "bullish");
+}
+
+if (divergence) {
+  divergenceType = divergence.type;
 }
 
 
@@ -4881,32 +4944,17 @@ const hasFlipAttempt =
   fromPolarity !== "neutral" &&
   toPolarity !== "neutral";
 
-  let divergence = null;
+  let structureIntent = "None";
+let trapRisk = "LOW";
 
-  if (mainTrend === "bullish") {
-    // ⚠️ Look for distribution
-    divergence =
-      detectBearishRSIPriceDivergence(closes15m, rsi15m);
+if (divergence) {
+  structureIntent =
+    divergence.type === "bearish"
+      ? "Distribution"
+      : "Accumulation";
+
+  trapRisk = "HIGH";
   }
-
-  if (mainTrend === "bearish") {
-    // ⚠️ Look for absorption
-    divergence =
-      detectBullishRSIPriceDivergence(closes15m, rsi15m);
-  }
-
-    // ---- Interpret intent
-  if (divergence) {
-    d.structureIntent =
-      divergence.type === "bearish"
-        ? "Distribution"
-        : "Accumulation";
-
-    d.trapRisk = "HIGH";
-  } else {
-    d.structureIntent = "None";
-    d.trapRisk = "LOW";
-      }
   
   
 
@@ -4933,7 +4981,11 @@ moveStrength,directionalBias,setupScore,htf,htfNote,htfTrend: htf.htfTrend,
   flipAttemptCount,
   fromPolarity,
   toPolarity,
-  hasFlipAttempt,divergence};
+  hasFlipAttempt,
+  trapRisk,
+  hasRSIDivergence: d.hasRSIDivergence,
+  rsiDivergenceType: divergenceType,
+  rsiDivergence: divergence};
 }
 
 
@@ -5945,17 +5997,13 @@ ${d.intradayRSIDiv ? (() => {
 })() : ""}
 
 
-     ${d.hasDivergence ? `
-      <div class="${d.divergenceType === "bearish" ? "bear" : "bull"}">
-        ⚠️ <b>${d.structureIntent}</b><br>
-        A: RSI ${d.divergence.A.rsi.toFixed(1)} |
-           Price ${d.divergence.A.price}<br>
-        B: RSI ${d.divergence.B.rsi.toFixed(1)} |
-           Price ${d.divergence.B.price}
-      </div>
-    ` : `
-      <div class="muted">No divergence detected</div>
-    `}
+     ${d.hasRSIDivergence ? `
+  <div class="muted ${d.rsiDivergenceType === "bearish" ? "bear" : "bull"}">
+    🔀 <b>${d.rsiDivergenceType.toUpperCase()} RSI Divergence</b><br>
+    A → RSI ${d.rsiDivergence.pointA.rsi} | Price ${d.rsiDivergence.pointA.price}<br>
+    B → RSI ${d.rsiDivergence.pointB.rsi} | Price ${d.rsiDivergence.pointB.price}
+  </div>
+` : ""}
   
 
 
