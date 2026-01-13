@@ -525,7 +525,9 @@ button.secondary{
     </select>
     
 <select id="filterEMA200">
-    <option value="oversold">EMA200 Touched (24h)</option>
+  <option value="all">EMA200 (All)</option>
+  <option value="touched">EMA200 Touched (24h)</option>
+  <option value="not">EMA200 Not Touched</option>
 </select>
   </div>
 
@@ -4861,7 +4863,7 @@ const r15 = document.getElementById("filterRsi15Context")?.value || "all";
   const fv = document.getElementById("filterVolumeQuality")?.value || "all";
   const intentFilter =
     document.getElementById("filterBreakIntent")?.value || "all";
-  const e = filterEMA200.checked;
+  const e = filterEMA200.value;
   
 
   
@@ -4887,9 +4889,13 @@ const r15 = document.getElementById("filterRsi15Context")?.value || "all";
     if (ts !== "all" && c.dataset.tradeside !== ts) ok = false;
     if (ez !== "all" && c.dataset.execution !== ez) ok = false;
     if (vai !== "all" && c.dataset.volai !== vai) ok = false;
-    if (e && c.dataset.ema200Touched !== "1") {
-      visible = false;
-    }
+    if (e === "touched" && card.dataset.ema200Touched !== "1") {
+  visible = false;
+}
+
+if (e === "not" && card.dataset.ema200Touched !== "0") {
+  visible = false;
+}
 
         if (fv !== "all") {
   if ((c.dataset.volumeQuality || "none") !== fv) {
@@ -4982,7 +4988,7 @@ if (intentFilter !== "all") {
            document.getElementById("filterDefenseSide").value = "all";
            document.getElementById("filterVolumeQuality").value = "all";
            document.getElementById("filterBreakIntent").value = "all";
-  filterEMA200.checked;
+  filterEMA200.value = "all";
   
            
 
