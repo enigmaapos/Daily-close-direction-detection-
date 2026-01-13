@@ -5610,7 +5610,8 @@ const phaseIcon =
   flipAttemptCount
 } = d;
 
-  
+  const divIcon =
+  d.rsiDivergenceType === "bearish" ? "🟥" : "🟩";
        
 
 card.innerHTML = `
@@ -6041,10 +6042,24 @@ ${d.intradayRSIDiv ? (() => {
 
 
      ${d.hasRSIDivergence ? `
-  <div class="muted ${d.rsiDivergenceType === "bearish" ? "bear" : "bull"}">
-    🔀 <b>${d.rsiDivergenceType.toUpperCase()} RSI Divergence</b><br>
-    A → RSI ${d.rsiDivergence.pointA.rsi} | Price ${d.rsiDivergence.pointA.price}<br>
-    B → RSI ${d.rsiDivergence.pointB.rsi} | Price ${d.rsiDivergence.pointB.price}
+  <div class="muted rsi-div 
+    ${d.rsiDivergenceType === "bearish" ? "bear" : "bull"}
+    ${d.trapRisk === "HIGH" ? "trap" : ""}
+  ">
+    🔀 <b>
+      ${d.rsiDivergenceType === "bearish"
+        ? "BEARISH DIVERGENCE @ RESISTANCE"
+        : "BULLISH DIVERGENCE @ SUPPORT"}
+    </b><br>
+
+    Intent: <b>${d.divergenceIntent}</b><br>
+    Trap Risk: <b>${d.trapRisk}</b><br>
+
+    A → RSI ${d.rsiDivergence.pointA.rsi}
+    | Price ${d.rsiDivergence.pointA.price}<br>
+
+    B → RSI ${d.rsiDivergence.pointB.rsi}
+    | Price ${d.rsiDivergence.pointB.price}
   </div>
 ` : ""}
   
