@@ -2835,6 +2835,26 @@ function classifyStructureIntent({ pressure, reaction, score }) {
   return "CONFLICT";
 }
 
+    function findExtreme(arr, start, end, mode = "max") {
+  let bestIdx = -1;
+  let bestVal = mode === "max" ? -Infinity : Infinity;
+
+  for (let i = start; i < end; i++) {
+    const v = arr[i];
+    if (v == null || isNaN(v)) continue;
+
+    if (
+      (mode === "max" && v > bestVal) ||
+      (mode === "min" && v < bestVal)
+    ) {
+      bestVal = v;
+      bestIdx = i;
+    }
+  }
+
+  return bestIdx;
+    }
+
 
   function detectBullishRSIPriceDivergence(closes, rsi) {
   if (closes.length < 96 || rsi.length < 96) return null;
@@ -2904,32 +2924,35 @@ function classifyStructureIntent({ pressure, reaction, score }) {
     function detectRSIPriceDivergence(closes, rsi, type) {
   if (!closes || !rsi || closes.length < 100 || rsi.length < 100) return null;
 
-  const lookback = 96; // 24h
+  const lookback = 96;
   const c = closes.slice(-lookback);
   const r = rsi.slice(-lookback);
+  const mid = Math.floor(lookback / 2);
 
-  // --- Find Point A (earlier extreme)
-  let idxA = 0;
-  let idxB = 0;
+  let idxA = -1;
+  let idxB = -1;
 
   if (type === "bearish") {
-    // RSI HIGHER + PRICE LOWER (A)
-    idxA = r.indexOf(Math.max(...r.slice(0, lookback / 2)));
+    idxA = findExtreme(r, 0, mid, "max");
+    idxB = findExtreme(r, mid, lookback, "max");
+  }
 
-    // RSI LOWER + PRICE HIGHER (B)
-    idxB = r.indexOf(Math.max(...r.slice(lookback / 2))) + lookback / 2;
+  if (type === "bullish") {
+    idxA = findExtreme(r, 0, mid, "min");
+    idxB = findExtreme(r, mid, lookback, "min");
+  }
 
+  // ❗ Guard clause (CRITICAL)
+  if (idxA === -1 || idxB === -1) return null;
+  if (r[idxA] == null || r[idxB] == null) return null;
+
+  // Divergence rules
+  if (type === "bearish") {
     if (r[idxB] >= r[idxA]) return null;
     if (c[idxB] <= c[idxA]) return null;
   }
 
   if (type === "bullish") {
-    // RSI LOWER + PRICE HIGHER (A)
-    idxA = r.indexOf(Math.min(...r.slice(0, lookback / 2)));
-
-    // RSI HIGHER + PRICE LOWER (B)
-    idxB = r.indexOf(Math.min(...r.slice(lookback / 2))) + lookback / 2;
-
     if (r[idxB] <= r[idxA]) return null;
     if (c[idxB] >= c[idxA]) return null;
   }
@@ -2937,15 +2960,17 @@ function classifyStructureIntent({ pressure, reaction, score }) {
   return {
     type,
     pointA: {
+      index: idxA,
       rsi: +r[idxA].toFixed(2),
       price: +c[idxA].toFixed(4)
     },
     pointB: {
+      index: idxB,
       rsi: +r[idxB].toFixed(2),
       price: +c[idxB].toFixed(4)
     }
   };
-  }
+}
 
   
 
