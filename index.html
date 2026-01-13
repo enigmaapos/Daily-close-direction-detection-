@@ -2972,6 +2972,18 @@ function classifyStructureIntent({ pressure, reaction, score }) {
   };
 }
 
+      function isPriceNearZone(price, zone, tolerancePct = 0.003) {
+  if (!zone) return false;
+
+  const zoneMid = (zone.high + zone.low) / 2;
+  const tolerance = zoneMid * tolerancePct;
+
+  return (
+    price >= zone.low - tolerance &&
+    price <= zone.high + tolerance
+  );
+    }
+
   
 
     /* ================= DAILY RSI CONTEXT ================= */
@@ -4960,14 +4972,31 @@ const htfEnv = htf?.htfTrend;
 
 if (htfEnv === "bullish" || htfEnv === "bearish") {
   const expectedType = htfEnv === "bullish" ? "bearish" : "bullish";
-  divergence = detectRSIPriceDivergence(c, rsi15Arr, expectedType);
+  const rawDivergence = detectRSIPriceDivergence(c, rsi15Arr, expectedType);
+
+  if (rawDivergence) {
+    const divPrice = rawDivergence.pointB.price;
+
+    const valid =
+      rawDivergence.type === "bearish"
+        ? isPriceNearZone(divPrice, nearestResistanceZone)
+        : isPriceNearZone(divPrice, nearestSupportZone);
+
+    if (valid) {
+      divergence = rawDivergence;
+    }
+  }
 }
 
 if (divergence) {
-  divergenceType = divergence.type;
-  divergenceIntent =
-    divergence.type === "bearish" ? "Distribution" : "Accumulation";
-  trapRisk = "HIGH";
+  const reaction =
+    divergence.type === "bearish"
+      ? resistanceReaction
+      : supportReaction;
+
+  if (reaction === "REJECT") {
+    trapRisk = "VERY_HIGH";
+  }
 }
   
   
