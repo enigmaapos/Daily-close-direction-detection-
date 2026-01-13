@@ -3852,25 +3852,6 @@ if (rsi15Arr && rsi15Arr.length >= 20) {
   };
 }
 
-  // ================= RSI ↔ PRICE DIVERGENCE =================
-let divergence = null;
-let divergenceType = "none";
-
-// Decide environment
-const htfEnv = htf?.htfTrend || "neutral";
-
-if (htfEnv === "bullish") {
-  divergence = detectRSIPriceDivergence(c, rsi15Arr, "bearish");
-}
-
-if (htfEnv === "bearish") {
-  divergence = detectRSIPriceDivergence(c, rsi15Arr, "bullish");
-}
-
-if (divergence) {
-  divergenceType = divergence.type;
-}
-
 
   let domV = 0;
 let domVBull = true;
@@ -4944,7 +4925,25 @@ const hasFlipAttempt =
   fromPolarity !== "neutral" &&
   toPolarity !== "neutral";
 
-  let structureIntent = "None";
+  // ================= RSI ↔ PRICE DIVERGENCE =================
+let divergence = null;
+let divergenceType = "none";
+
+// Decide environment
+const htfEnv = htf?.htfTrend || "neutral";
+
+if (htfEnv === "bullish") {
+  divergence = detectRSIPriceDivergence(c, rsi15Arr, "bearish");
+}
+
+if (htfEnv === "bearish") {
+  divergence = detectRSIPriceDivergence(c, rsi15Arr, "bullish");
+}
+
+if (divergence) {
+  divergenceType = divergence.type;
+}
+  
 let trapRisk = "LOW";
 
 if (divergence) {
