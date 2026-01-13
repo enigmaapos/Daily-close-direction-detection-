@@ -491,6 +491,12 @@ button.secondary{
       <option value="FAILED">Defense Failed</option>
       <option value="PRESSURE">Under Pressure</option>
     </select>
+
+    <select id="filterActiveZone">
+  <option value="all">Active Zone (All)</option>
+  <option value="support">Support</option>
+  <option value="resistance">Resistance</option>
+    </select>
   </div>
 
   <!-- ===== RSI CONTEXT ===== -->
@@ -4864,6 +4870,7 @@ const r15 = document.getElementById("filterRsi15Context")?.value || "all";
   const intentFilter =
     document.getElementById("filterBreakIntent")?.value || "all";
   const e = filterEMA200.value;
+  const az = document.getElementById("filterActiveZone")?.value || "all";
   
 
   
@@ -4889,6 +4896,7 @@ const r15 = document.getElementById("filterRsi15Context")?.value || "all";
     if (ts !== "all" && c.dataset.tradeside !== ts) ok = false;
     if (ez !== "all" && c.dataset.execution !== ez) ok = false;
     if (vai !== "all" && c.dataset.volai !== vai) ok = false;
+    if (az !== "all" && c.dataset.activeZone !== az) ok = false;
   
     /* ===== EMA200 Filter ===== */
 if (e === "touched" && c.dataset.ema200Touched !== "1") ok = false;
@@ -4986,6 +4994,7 @@ if (intentFilter !== "all") {
            document.getElementById("filterVolumeQuality").value = "all";
            document.getElementById("filterBreakIntent").value = "all";
   filterEMA200.value = "all";
+           document.getElementById("filterActiveZone")?.value = "all";
   
            
 
@@ -5242,6 +5251,10 @@ const intentKey =
 
 card.dataset.breakIntent = intentKey;
   card.dataset.ema200Touched = d.ema200Touched ? "1" : "0";
+    card.dataset.activeZone =
+  d.supportZone ? "support" :
+  d.resistanceZone ? "resistance" :
+  "none";
 
 
     
@@ -6496,7 +6509,8 @@ async function runSearch(){
     "filter12hCandle",
     "filterVolumeQuality",
     "filterBreakIntent",
-  "filterEMA200"
+  "filterEMA200",
+    "filterActiveZone"
 ].forEach(id=>{
   document.getElementById(id)?.addEventListener("change", applyFilters);
 });
