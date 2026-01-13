@@ -5483,11 +5483,14 @@ card.dataset.breakIntent = intentKey;
     card.dataset.activeZone =
   d.pressure === "BUY" ? "resistance" : "support";
 
-    card.dataset.divergence = d.hasRSIDivergence ? "yes" : "no";
-card.dataset.divergenceType = d.rsiDivergenceType || "none"; // bullish | bearish
-card.dataset.divergenceIntent = d.divergenceIntent || "none";
-card.dataset.trapRisk = d.trapRisk || "LOW";
+    // ================= RSI DIVERGENCE =================
+card.dataset.div = d.rsiDivergence ? "yes" : "no";
+card.dataset.divType = d.rsiDivergenceType || "none";     // bullish | bearish
+card.dataset.divIntent = d.divergenceIntent || "none";   // reversal | continuation | trap
+card.dataset.divStrength = d.rsiDivergence?.strength || "normal";
 
+// ================= RISK =================
+card.dataset.trapRisk = d.trapRisk || "LOW";
         
 
 
