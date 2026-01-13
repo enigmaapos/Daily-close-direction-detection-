@@ -752,7 +752,7 @@ const BLACKSET=new Set([
 "AIAUSDT","AMBUSDT","FLMUSDT","PERPUSDT","OBOLUSDT","SWELLUSDT","FTMUSDT","XCNUSDT",
   "RADUSDT","IDEXUSDT","SNTUSDT","BADGERUSDT","GLMRUSDT","ORBSUSDT","BALUSDT","KLAYUSDT",
   "UNFIUSDT","REEFUSDT","STPTUSDT","OMGUSDT","VOXELUSDT","QUICKUSDT","FISUSDT","MKRUSDT",
-  "REIUSDT","KDAUSDT"
+  "REIUSDT","KDAUSDT","FXSUSDT"
 ]);
 
 const favSet=new Set();
@@ -6120,33 +6120,6 @@ ${d.intradayRSIDiv ? (() => {
   
 
 
-      <div class="bias-chart-wrap">
-      <div class="bias-accumulation">
-  <div>
-    🧠 Bias Accumulation:
-    <b id="biasAcc-${d.sym}">—</b>
-  </div>
-  <div class="muted">
-    RAW:
-    <span id="rawBiasAcc-${d.sym}">—</span>
-  </div>
-</div>
-
-  <canvas class="bias-chart" width="320" height="160"></canvas>
-</div>
-
-${d.marketPhase ? `
-  <div class="muted ${d.marketPhase.cls}">
-    ${phaseIcon} Market Phase: <b>${d.marketPhase.phase}</b><br>
-    <span class="muted">${d.marketPhase.reason}</span><br>
-    <span class="muted">
-      Bias Acc: ${d.marketPhase.interpAcc}
-      · RAW: ${d.marketPhase.rawAcc}
-    </span>
-  </div>
-` : ""}
-
-
 <div class="muted ${v.verdictClass}">
     🧠 AI Verdict: <b>${v.verdict}</b>
   </div>
@@ -6220,6 +6193,32 @@ ${d.R?.[1] != null ? `<div class="muted bull">R2: ${d.R[1].toFixed(4)}</div>` : 
   <b class="behavior-${behavior ?? "neutral"}">
     ${behavior ?? "neutral"}
   </b>
+</div>
+
+${d.marketPhase ? `
+  <div class="muted ${d.marketPhase.cls}">
+    ${phaseIcon} Market Phase: <b>${d.marketPhase.phase}</b><br>
+    <span class="muted">${d.marketPhase.reason}</span><br>
+    <span class="muted">
+      Bias Acc: ${d.marketPhase.interpAcc}
+      · RAW: ${d.marketPhase.rawAcc}
+    </span>
+  </div>
+` : ""}
+
+<div class="bias-chart-wrap">
+      <div class="bias-accumulation">
+  <div>
+    🧠 Bias Accumulation:
+    <b id="biasAcc-${d.sym}">—</b>
+  </div>
+  <div class="muted">
+    RAW:
+    <span id="rawBiasAcc-${d.sym}">—</span>
+  </div>
+</div>
+
+  <canvas class="bias-chart" width="320" height="160"></canvas>
 </div>
 
 
