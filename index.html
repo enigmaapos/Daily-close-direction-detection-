@@ -4889,13 +4889,10 @@ const r15 = document.getElementById("filterRsi15Context")?.value || "all";
     if (ts !== "all" && c.dataset.tradeside !== ts) ok = false;
     if (ez !== "all" && c.dataset.execution !== ez) ok = false;
     if (vai !== "all" && c.dataset.volai !== vai) ok = false;
-    if (e === "touched" && card.dataset.ema200Touched !== "1") {
-  visible = false;
-}
-
-if (e === "not" && card.dataset.ema200Touched !== "0") {
-  visible = false;
-}
+  
+    /* ===== EMA200 Filter ===== */
+if (e === "touched" && c.dataset.ema200Touched !== "1") ok = false;
+if (e === "not" && c.dataset.ema200Touched !== "0") ok = false;
 
         if (fv !== "all") {
   if ((c.dataset.volumeQuality || "none") !== fv) {
@@ -5245,6 +5242,7 @@ const intentKey =
 
 card.dataset.breakIntent = intentKey;
   card.dataset.ema200Touched = d.ema200Touched ? "1" : "0";
+
 
     
 
