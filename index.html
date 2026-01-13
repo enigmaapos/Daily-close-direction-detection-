@@ -4977,10 +4977,10 @@ if (htfEnv === "bullish" || htfEnv === "bearish") {
   if (rawDivergence) {
     const divPrice = rawDivergence.pointB.price;
 
-    const valid =
-      rawDivergence.type === "bearish"
-        ? isPriceNearZone(divPrice, nearestResistanceZone)
-        : isPriceNearZone(divPrice, nearestSupportZone);
+  const valid =
+  rawDivergence.type === "bearish"
+    ? isPriceNearZone(divPrice, nearestResistanceZone, 0.006)
+    : isPriceNearZone(divPrice, nearestSupportZone, 0.006);
 
     if (valid) {
       divergence = rawDivergence;
