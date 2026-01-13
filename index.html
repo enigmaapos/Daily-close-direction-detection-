@@ -4953,32 +4953,22 @@ const hasFlipAttempt =
   // ================= RSI ↔ PRICE DIVERGENCE =================
 let divergence = null;
 let divergenceType = "none";
+let divergenceIntent = null;
+let trapRisk = "LOW";
 
-// Decide environment
-const htfEnv = htf?.htfTrend || "neutral";
+const htfEnv = htf?.htfTrend;
 
-if (htfEnv === "bullish") {
-  divergence = detectRSIPriceDivergence(c, rsi15Arr, "bearish");
-}
-
-if (htfEnv === "bearish") {
-  divergence = detectRSIPriceDivergence(c, rsi15Arr, "bullish");
+if (htfEnv === "bullish" || htfEnv === "bearish") {
+  const expectedType = htfEnv === "bullish" ? "bearish" : "bullish";
+  divergence = detectRSIPriceDivergence(c, rsi15Arr, expectedType);
 }
 
 if (divergence) {
   divergenceType = divergence.type;
-}
-  
-let trapRisk = "LOW";
-
-if (divergence) {
   divergenceIntent =
-    divergence.type === "bearish"
-      ? "Distribution"
-      : "Accumulation";
-
+    divergence.type === "bearish" ? "Distribution" : "Accumulation";
   trapRisk = "HIGH";
-  }
+}
   
   
 
