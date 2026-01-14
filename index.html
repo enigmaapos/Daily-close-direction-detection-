@@ -5150,6 +5150,38 @@ if (domVIndex > 0) {
   }
 }
 
+  // ===== Trend-aligned efficiency fallback =====
+if (!pvSignalType && B > 0) {
+  const volSlice = v.slice(Math.max(0, B - LOOKBACK), B);
+if (volSlice.length < 5) return; // or just skip efficiency
+
+const avgVol = average(volSlice);
+  
+  const bodySlice = k
+  .slice(Math.max(0, B - LOOKBACK), B)
+  .map(x => Math.abs(x[4] - x[1]));
+
+const avgBody = average(bodySlice);
+
+  const trendBull = mainTrend === "BULL";
+  const trendBear = mainTrend === "BEAR";
+
+  if (
+    (trendBull && bull) ||
+    (trendBear && !bull)
+  ) {
+    const volB = v[B];
+    const bodyB = Math.abs(k[B][4] - k[B][1]);
+
+    if (volB < avgVol && bodyB > avgBody) {
+      pvSignalType = bull
+        ? "BULL_EFFICIENCY"
+        : "BEAR_EFFICIENCY";
+
+      pvStrength = (bodyB / avgBody) * (avgVol / Math.max(volB, 1e-6));
+    }
+  }
+}
   
 
   return {sym,price,change,bull,prob,bias,structure,structureType,volumeStructure,structureQuality,volumeQuality,volumeAlign,defenseFailure,trendStructureRisk,S:sw.S,R:sw.R,dailyRSI,rsi15Context,rsi15,rsi15Momentum,volumeBreakout,
