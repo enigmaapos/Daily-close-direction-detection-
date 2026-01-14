@@ -6665,11 +6665,13 @@ function showAll() {
 async function runScan() {
   if (scanLock) return;
 
-  // 🔄 RESET SCAN STATE
-  greenShown = 0;
-  redShown = 0;
-  scannedGreen = [];
-  scannedRed = [];
+  // 🔄 RESET ONLY WHEN NOT IN A LOCKED VIEW
+  if (viewMode === "all") {
+    greenShown = 0;
+    redShown = 0;
+    scannedGreen = [];
+    scannedRed = [];
+  }
 
   scanLock = true;
   scanBtn.disabled = true;
