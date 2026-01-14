@@ -5890,6 +5890,24 @@ ${d.setupScore ? `
   (Net ${d.marketDom?.net ?? "—"}%)
 </div>
 
+<div class="muted ${
+  d.mainTrend === "bullish" ? "bull" :
+  d.mainTrend === "bearish" ? "bear" : "neutral"
+}">
+  Main Trend: ${(typeof d.mainTrend === "string" ? d.mainTrend : "neutral").toUpperCase()}
+</div>
+
+<div class="muted ${
+  d.emaShortBias === "bullish" ? "bull" :
+  d.emaShortBias === "bearish" ? "bear" : "neutral"
+}">
+  Micro Trend: ${(typeof d.emaShortBias === "string" ? d.emaShortBias : "neutral").toUpperCase()}
+  ${
+    d.emaShortCross === "bullish-cross" ? " ⬆ Cross" :
+    d.emaShortCross === "bearish-cross" ? " ⬇ Cross" : ""
+  }
+</div>
+
 
 <div class="prob ${
   d.bias?.includes?.("Bull") ? "bull" :
@@ -6341,23 +6359,6 @@ ${d.S?.[1] != null ? `<div class="muted bear">S2: ${d.S[1].toFixed(4)}</div>` : 
 ${d.R?.[0] != null ? `<div class="muted bull">R1: ${d.R[0].toFixed(4)}</div>` : ""}
 ${d.R?.[1] != null ? `<div class="muted bull">R2: ${d.R[1].toFixed(4)}</div>` : ""}
 
-<div class="muted ${
-  d.mainTrend === "bullish" ? "bull" :
-  d.mainTrend === "bearish" ? "bear" : "neutral"
-}">
-  Main Trend: ${(typeof d.mainTrend === "string" ? d.mainTrend : "neutral").toUpperCase()}
-</div>
-
-<div class="muted ${
-  d.emaShortBias === "bullish" ? "bull" :
-  d.emaShortBias === "bearish" ? "bear" : "neutral"
-}">
-  Micro Trend: ${(typeof d.emaShortBias === "string" ? d.emaShortBias : "neutral").toUpperCase()}
-  ${
-    d.emaShortCross === "bullish-cross" ? " ⬆ Cross" :
-    d.emaShortCross === "bearish-cross" ? " ⬇ Cross" : ""
-  }
-</div>
 
 <div class="muted neutral"
      title="Volume-based context only. Describes the likely near-term behavior, not a trade signal.">
