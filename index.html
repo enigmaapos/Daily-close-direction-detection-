@@ -6761,14 +6761,22 @@ async function runScan() {
       if (x.priceChangePercent >= 0) {
   scannedGreen.push(d);
 
-  if (viewMode !== "red" && scanGreen && greenShown < limit) {
+  if (
+    (viewMode === "all" || viewMode === "green") &&
+    scanGreen &&
+    greenShown < limit
+  ) {
     renderCard(d, greenGrid);
     greenShown++;
   }
 } else {
   scannedRed.push(d);
 
-  if (viewMode !== "green" && scanRed && redShown < limit) {
+  if (
+    (viewMode === "all" || viewMode === "red") &&
+    scanRed &&
+    redShown < limit
+  ) {
     renderCard(d, redGrid);
     redShown++;
   }
@@ -6782,10 +6790,13 @@ async function runScan() {
   }
 
       done++;
-      if (!isAutoScan && total > 0) {
-        progressFill.style.width =
-          Math.round((done / total) * 100) + "%";
-      }
+      
+      // instead of unconditional clear
+if (!isAutoScan && viewMode === "all") {
+  if (scanGreen) greenGrid.innerHTML = "";
+  if (scanRed)   redGrid.innerHTML = "";
+  progressFill.style.width = "0%";
+}
 
       await sleep(120); // rate-limit safe
     }
