@@ -6709,13 +6709,7 @@ async function runScan() {
       return;
     }
 
-    /* ===== RESET UI ONLY FOR MANUAL SCAN ===== */
-    // instead of unconditional clear
-if (!isAutoScan && viewMode === "all") {
-  if (scanGreen) greenGrid.innerHTML = "";
-  if (scanRed)   redGrid.innerHTML = "";
-  progressFill.style.width = "0%";
-}
+
 
     /* ===== FETCH MARKET DATA ===== */
     const t = await fetchJSON(`${API}/fapi/v1/ticker/24hr`);
@@ -6764,6 +6758,7 @@ if (!isAutoScan && viewMode === "all") {
       if (x.priceChangePercent >= 0) {
   scannedGreen.push(d);
 
+  // paint green ONLY if user allows it
   if (
     (viewMode === "all" || viewMode === "green") &&
     scanGreen &&
@@ -6772,9 +6767,11 @@ if (!isAutoScan && viewMode === "all") {
     renderCard(d, greenGrid);
     greenShown++;
   }
+
 } else {
   scannedRed.push(d);
 
+  // paint red ONLY if user allows it
   if (
     (viewMode === "all" || viewMode === "red") &&
     scanRed &&
