@@ -1497,7 +1497,6 @@ const FLIP_REGISTRY = {};
 
   } catch (e) {
     console.error("Flip symbol load failed:", sym);
-    console.log("SCAN RUNNING ON:", typeof window === "undefined" ? "SERVER" : "BROWSER");
   }
   }
 
@@ -5498,6 +5497,8 @@ logStep("FINAL", {
   volumeStructure: volumeStructure.name,
   volumeAlign
 });
+
+console.log("SCAN RUNNING ON:", typeof window === "undefined" ? "SERVER" : "BROWSER");
 
 
   
