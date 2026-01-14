@@ -6710,11 +6710,12 @@ async function runScan() {
     }
 
     /* ===== RESET UI ONLY FOR MANUAL SCAN ===== */
-    if (!isAutoScan) {
-      if (scanGreen) greenGrid.innerHTML = "";
-      if (scanRed)   redGrid.innerHTML = "";
-      progressFill.style.width = "0%";
-    }
+    // instead of unconditional clear
+if (!isAutoScan && viewMode === "all") {
+  if (scanGreen) greenGrid.innerHTML = "";
+  if (scanRed)   redGrid.innerHTML = "";
+  progressFill.style.width = "0%";
+}
 
     /* ===== FETCH MARKET DATA ===== */
     const t = await fetchJSON(`${API}/fapi/v1/ticker/24hr`);
@@ -6792,13 +6793,12 @@ async function runScan() {
   }
 
       done++;
+
+      if (!isAutoScan && total > 0) {
+        progressFill.style.width =
+          Math.round((done / total) * 100) + "%";
+  }
       
-      // instead of unconditional clear
-if (!isAutoScan && viewMode === "all") {
-  if (scanGreen) greenGrid.innerHTML = "";
-  if (scanRed)   redGrid.innerHTML = "";
-  progressFill.style.width = "0%";
-}
 
       await sleep(120); // rate-limit safe
     }
