@@ -802,6 +802,7 @@ let dailyRSIScanned = 0;
 let redShown = 0;
   let scannedGreen = [];
 let scannedRed   = [];
+  let viewMode = "all"; // "all" | "green" | "red"
   
 
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
@@ -6580,6 +6581,8 @@ function removeFav(sym){
 }
 
   function showTopGreen(limit = 30) {
+  viewMode = "green";
+
   greenGrid.innerHTML = "";
   redGrid.innerHTML = "";
 
@@ -6591,6 +6594,8 @@ function removeFav(sym){
 }
 
 function showTopRed(limit = 30) {
+  viewMode = "red";
+
   greenGrid.innerHTML = "";
   redGrid.innerHTML = "";
 
@@ -6602,6 +6607,8 @@ function showTopRed(limit = 30) {
 }
 
 function showAll() {
+  viewMode = "all";
+
   greenGrid.innerHTML = "";
   redGrid.innerHTML = "";
 
@@ -6754,15 +6761,14 @@ async function runScan() {
       if (x.priceChangePercent >= 0) {
   scannedGreen.push(d);
 
-
-  if (scanGreen && greenShown < limit) {
+  if (viewMode !== "red" && scanGreen && greenShown < limit) {
     renderCard(d, greenGrid);
     greenShown++;
   }
 } else {
   scannedRed.push(d);
 
-  if (scanRed && redShown < limit) {
+  if (viewMode !== "green" && scanRed && redShown < limit) {
     renderCard(d, redGrid);
     redShown++;
   }
