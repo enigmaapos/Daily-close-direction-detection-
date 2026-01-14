@@ -6906,37 +6906,32 @@ scrollTopBtn.addEventListener("click", () => {
   }
 });
 
-  function enforceScanLimitRules() {
+  
+
+      function enforceScanLimitRules() {
   const green = document.getElementById("scanGreen");
   const red   = document.getElementById("scanRed");
-  const limit = parseInt(
-    document.getElementById("scanLimit")?.value || "30",
-    10
-  );
+  const limitEl = document.getElementById("scanLimit");
 
-  if (!green || !red) return;
+  if (!green || !red || !limitEl) return;
+
+  const limit = parseInt(limitEl.value || "30", 10);
+
+  // reset first
+  green.disabled = false;
+  red.disabled   = false;
 
   if (limit > 30) {
-    // only one side allowed — DO NOT change checked state
+    // enforce single-side selection
     if (green.checked && !red.checked) {
       red.disabled = true;
-      green.disabled = false;
     }
     else if (red.checked && !green.checked) {
       green.disabled = true;
-      red.disabled = false;
     }
-    else {
-      // both checked OR both unchecked → allow choice
-      green.disabled = false;
-      red.disabled = false;
-    }
-  } else {
-    // normal mode
-    green.disabled = false;
-    red.disabled = false;
   }
-}
+      }
+    
 
   document.getElementById("scanGreen")
   ?.addEventListener("change", enforceScanLimitRules);
