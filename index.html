@@ -5908,6 +5908,13 @@ ${d.setupScore ? `
   </div>
 ` : ""}
 
+  <div class="muted ${
+    structureBias === "bullish" ? "bull" :
+    structureBias === "bearish" ? "bear" : "neutral"
+  }">
+   Trend Structure: ${d.structure}
+  </div>
+  
   <div class="muted ${volumeStructClass}">
     Volume Structure: <b>${volumeStruct.name}</b>
   </div>
@@ -6008,14 +6015,6 @@ ${d.pvValid ? `
     📊 No 24h Volume Breakout
   </div>
 `}
-
-
-  <div class="muted ${
-    structureBias === "bullish" ? "bull" :
-    structureBias === "bearish" ? "bear" : "neutral"
-  }">
-   Trend Structure: ${d.structure}
-  </div>
 
 
 ${(d.defenseFailure && d.defenseFailure !== "NONE") || d.trendStructureRisk
