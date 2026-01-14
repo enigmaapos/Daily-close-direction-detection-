@@ -4139,6 +4139,12 @@ const brokeBelowSupportZone =
     const recentVol = v.at(-1);
 const volConfirmed = recentVol >= avgVol * 1.2;
 
+  const holdingAboveResistance =
+  rZone && price > rZone.high;
+
+const holdingBelowSupport =
+  sZone && price < sZone.low;
+
 
 
 // HTF permission logic
@@ -4161,8 +4167,8 @@ const htfBearOk =
   
    const bullishBreakAccepted =
   rb &&
-  brokeAboveResistanceZone &&      // structure confirmation
-  bullishEMAAcceptance &&          // EMA acceptance (THIS is what you meant)
+  (brokeAboveResistanceZone || holdingAboveResistance) &&
+  bullishEMAAcceptance &&
   volConfirmed &&
   rsi15 !== null &&
   rsi15Rising &&
@@ -4170,13 +4176,10 @@ const htfBearOk =
   reactionR !== "DEFENDED" &&
   htfBullOk;
 
-
-  
-
 const bearishBreakAccepted =
   sb &&
-  brokeBelowSupportZone &&         // structure confirmation
-  bearishEMAAcceptance &&          // EMA acceptance
+  (brokeBelowSupportZone || holdingBelowSupport) &&
+  bearishEMAAcceptance &&
   volConfirmed &&
   rsi15 !== null &&
   !rsi15Rising &&
