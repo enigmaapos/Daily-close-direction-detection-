@@ -6681,8 +6681,6 @@ async function runScan() {
       const d = await analyze(x.symbol, +x.priceChangePercent);
       d.marketDom = dom;
 
-      if (x.priceChangePercent >= 0) {
-  scannedGreen.push(d);
 
   if (scanGreen && greenShown < limit) {
     renderCard(d, greenGrid);
