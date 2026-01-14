@@ -3992,84 +3992,6 @@ for(let i = k.length - 96; i < k.length - 1; i++){
 
     const bull = domVBull;
 
-// ===== PRICE–VOLUME (EFFORT vs RESULT) =====
-let pvSignalType = null;
-let pvPointA = null;
-let pvPointB = null;
-let pvStrength = 0;
-
-let B = -1;
-const LOOKBACK = 32;
-const VOL_RATIO = 1.3;
-
-if (domVIndex > 0) {
-  B = domVIndex;
-
-  for (let A = B - 1; A >= Math.max(0, B - LOOKBACK); A--) {
-
-    // Same candle color as dominant
-    if (bull && !(k[A][4] > k[A][1])) continue;
-    if (!bull && !(k[A][4] < k[A][1])) continue;
-
-    const volA = v[A];
-    const volB = v[B];
-
-    const bodyA = Math.abs(k[A][4] - k[A][1]);
-    const bodyB = Math.abs(k[B][4] - k[B][1]);
-
-    // Exhaustion
-    if (volB > volA * VOL_RATIO && bodyB < bodyA) {
-      pvSignalType = bull ? "BULL_EXHAUSTION" : "BEAR_EXHAUSTION";
-      pvPointA = A;
-      pvPointB = B;
-      pvStrength = (volB / volA) * (bodyA / Math.max(bodyB, 1e-6));
-      break;
-    }
-
-    // Efficiency (rare, but valid)
-    if (volB < volA / VOL_RATIO && bodyB > bodyA) {
-      pvSignalType = bull ? "BULL_EFFICIENCY" : "BEAR_EFFICIENCY";
-      pvPointA = A;
-      pvPointB = B;
-      pvStrength = (bodyB / bodyA) * (volA / Math.max(volB, 1e-6));
-      break;
-    }
-  }
-}
-
-// ===== Trend-aligned efficiency fallback =====
-if (!pvSignalType && B > 0) {
-  const volSlice = v.slice(Math.max(0, B - LOOKBACK), B);
-if (volSlice.length < 5) return; // or just skip efficiency
-
-const avgVol = average(volSlice);
-  
-  const bodySlice = k
-  .slice(Math.max(0, B - LOOKBACK), B)
-  .map(x => Math.abs(x[4] - x[1]));
-
-const avgBody = average(bodySlice);
-
-  const trendBull = mainTrend === "BULL";
-  const trendBear = mainTrend === "BEAR";
-
-  if (
-    (trendBull && bull) ||
-    (trendBear && !bull)
-  ) {
-    const volB = v[B];
-    const bodyB = Math.abs(k[B][4] - k[B][1]);
-
-    if (volB < avgVol && bodyB > avgBody) {
-      pvSignalType = bull
-        ? "BULL_EFFICIENCY"
-        : "BEAR_EFFICIENCY";
-
-      pvStrength = (bodyB / avgBody) * (avgVol / Math.max(volB, 1e-6));
-    }
-  }
-  }
-
 
   const ema14 = ema(c.slice(-100), 14);
 const ema21 = ema(c.slice(-100), 21);
@@ -4094,14 +4016,6 @@ if (ema14Prev <= ema21Prev && ema14Last > ema21Last)
 if (ema14Prev >= ema21Prev && ema14Last < ema21Last)
   emaShortCross = "bearish-cross";
 
-const mainTrend = getMainTrendOnly(
-  ema70,
-  ema200,
-  c,
-  k.map(x=>+x[1]), // opens
-  h,
-  l
-);
 
   const ema200Arr = ema200;              // reuse existing array
 const ema200Last = ema200Arr.at(-1);   // scalar
@@ -4124,6 +4038,15 @@ if (ema70Last != null && price != null && ema70Last !== 0) {
     ema200,
     0.3 // tolerance %
   );
+
+  const mainTrend = getMainTrendOnly(
+  ema70,
+  ema200,
+  c,
+  k.map(x=>+x[1]), // opens
+  h,
+  l
+);
 
   // 🧠 Market dominance side (logic-safe)
 const marketDomSide =
@@ -5178,6 +5101,84 @@ if (divergence) {
   }
 
   prob = Math.max(40, Math.min(prob, 95));
+
+  // ===== PRICE–VOLUME (EFFORT vs RESULT) =====
+let pvSignalType = null;
+let pvPointA = null;
+let pvPointB = null;
+let pvStrength = 0;
+
+let B = -1;
+const LOOKBACK = 32;
+const VOL_RATIO = 1.3;
+
+if (domVIndex > 0) {
+  B = domVIndex;
+
+  for (let A = B - 1; A >= Math.max(0, B - LOOKBACK); A--) {
+
+    // Same candle color as dominant
+    if (bull && !(k[A][4] > k[A][1])) continue;
+    if (!bull && !(k[A][4] < k[A][1])) continue;
+
+    const volA = v[A];
+    const volB = v[B];
+
+    const bodyA = Math.abs(k[A][4] - k[A][1]);
+    const bodyB = Math.abs(k[B][4] - k[B][1]);
+
+    // Exhaustion
+    if (volB > volA * VOL_RATIO && bodyB < bodyA) {
+      pvSignalType = bull ? "BULL_EXHAUSTION" : "BEAR_EXHAUSTION";
+      pvPointA = A;
+      pvPointB = B;
+      pvStrength = (volB / volA) * (bodyA / Math.max(bodyB, 1e-6));
+      break;
+    }
+
+    // Efficiency (rare, but valid)
+    if (volB < volA / VOL_RATIO && bodyB > bodyA) {
+      pvSignalType = bull ? "BULL_EFFICIENCY" : "BEAR_EFFICIENCY";
+      pvPointA = A;
+      pvPointB = B;
+      pvStrength = (bodyB / bodyA) * (volA / Math.max(volB, 1e-6));
+      break;
+    }
+  }
+}
+
+// ===== Trend-aligned efficiency fallback =====
+if (!pvSignalType && B > 0) {
+  const volSlice = v.slice(Math.max(0, B - LOOKBACK), B);
+if (volSlice.length < 5) return; // or just skip efficiency
+
+const avgVol = average(volSlice);
+  
+  const bodySlice = k
+  .slice(Math.max(0, B - LOOKBACK), B)
+  .map(x => Math.abs(x[4] - x[1]));
+
+const avgBody = average(bodySlice);
+
+  const trendBull = mainTrend === "bullish";
+  const trendBear = mainTrend === "bearish";
+
+  if (
+    (trendBull && bull) ||
+    (trendBear && !bull)
+  ) {
+    const volB = v[B];
+    const bodyB = Math.abs(k[B][4] - k[B][1]);
+
+    if (volB < avgVol && bodyB > avgBody) {
+      pvSignalType = bull
+        ? "BULL_EFFICIENCY"
+        : "BEAR_EFFICIENCY";
+
+      pvStrength = (bodyB / avgBody) * (avgVol / Math.max(volB, 1e-6));
+    }
+  }
+  }
   
   
 
