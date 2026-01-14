@@ -6580,7 +6580,8 @@ function removeFav(sym){
   favSet.forEach(addFav);
 }
 
-  function showTopGreen(limit = 30) {
+  
+function showTopGreen(limit = 30) {
   viewMode = "green";
 
   greenGrid.innerHTML = "";
@@ -6590,6 +6591,7 @@ function removeFav(sym){
     .slice(0, limit)
     .forEach(d => renderCard(d, greenGrid));
 
+  setActiveBtn("btnGreen");
   setScanStatus(`🟢 Showing Top ${limit} Green`);
 }
 
@@ -6603,6 +6605,7 @@ function showTopRed(limit = 30) {
     .slice(0, limit)
     .forEach(d => renderCard(d, redGrid));
 
+  setActiveBtn("btnRed");
   setScanStatus(`🔴 Showing Top ${limit} Red`);
 }
 
@@ -6615,50 +6618,10 @@ function showAll() {
   scannedGreen.forEach(d => renderCard(d, greenGrid));
   scannedRed.forEach(d => renderCard(d, redGrid));
 
-  setScanStatus("⚖ Showing All Scanned Results");
-}
-
-  function setActiveBtn(id) {
-  document.querySelectorAll(".filter-btn")
-    .forEach(b => b.classList.remove("active"));
-
-  document.getElementById(id)?.classList.add("active");
-}
-
-function showTopGreen(limit = 30) {
-  greenGrid.innerHTML = "";
-  redGrid.innerHTML = "";
-
-  scannedGreen
-    .slice(0, limit)
-    .forEach(d => renderCard(d, greenGrid));
-
-  setActiveBtn("btnGreen");
-  setScanStatus(`🟢 Showing Top ${limit} Green`);
-}
-
-function showTopRed(limit = 30) {
-  greenGrid.innerHTML = "";
-  redGrid.innerHTML = "";
-
-  scannedRed
-    .slice(0, limit)
-    .forEach(d => renderCard(d, redGrid));
-
-  setActiveBtn("btnRed");
-  setScanStatus(`🔴 Showing Top ${limit} Red`);
-}
-
-function showAll() {
-  greenGrid.innerHTML = "";
-  redGrid.innerHTML = "";
-
-  scannedGreen.forEach(d => renderCard(d, greenGrid));
-  scannedRed.forEach(d => renderCard(d, redGrid));
-
   setActiveBtn("btnAll");
   setScanStatus("⚖ Showing All Scanned Results");
 }
+  
 
 
 /* ================= SCAN ================= */
