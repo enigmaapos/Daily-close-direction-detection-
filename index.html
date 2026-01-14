@@ -383,7 +383,28 @@ button.secondary{
   margin-bottom: 6px;
 }
 
-  
+  .filter-btn {
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid #333;
+  background: #111;
+  color: #aaa;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.filter-btn:hover {
+  color: #fff;
+  border-color: #666;
+  transform: translateY(-1px);
+}
+
+.filter-btn.active {
+  background: #1e1e1e;
+  color: #fff;
+  border-color: #00ff99;
+  box-shadow: 0 0 8px rgba(0,255,153,0.35);
+}
 </style>
 </head>
 
@@ -414,10 +435,6 @@ button.secondary{
   <option value="100">100</option>
 </select>
   </label>
-
-    <button onclick="showTopGreen()">🟢 Top 30 Green</button>
-<button onclick="showTopRed()">🔴 Top 30 Red</button>
-<button onclick="showAll()">⚖ Show All</button>
   </div>
 
   <!-- ================= FILTER PANEL ================= -->
@@ -670,6 +687,10 @@ button.secondary{
   </div>
   
 </div>
+
+<button class="filter-btn" id="btnGreen" onclick="showTopGreen()">🟢 Top 30 Green</button>
+<button class="filter-btn" id="btnRed" onclick="showTopRed()">🔴 Top 30 Red</button>
+<button class="filter-btn" id="btnAll" onclick="showAll()">⚖ Show All</button>
 
 
 <div class="muted">
@@ -6587,6 +6608,48 @@ function showAll() {
   scannedGreen.forEach(d => renderCard(d, greenGrid));
   scannedRed.forEach(d => renderCard(d, redGrid));
 
+  setScanStatus("⚖ Showing All Scanned Results");
+}
+
+  function setActiveBtn(id) {
+  document.querySelectorAll(".filter-btn")
+    .forEach(b => b.classList.remove("active"));
+
+  document.getElementById(id)?.classList.add("active");
+}
+
+function showTopGreen(limit = 30) {
+  greenGrid.innerHTML = "";
+  redGrid.innerHTML = "";
+
+  scannedGreen
+    .slice(0, limit)
+    .forEach(d => renderCard(d, greenGrid));
+
+  setActiveBtn("btnGreen");
+  setScanStatus(`🟢 Showing Top ${limit} Green`);
+}
+
+function showTopRed(limit = 30) {
+  greenGrid.innerHTML = "";
+  redGrid.innerHTML = "";
+
+  scannedRed
+    .slice(0, limit)
+    .forEach(d => renderCard(d, redGrid));
+
+  setActiveBtn("btnRed");
+  setScanStatus(`🔴 Showing Top ${limit} Red`);
+}
+
+function showAll() {
+  greenGrid.innerHTML = "";
+  redGrid.innerHTML = "";
+
+  scannedGreen.forEach(d => renderCard(d, greenGrid));
+  scannedRed.forEach(d => renderCard(d, redGrid));
+
+  setActiveBtn("btnAll");
   setScanStatus("⚖ Showing All Scanned Results");
 }
 
