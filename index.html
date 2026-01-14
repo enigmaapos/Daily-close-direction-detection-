@@ -3993,10 +3993,12 @@ let pvPointA = null;
 let pvPointB = null;
 let pvStrength = 0;
 
+let B = -1;
+const LOOKBACK = 32;
+const VOL_RATIO = 1.3;
+
 if (domVIndex > 0) {
-  const B = domVIndex;
-  const LOOKBACK = 32;
-  const VOL_RATIO = 1.3;
+  B = domVIndex;
 
   for (let A = B - 1; A >= Math.max(0, B - LOOKBACK); A--) {
 
@@ -4010,7 +4012,7 @@ if (domVIndex > 0) {
     const bodyA = Math.abs(k[A][4] - k[A][1]);
     const bodyB = Math.abs(k[B][4] - k[B][1]);
 
-    // Exhaustion: more volume, less result
+    // Exhaustion
     if (volB > volA * VOL_RATIO && bodyB < bodyA) {
       pvSignalType = bull ? "BULL_EXHAUSTION" : "BEAR_EXHAUSTION";
       pvPointA = A;
@@ -4019,7 +4021,7 @@ if (domVIndex > 0) {
       break;
     }
 
-    // Efficiency: less volume, more result
+    // Efficiency (rare, but valid)
     if (volB < volA / VOL_RATIO && bodyB > bodyA) {
       pvSignalType = bull ? "BULL_EFFICIENCY" : "BEAR_EFFICIENCY";
       pvPointA = A;
@@ -4029,6 +4031,34 @@ if (domVIndex > 0) {
     }
   }
 }
+
+// ===== Trend-aligned efficiency fallback =====
+if (!pvSignalType && B > 0) {
+  const avgVol = average(v.slice(Math.max(0, B - LOOKBACK), B));
+  const avgBody = average(
+    k.slice(Math.max(0, B - LOOKBACK), B)
+     .map(x => Math.abs(x[4] - x[1]))
+  );
+
+  const trendBull = mainTrend === "BULL";
+  const trendBear = mainTrend === "BEAR";
+
+  if (
+    (trendBull && bull) ||
+    (trendBear && !bull)
+  ) {
+    const volB = v[B];
+    const bodyB = Math.abs(k[B][4] - k[B][1]);
+
+    if (volB < avgVol && bodyB > avgBody) {
+      pvSignalType = bull
+        ? "BULL_EFFICIENCY"
+        : "BEAR_EFFICIENCY";
+
+      pvStrength = (bodyB / avgBody) * (avgVol / Math.max(volB, 1e-6));
+    }
+  }
+  }
 
 
   const ema14 = ema(c.slice(-100), 14);
