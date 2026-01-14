@@ -770,6 +770,8 @@ let dailyRSIScanned = 0;
   let statusLocked = false;
   let auto24hVolumeEnabled = false; // ✅ default ON
   let GLOBAL_MARKET_DOM = null;
+  let greenShown = 0;
+let redShown = 0;
   
 
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
@@ -6639,10 +6641,24 @@ async function runScan() {
       const d = await analyze(x.symbol, +x.priceChangePercent);
       d.marketDom = dom;
 
-      renderCard(
-        d,
-        x.priceChangePercent >= 0 ? greenGrid : redGrid
-      );
+      if (x.priceChangePercent >= 0) {
+  if (scanGreen && greenShown < limit) {
+    renderCard(d, greenGrid);
+    greenShown++;
+  }
+} else {
+  if (scanRed && redShown < limit) {
+    renderCard(d, redGrid);
+    redShown++;
+  }
+}
+
+  if (
+  (!scanGreen || greenShown >= limit) &&
+  (!scanRed   || redShown   >= limit)
+) {
+  break;
+  }
 
       done++;
       if (!isAutoScan && total > 0) {
