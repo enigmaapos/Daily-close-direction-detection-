@@ -3877,6 +3877,11 @@ function getSetupGradeClass(score) {
 
   return Math.max(20, Math.min(95, prob));
   }
+
+  function average(arr) {
+  if (!arr || arr.length === 0) return 0;
+  return arr.reduce((sum, v) => sum + v, 0) / arr.length;
+}
   
 
 /* ================= ANALYZE ================= */
@@ -3993,10 +3998,12 @@ let pvPointA = null;
 let pvPointB = null;
 let pvStrength = 0;
 
+let B = -1;
+const LOOKBACK = 32;
+const VOL_RATIO = 1.3;
+
 if (domVIndex > 0) {
-  const B = domVIndex;
-  const LOOKBACK = 32;
-  const VOL_RATIO = 1.3;
+  B = domVIndex;
 
   for (let A = B - 1; A >= Math.max(0, B - LOOKBACK); A--) {
 
@@ -4010,7 +4017,7 @@ if (domVIndex > 0) {
     const bodyA = Math.abs(k[A][4] - k[A][1]);
     const bodyB = Math.abs(k[B][4] - k[B][1]);
 
-    // Exhaustion: more volume, less result
+    // Exhaustion
     if (volB > volA * VOL_RATIO && bodyB < bodyA) {
       pvSignalType = bull ? "BULL_EXHAUSTION" : "BEAR_EXHAUSTION";
       pvPointA = A;
@@ -4019,7 +4026,7 @@ if (domVIndex > 0) {
       break;
     }
 
-    // Efficiency: less volume, more result
+    // Efficiency (rare, but valid)
     if (volB < volA / VOL_RATIO && bodyB > bodyA) {
       pvSignalType = bull ? "BULL_EFFICIENCY" : "BEAR_EFFICIENCY";
       pvPointA = A;
@@ -4030,14 +4037,18 @@ if (domVIndex > 0) {
   }
 }
 
-
 // ===== Trend-aligned efficiency fallback =====
 if (!pvSignalType && B > 0) {
-  const avgVol = average(v.slice(Math.max(0, B - LOOKBACK), B));
-  const avgBody = average(
-    k.slice(Math.max(0, B - LOOKBACK), B)
-     .map(x => Math.abs(x[4] - x[1]))
-  );
+  const volSlice = v.slice(Math.max(0, B - LOOKBACK), B);
+if (volSlice.length < 5) return; // or just skip efficiency
+
+const avgVol = average(volSlice);
+  
+  const bodySlice = k
+  .slice(Math.max(0, B - LOOKBACK), B)
+  .map(x => Math.abs(x[4] - x[1]));
+
+const avgBody = average(bodySlice);
 
   const trendBull = mainTrend === "BULL";
   const trendBear = mainTrend === "BEAR";
