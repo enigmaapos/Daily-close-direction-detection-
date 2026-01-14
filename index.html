@@ -475,6 +475,13 @@ button.secondary{
       <option value="bear">Bear Volume</option>
     </select>
 
+    <select id="filterPV">
+  <option value="all">All</option>
+  <option value="efficiency">Efficiency</option>
+  <option value="exhaustion">Exhaustion</option>
+  <option value="none">No Signal</option>
+    </select>
+
     <select id="filterVolBreak">
       <option value="all">All Volume Breaks</option>
       <option value="yes">24h Volume Breakout</option>
@@ -5200,6 +5207,7 @@ const r15 = document.getElementById("filterRsi15Context")?.value || "all";
   const az = document.getElementById("filterActiveZone")?.value || "all";
   const div = document.getElementById("filterDivergence")?.value || "all";
 const di  = document.getElementById("filterDivergenceIntent")?.value || "all";
+  const pv = filterPV.value;
   
 
   
@@ -5226,6 +5234,11 @@ const di  = document.getElementById("filterDivergenceIntent")?.value || "all";
     if (ez !== "all" && c.dataset.execution !== ez) ok = false;
     if (vai !== "all" && c.dataset.volai !== vai) ok = false;
     if (az !== "all" && c.dataset.activeZone !== az) ok = false;
+
+        if (pv !== "all") {
+  if (pv === "none" && c.dataset.pvclass !== "none") ok = false;
+  else if (pv !== "none" && c.dataset.pvclass !== pv) ok = false;
+        }
   
     /* ===== EMA200 Filter ===== */
 if (e === "touched" && c.dataset.ema200Touched !== "1") ok = false;
@@ -5342,6 +5355,7 @@ if (di !== "all") {
            document.getElementById("filterActiveZone").value = "all";
            document.getElementById("filterDivergence").value = "all";
            document.getElementById("filterDivergenceIntent").value = "all";
+           filterPV.value = "all";
   
            
 
@@ -5620,6 +5634,11 @@ card.dataset.divStrength = d.rsiDivergence?.strength || "normal";
 
 // ================= RISK =================
 card.dataset.trapRisk = d.trapRisk || "LOW";
+
+    card.dataset.pvtype = d.pvValid ? d.pvSignalType : "NONE";
+card.dataset.pvclass = d.pvValid
+  ? (d.pvSignalType.includes("EFFICIENCY") ? "efficiency" : "exhaustion")
+  : "none";
         
 
 
@@ -7014,7 +7033,8 @@ async function runSearch(){
   "filterEMA200",
     "filterActiveZone",
     "filterDivergence",
-    "filterDivergenceIntent"
+    "filterDivergenceIntent",
+    "filterPV"
 ].forEach(id=>{
   document.getElementById(id)?.addEventListener("change", applyFilters);
 });
