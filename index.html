@@ -5,15 +5,13 @@
 <title>15m Volume + Structure Probability Scanner</title>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 
+
 <style>
-/* ================= CORE THEME ================= */
 :root{
   --bg:#0f1720;
   --panel:#0b1220;
   --border:#172033;
-  --text:#e6eef8;
   --muted:#9fb3cc;
-
   --bull:#22c55e;
   --bear:#fb7185;
   --neutral:#facc15;
@@ -21,46 +19,23 @@
 }
 
 body{
-  margin:16px;
-  background:var(--bg);
-  color:var(--text);
   font-family:Inter,system-ui,Arial;
+  background:var(--bg);
+  color:#e6eef8;
+  margin:16px;
 }
 
-/* ================= TYPOGRAPHY ================= */
 h1{font-size:18px;margin-bottom:6px}
 h2{font-size:16px;margin:16px 0 8px}
+
 .muted{color:var(--muted);font-size:13px}
 
-/* ================= LAYOUT ================= */
-.row{
-  display:flex;
-  gap:8px;
-  flex-wrap:wrap;
-  margin-bottom:10px;
-}
-
-.panel{
-  background:var(--panel);
-  border:1px solid var(--border);
-  border-radius:12px;
-  padding:14px;
-  margin-bottom:14px;
-}
-
-.grid{
-  display:grid;
-  grid-template-columns:repeat(auto-fill,minmax(280px,1fr));
-  gap:12px;
-}
-
-/* ================= BUTTONS & INPUTS ================= */
 button,input,select{
   padding:8px 12px;
   border-radius:6px;
   border:1px solid #334155;
   background:var(--panel);
-  color:var(--text);
+  color:#e6eef8;
 }
 
 button.primary{
@@ -80,21 +55,54 @@ button.secondary{
   border:0;
 }
 
-button:hover{opacity:.9}
-
-/* ================= STATUS ================= */
-#dailyRSIStatus{
-  padding:6px 8px;
-  border-radius:6px;
-  background:var(--panel);
-  border:1px solid var(--border);
+.row{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  margin-bottom:10px;
 }
 
-.status-running{color:var(--accent)}
-.status-done{color:var(--bull)}
-.status-error{color:var(--bear)}
+.grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(280px,1fr));
+  gap:12px;
+}
 
-/* ================= PROGRESS ================= */
+.card{
+  background:var(--panel);
+  border:1px solid var(--border);
+  border-radius:12px;
+  padding:12px;
+  position:relative;
+  transition:transform .15s ease, box-shadow .15s ease;
+}
+.card:hover{
+  transform:translateY(-2px);
+  box-shadow:0 8px 24px rgba(0,0,0,.6);
+}
+
+.bull{color:var(--bull)}
+.bear{color:var(--bear)}
+.neutral{color:var(--neutral)}
+.prob{font-weight:700;margin-top:4px}
+
+.star{
+  position:absolute;
+  top:8px;
+  right:8px;
+  cursor:pointer;
+  font-size:16px;
+}
+
+.close{
+  position:absolute;
+  top:8px;
+  right:32px; /* ⬅ moved left */
+  cursor:pointer;
+  color:var(--bear);
+  font-size:16px;
+}
+
 .progress{
   height:10px;
   background:var(--border);
@@ -109,170 +117,273 @@ button:hover{opacity:.9}
   transition:width .2s linear;
 }
 
-/* ================= MARKET DOMINANCE ================= */
-#marketGreen,#marketRed,#marketNet{
+.filter-box{
+  background:var(--panel);
+  border:1px solid var(--border);
+  border-radius:8px;
+  padding:8px;
+}
+
+  .status-running{ color: var(--accent); }
+.status-done{ color: var(--bull); }
+.status-error{ color: var(--bear); }
+
+  .reset-flash{
+  animation: resetPulse .6s ease;
+}
+
+@keyframes resetPulse{
+  0%{
+    box-shadow:0 0 0 rgba(34,197,94,0);
+    background:#334155;
+  }
+  50%{
+    box-shadow:0 0 14px rgba(34,197,94,.8);
+    background:#1f2937;
+  }
+  100%{
+    box-shadow:0 0 0 rgba(34,197,94,0);
+    background:#334155;
+  }
+}
+
+  .analyze-running{
+  background:linear-gradient(90deg,#334155,#1f2937,#334155);
+  background-size:200% 100%;
+  animation: analyzeFlow 1.2s linear infinite;
+  box-shadow:0 0 12px rgba(56,189,248,.6);
+}
+
+@keyframes analyzeFlow{
+  0%{background-position:0% 0}
+  100%{background-position:200% 0}
+}
+
+  #dailyRSIStatus{
+  padding:6px 8px;
+  border-radius:6px;
+  background:#0b1220;
+  border:1px solid #172033;
+  }
+
+  #marketGreen, #marketRed, #marketNet{
   font-weight:700;
   margin-right:12px;
+  }
+
+  .verdict-strong { color: var(--accent); }   /* confident */
+.verdict-watch  { color: var(--neutral); }  /* timing */
+.verdict-avoid  { color: var(--muted); }    /* no edge */
+
+  #scrollTopBtn{
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--accent);
+  font-size: 18px;
+  cursor: pointer;
+  display: none;
+  z-index: 999;
+  box-shadow: 0 6px 18px rgba(0,0,0,.6);
+  transition: opacity .2s ease, transform .2s ease;
 }
 
-.bull{color:var(--bull)}
-.bear{color:var(--bear)}
-.neutral{color:var(--neutral)}
-
-/* ================= CARDS ================= */
-.card{
-  background:var(--panel);
-  border:1px solid var(--border);
-  border-radius:12px;
-  padding:12px;
-  position:relative;
-  transition:transform .15s ease, box-shadow .15s ease;
-}
-.card:hover{
-  transform:translateY(-2px);
-  box-shadow:0 8px 24px rgba(0,0,0,.6);
-}
-
-.card.closing{
-  opacity:0;
-  transform:scale(.98);
-}
-
-/* ================= CARD ACTIONS ================= */
-.star{
-  position:absolute;
-  top:8px;
-  right:8px;
-  cursor:pointer;
-  font-size:16px;
-}
-.close{
-  position:absolute;
-  top:8px;
-  right:32px;
-  cursor:pointer;
-  color:var(--bear);
-}
-
-/* ================= EXECUTION & VERDICT ================= */
-.exec-entry-long{color:var(--bull);font-weight:700}
-.exec-entry-short{color:var(--bear);font-weight:700}
-.exec-pullback{color:var(--neutral)}
-.exec-late{color:var(--accent)}
-.exec-no-trade{color:var(--muted)}
-
-.verdict-strong{color:var(--accent)}
-.verdict-watch{color:var(--neutral)}
-.verdict-avoid{color:var(--muted)}
-
-/* ================= SETUP SCORE ================= */
-.setup-score{margin-top:6px;font-size:13px}
-.setup-grade{font-weight:600}
-
-.grade-elite{color:#22c55e}
-.grade-high{color:#4ade80}
-.grade-good{color:#facc15}
-.grade-average{color:#fb923c}
-.grade-low{color:#ef4444}
-
-/* ================= VOLUME & BEHAVIOR ================= */
-.volume-hint{font-style:italic;opacity:.85}
-
-.behavior-SMOOTH{color:#22c55e}
-.behavior-CONSOLIDATION{color:#facc15}
-.behavior-CHOPPY{color:#fb7185}
-
-/* ================= FLIP PANEL ================= */
-#flipPanel{margin:6px 0}
-#flipPanel h2{
-  font-size:12px;
-  font-weight:600;
-  margin:4px 0;
-  color:var(--neutral);
-}
-
-#flipGrid{
-  display:grid;
-  grid-template-columns:repeat(auto-fill,minmax(110px,1fr));
-  gap:4px;
-}
-
-.flip-card{
-  padding:4px 6px;
-  border-radius:4px;
-  font-size:10px;
-  border:1px solid #7c2d12;
-  background:#1c0f0a;
-  cursor:pointer;
-  transition:.15s ease;
-}
-
-.flip-card b{
-  display:block;
-  font-size:10px;
-  font-weight:600;
-  margin-bottom:1px;
-}
-
-.flip-card.bull{
-  border-color:#14532d;
-  background:#052e1a;
-}
-.flip-card.bull b{color:var(--bull)}
-
-.flip-card.bear{
-  border-color:#7f1d1d;
-  background:#2a0f14;
-}
-.flip-card.bear b{color:var(--bear)}
-
-.flip-card:hover{
-  box-shadow:0 0 10px rgba(56,189,248,.4);
-  transform:scale(1.02);
-}
-
-/* ================= FILTER PANEL ================= */
-.filter-panel{
-  display:grid;
-  grid-template-columns:repeat(auto-fill,minmax(240px,1fr));
-  gap:12px;
-  padding:12px;
-}
-
-.filter-group{
-  background:#111;
-  border-radius:10px;
-  padding:10px;
-  border:1px solid #222;
-}
-
-.filter-group h4{
-  font-size:12px;
-  color:#aaa;
-  margin-bottom:6px;
-  text-transform:uppercase;
-}
-
-/* ================= SCROLL TOP ================= */
-#scrollTopBtn{
-  position:fixed;
-  bottom:20px;
-  right:20px;
-  width:44px;
-  height:44px;
-  border-radius:50%;
-  border:1px solid var(--border);
-  background:var(--panel);
-  color:var(--accent);
-  font-size:18px;
-  cursor:pointer;
-  display:none;
-  z-index:999;
-  box-shadow:0 6px 18px rgba(0,0,0,.6);
-}
 #scrollTopBtn:hover{
-  transform:translateY(-2px);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 26px rgba(0,0,0,.8);
 }
+
+  .exec-entry-long { color: var(--bull); font-weight:700; }
+.exec-entry-short{ color: var(--bear); font-weight:700; }
+
+.exec-pullback   { color: var(--neutral); }
+.exec-late       { color: var(--accent); }   /* blue */
+.exec-no-trade   { color: var(--muted); }
+
+  .volume-hint {
+  font-style: italic;
+  opacity: .85;
+  }
+
+  .setup-score {
+  margin-top: 6px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.setup-grade {
+  margin-top: 2px;
+  font-weight: 600;
+}
+
+.grade-elite {
+  color: #22c55e; /* strong green */
+}
+
+.grade-high {
+  color: #4ade80; /* green */
+}
+
+.grade-good {
+  color: #facc15; /* yellow */
+}
+
+.grade-average {
+  color: #fb923c; /* orange */
+}
+
+.grade-low {
+  color: #ef4444; /* red */
+}
+
+  .card.closing {
+  opacity: 0;
+  transform: scale(0.98);
+  transition: all .15s ease;
+  }
+
+  .behavior-SMOOTH { color: #22c55e; }
+.behavior-CONSOLIDATION { color: #facc15; }
+.behavior-CHOPPY { color: #fb7185; }
+
+.bias-chart {
+  display: block;
+  width: 100%;
+  margin-top: 10px;
+}
+  .bias-chart-wrap {
+  margin-top: 12px;
+  padding-top: 8px;
+  border-top: 1px solid #172033;
+    }
+  .card-header {
+  position: absolute;
+  }
+  .card {
+  outline: 1px solid red;
+  }
+
+/* ================= FLIP PANEL (COMPACT) ================= */
+
+#flipPanel {
+  margin: 6px 0;
+}
+
+#flipPanel h2 {
+  font-size: 12px;
+  font-weight: 600;
+  margin: 4px 0;
+  color: #facc15;
+}
+
+/* tight grid */
+#flipGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 4px;
+}
+
+/* ================= FLIP ITEM (VERY SMALL) ================= */
+
+.flip-card {
+  padding: 4px 6px;
+  border-radius: 4px;
+  border: 1px solid #7c2d12;
+  background: #1c0f0a;
+  font-size: 10px;
+  line-height: 1.2;
+}
+
+/* symbol */
+.flip-card b {
+  display: block;
+  font-size: 10px;
+  font-weight: 600;
+  color: #fb7185;
+  margin-bottom: 1px;
+}
+
+/* time + direction */
+.flip-card .muted {
+  font-size: 9px;
+  color: #9fb3cc;
+}
+
+  /* ================= FLIP DIRECTION COLORS ================= */
+
+.flip-card.bull {
+  border-color: #14532d;
+  background: #052e1a;
+}
+
+.flip-card.bull b {
+  color: #22c55e;
+}
+
+.flip-card.bear {
+  border-color: #7f1d1d;
+  background: #2a0f14;
+}
+
+.flip-card.bear b {
+  color: #fb7185;
+}
+
+  .flip-card {
+  cursor: pointer;
+}
+
+.flip-card:hover {
+  box-shadow: 0 0 10px rgba(56,189,248,0.4);
+  transform: scale(1.02);
+}
+
+  .bias-accumulation {
+  margin-top: 6px;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.bias-accumulation b {
+  font-weight: 600;
+}
+
+.bias-accumulation .bull { color: var(--bull); }
+.bias-accumulation .bear { color: var(--bear); }
+.bias-accumulation .neutral { color: var(--neutral); }
+
+  .filter-panel {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
+  padding: 12px;
+}
+
+.filter-group {
+  background: #111;
+  border-radius: 10px;
+  padding: 10px;
+  border: 1px solid #222;
+}
+
+.filter-group h4 {
+  font-size: 12px;
+  color: #aaa;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+}
+
+.filter-group select {
+  width: 100%;
+  margin-bottom: 6px;
+}
+
+  
 </style>
 </head>
 
@@ -561,76 +672,72 @@ button:hover{opacity:.9}
 </div>
 
 
-<!-- ================= STATUS BAR ================= -->
-<div class="status-bar">
-  <div>⏱ Last update: <span id="timestamp">—</span></div>
-  <div>⏳ Next scan in: <span id="nextScan">—</span></div>
-</div>
-
-<!-- ================= ACTION PANEL ================= -->
-<div class="panel actions">
-
-  <div class="action-left">
-    <button class="btn primary" id="scanBtn" onclick="runScan()">🧭 Run Scan</button>
-    <button class="btn secondary" id="scanVolBreakBtn">🔥 24h Volume Break</button>
-    <button class="btn ghost" id="resetFiltersBtn" onclick="resetFilters()">Reset Filters</button>
+<div class="muted">
+  Last update: <span id="timestamp">—</span><br>
+  Next scan in: <span id="nextScan">—</span>
   </div>
 
-  <div class="action-right">
-    <label class="toggle">
-      <input type="checkbox" id="toggle24hVolume">
-      🔥 Auto Volume Scan
-    </label>
-
-    <input id="symbolSearch" placeholder="BTCUSDT"/>
-    <button class="btn secondary" id="analyzeBtn" onclick="runSearch()">Analyze</button>
+  <!-- ACTION ROW -->
+<div class="row">
+  <button class="primary" id="scanBtn" onclick="runScan()">Run Scan</button>
+<button class="secondary" id="scanVolBreakBtn">
+  🔥 Scan 24h Volume Break
+</button>
+  <button class="secondary" id="resetFiltersBtn" onclick="resetFilters()">
+    Reset Filters
+  </button>
+  <div class="row filter-box">
+  <label class="muted" style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+    <input
+      type="checkbox"
+      id="toggle24hVolume"
+    />
+    🔥 Auto 24h Volume Break Scan
+  </label>
   </div>
-
+  <input id="symbolSearch" placeholder="BTCUSDT"/>
+  <button class="secondary" id="analyzeBtn" onclick="runSearch()">Analyze</button>
 </div>
 
-<!-- ================= STATUS ================= -->
-<div id="dailyRSIStatus" class="status-line">
-  🧭 Scanner Status: Idle
-</div>
+<div id="manualStatus" class="muted"></div>
 
 <div class="progress">
   <div id="progressFill"></div>
 </div>
 
-<!-- ================= MARKET DOMINANCE ================= -->
-<div class="panel dominance">
-  <div class="stat bull" id="marketGreen">🟢 Green: —</div>
-  <div class="stat bear" id="marketRed">🔴 Red: —</div>
-  <div class="stat neutral" id="marketNet">⚖ Net: —</div>
-</div>
+  <div class="muted" id="dailyRSIStatus">
+  🧭 Scanner Status: Idle
+  </div>
 
-<!-- ================= PANELS ================= -->
-<section id="flipPanel" class="panel">
+  <div class="row filter-box">
+  <div class="muted">
+    📊 Market 24h Dominance
+  </div>
+  <div id="marketGreen" class="bull">🟢 Green: —</div>
+  <div id="marketRed" class="bear">🔴 Red: —</div>
+  <div id="marketNet" class="neutral">⚖ Net: —</div>
+  </div>
+
+<section id="flipPanel">
   <h2>⚠ Polarity Flip Attempts</h2>
-  <div id="flipGrid" class="grid"></div>
+  <div id="flipGrid"></div>
 </section>
 
-<section class="panel">
-  <h2>⭐ Favorites</h2>
-  <div id="favGrid" class="grid"></div>
-</section>
+<h2>⭐ Favorites</h2>
+<div class="grid" id="favGrid"></div>
 
-<section class="panel">
-  <h2>🔍 Manual Analysis</h2>
-  <div id="searchGrid" class="grid"></div>
-</section>
+<h2>🔍 Manual</h2>
+<div class="grid" id="searchGrid"></div>
 
-<section class="panel">
-  <h2>🟢 Top Gainers <span class="hint">Sell on strength</span></h2>
-  <div id="greenGrid" class="grid"></div>
-</section>
+<h2>🟢 Top Gainers — (Sell on Strength)</h2>
+<div class="grid" id="greenGrid"></div>
 
-<section class="panel">
-  <h2>🔴 Top Losers <span class="hint">Buy on weakness</span></h2>
-  <div id="redGrid" class="grid"></div>
-</section>
+<h2>🔴 Top Losers — (Buy on Weakness)</h2>
+<div class="grid" id="redGrid"></div>
 
-<button id="scrollTopBtn" title="Back to top">⬆</button>
+
+
+  <button id="scrollTopBtn" title="Back to top">⬆</button>
   
 <script>
 /* ================= CONFIG ================= */
@@ -6572,6 +6679,9 @@ async function runScan() {
 
       const d = await analyze(x.symbol, +x.priceChangePercent);
       d.marketDom = dom;
+
+      if (x.priceChangePercent >= 0) {
+  scannedGreen.push(d);
 
 
   if (scanGreen && greenShown < limit) {
