@@ -405,6 +405,49 @@ button.secondary{
   border-color: #00ff99;
   box-shadow: 0 0 8px rgba(0,255,153,0.35);
 }
+
+  .muted {
+  font-size: 12px;
+  opacity: 0.85;
+  margin-top: 4px;
+}
+
+.bull {
+  color: #00ff99;
+}
+
+.bear {
+  color: #ff5555;
+}
+
+.neutral {
+  color: #aaaaaa;
+}
+
+.pv-signal {
+  margin-top: 2px;
+}
+
+.pv-strength {
+  height: 4px;
+  background: #222;
+  border-radius: 2px;
+  margin-top: 4px;
+  overflow: hidden;
+}
+
+.pv-strength-bar {
+  height: 100%;
+  transition: width 0.3s ease;
+}
+
+.pv-strength-bar.strong {
+  background: #00ff99;
+}
+
+.pv-strength-bar.weak {
+  background: #ffaa00;
+  }
 </style>
 </head>
 
@@ -3953,6 +3996,51 @@ for(let i = k.length - 96; i < k.length - 1; i++){
   }
 }
 
+    const bull = domVBull;
+
+  // ===== PRICE–VOLUME (EFFORT vs RESULT) =====
+let pvSignalType = null;
+let pvPointA = null;
+let pvPointB = null;
+let pvStrength = 0;
+
+if (domVIndex > 0) {
+  const B = domVIndex;
+  const LOOKBACK = 32;
+  const VOL_RATIO = 1.3;
+
+  for (let A = B - 1; A >= Math.max(0, B - LOOKBACK); A--) {
+
+    // Same candle color as dominant
+    if (bull && !(k[A][4] > k[A][1])) continue;
+    if (!bull && !(k[A][4] < k[A][1])) continue;
+
+    const volA = v[A];
+    const volB = v[B];
+
+    const bodyA = Math.abs(k[A][4] - k[A][1]);
+    const bodyB = Math.abs(k[B][4] - k[B][1]);
+
+    // Exhaustion: more volume, less result
+    if (volB > volA * VOL_RATIO && bodyB < bodyA) {
+      pvSignalType = bull ? "BULL_EXHAUSTION" : "BEAR_EXHAUSTION";
+      pvPointA = A;
+      pvPointB = B;
+      pvStrength = (volB / volA) * (bodyA / Math.max(bodyB, 1e-6));
+      break;
+    }
+
+    // Efficiency: less volume, more result
+    if (volB < volA / VOL_RATIO && bodyB > bodyA) {
+      pvSignalType = bull ? "BULL_EFFICIENCY" : "BEAR_EFFICIENCY";
+      pvPointA = A;
+      pvPointB = B;
+      pvStrength = (bodyB / bodyA) * (volA / Math.max(volB, 1e-6));
+      break;
+    }
+  }
+}
+
 
   const ema14 = ema(c.slice(-100), 14);
 const ema21 = ema(c.slice(-100), 21);
@@ -4077,8 +4165,6 @@ const postVolBreakRSIConfirm =
   rsi15 < 50 &&              // RSI reset
   rsi15Rising;            // RSI turning up 
   
-  
-  const bull = domVBull;
 
   let swings = findSwings(h, l, c, v);
   
@@ -5094,7 +5180,12 @@ moveStrength,directionalBias,setupScore,htf,htfNote,htfTrend: htf.htfTrend,
   hasRSIDivergence: !!divergence,
   rsiDivergenceType: divergenceType,
   divergenceIntent,
-  rsiDivergence: divergence};
+  rsiDivergence: divergence,pvSignalType,
+pvPointA,
+pvPointB,
+pvStrength,
+pvValid: !!pvSignalType,
+pvDominantAligned: !!pvSignalType};
 }
 
 
@@ -5419,6 +5510,16 @@ else if (phase === "EARLY ACCUMULATION") {
     cls: "neutral",
     text
   };
+}
+
+  function formatPVSignal(type) {
+  switch (type) {
+    case "BULL_EFFICIENCY": return "BUYERS EFFICIENT";
+    case "BULL_EXHAUSTION": return "BUYERS EXHAUSTING";
+    case "BEAR_EFFICIENCY": return "SELLERS EFFICIENT";
+    case "BEAR_EXHAUSTION": return "SELLERS EXHAUSTING";
+    default: return "UNKNOWN";
+  }
 }
   
   
@@ -5766,9 +5867,19 @@ ${d.setupScore ? `
 ` : ""}
 
 
-  <div class="muted ${d.bull ? "bull" : "bear"}">
-    Dominant Volume: <b>${d.bull ? "BUYERS" : "SELLERS"}</b>
+  <div class="muted dom-vol ${d.bull ? "bull" : "bear"}">
+  Dominant Volume:
+  <b>${d.bull ? "BUYERS" : "SELLERS"}</b>
+</div>
+
+${d.pvValid ? `
+<div class="pv-strength">
+  <div
+    class="pv-strength-bar ${d.pvSignalType.includes("EFFICIENCY") ? "strong" : "weak"}"
+    style="width: ${Math.min(100, d.pvStrength * 10)}%">
   </div>
+</div>
+` : ``}
 
     ${d.breakIntent ? (() => {
   const bi = formatBreakIntent(d.breakIntent);
