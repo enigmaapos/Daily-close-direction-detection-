@@ -6621,7 +6621,13 @@ function showAll() {
   setActiveBtn("btnAll");
   setScanStatus("⚖ Showing All Scanned Results");
 }
-  
+
+  function setActiveBtn(id) {
+  document.querySelectorAll(".filter-btn")
+    .forEach(b => b.classList.remove("active"));
+
+  document.getElementById(id)?.classList.add("active");
+  }
 
 
 /* ================= SCAN ================= */
@@ -6670,6 +6676,14 @@ async function runScan() {
     if (!scanGreen && !scanRed) {
       setScanStatus("⚠ Select at least one scan side (Green or Red)");
       return;
+    }
+
+
+    /* ===== RESET UI ONLY FOR MANUAL SCAN ===== */
+    if (!isAutoScan) {
+      if (scanGreen) greenGrid.innerHTML = "";
+      if (scanRed)   redGrid.innerHTML = "";
+      progressFill.style.width = "0%";
     }
 
 
