@@ -1497,6 +1497,7 @@ const FLIP_REGISTRY = {};
 
   } catch (e) {
     console.error("Flip symbol load failed:", sym);
+    console.log("SCAN RUNNING ON:", typeof window === "undefined" ? "SERVER" : "BROWSER");
   }
   }
 
