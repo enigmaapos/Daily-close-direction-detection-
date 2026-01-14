@@ -5848,18 +5848,6 @@ ${d.setupScore ? `
   </div>
 ` : ""}
 
-                             ${d.pvValid ? `
-<div class="muted pv-signal ${d.pvSignalType.includes("BULL") ? "bull" : "bear"}">
-  Volume Behavior:
-  <b>${formatPVSignal(d.pvSignalType)}</b>
-</div>
-` : `
-<div class="muted pv-signal neutral">
-  Volume Behavior:
-  <b>NO CLEAR SIGNAL</b>
-</div>
-`}
-
 
   <div class="muted dom-vol ${d.bull ? "bull" : "bear"}">
   Dominant Volume:
@@ -5874,6 +5862,18 @@ ${d.pvValid ? `
   </div>
 </div>
 ` : ``}
+
+  ${d.pvValid ? `
+<div class="muted pv-signal ${d.pvSignalType.includes("BULL") ? "bull" : "bear"}">
+  Volume Behavior:
+  <b>${formatPVSignal(d.pvSignalType)}</b>
+</div>
+` : `
+<div class="muted pv-signal neutral">
+  Volume Behavior:
+  <b>NO CLEAR SIGNAL</b>
+</div>
+`}
 
     ${d.breakIntent ? (() => {
   const bi = formatBreakIntent(d.breakIntent);
