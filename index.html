@@ -5908,6 +5908,24 @@ ${d.setupScore ? `
   </div>
 ` : ""}
 
+  <div class="muted ${volumeStructClass}">
+    Volume Structure: <b>${volumeStruct.name}</b>
+  </div>
+
+  <div class="muted neutral">
+    ${volumeStruct.label}
+  </div>
+
+  <div class="muted volume-hint">
+    ℹ Volume structure reflects pressure behavior, not trend direction
+  </div>
+
+${d.structure === "none" && d.volumeStructure?.name !== "none" ? `
+  <div class="muted neutral">
+    ⏳ Volume pressure detected — waiting for structure confirmation
+  </div>
+` : ""}
+
 
   <div class="muted dom-vol ${d.bull ? "bull" : "bear"}">
   Dominant Volume:
@@ -5956,6 +5974,23 @@ ${d.pvValid ? `
   return out;
 })() : ""}
 
+      ${d.volAI ? `
+  <div class="muted ${
+    d.volAI.bias === "Bullish" ? "bull" :
+    d.volAI.bias === "Bearish" ? "bear" : "neutral"
+  }">
+    🧠 24h Volume AI
+    <br>
+    <span class="muted">
+      ${(d.volAI.color ?? "Unknown")} candle · ${(d.volAI.location ?? "Unknown")} range
+    </span>
+    <br>
+    <span class="muted">
+      ${d.volAI.meaning ?? "No interpretation available"}
+    </span>
+  </div>
+` : ""}
+
   ${d.volumeBreakout ? `
   <div class="muted ${
     d.volumeBreakoutType.includes("Bull") ? "bull" : "bear"
@@ -5974,33 +6009,13 @@ ${d.pvValid ? `
   </div>
 `}
 
-${d.candle12h ? `
-  <div class="muted ${d.candle12h.color === "green" ? "bull" : "bear"}">
-    ⏱ Last 12H Candle Close: ${d.candle12h.color.toUpperCase()}
+
+  <div class="muted ${
+    structureBias === "bullish" ? "bull" :
+    structureBias === "bearish" ? "bear" : "neutral"
+  }">
+   Trend Structure: ${d.structure}
   </div>
-` : ""}
-
-
-<div class="muted neutral">
-  ⏱ 4H Context:
-<b>${(d.htfTrend || "neutral").toUpperCase()}</b>
-  RSI ${["normal","overbought","oversold"].includes(d.htfRSIState)
-  ? d.htfRSIState
-  : "normal"}
-  Support ${
-  d.htfStructure?.support
-    ? d.htfStructure.support
-    : isDailyRSIActive()
-      ? "HTF disabled"
-      : "N/A"
-}
-</div>
-
-${d.htfNote ? `
-  <div class="muted" style="opacity:0.75">
-    ℹ ${d.htfNote}
-  </div>
-` : ""}
 
 
 ${(d.defenseFailure && d.defenseFailure !== "NONE") || d.trendStructureRisk
@@ -6032,28 +6047,6 @@ ${(d.defenseFailure && d.defenseFailure !== "NONE") || d.trendStructureRisk
       return out;
     })()
   : ""} 
-
-
-${d.hasFlipAttempt ? `
-  <div class="muted flip-attempt">
-    ⚠ <b>Polarity Flip Attempt</b><br>
-    🧭 ${d.fromPolarity === "bullish" ? "Bullish Polarity" : "Bearish Polarity"}
-    →
-    ${d.toPolarity === "bullish" ? "Bullish Polarity" : "Bearish Polarity"}
-    <br>
-    ⏱ ${formatTime?.(d.flipAttempt.timeFrom) ?? "—"}
-    →
-    ${formatTime?.(d.flipAttempt.timeTo) ?? "—"}
-  </div>
-` : ""}
-
-${d.flipAttemptCount > 0 && d.currentPolarity !== "neutral" ? `
-  <div class="muted">
-    🔁 ${d.currentPolarity === "bullish" ? "Bullish" : "Bearish"}
-    Polarity Flip Attempts (24h):
-    <b>${d.flipAttemptCount}</b>
-  </div>
-` : ""}
 
 
 
@@ -6159,47 +6152,52 @@ ${d.flipAttemptCount > 0 && d.currentPolarity !== "neutral" ? `
   return out;
 })() : ""}
 
-
-
-  <div class="muted ${
-    structureBias === "bullish" ? "bull" :
-    structureBias === "bearish" ? "bear" : "neutral"
-  }">
-   Trend Structure: ${d.structure}
-  </div>
-
-  <div class="muted ${volumeStructClass}">
-    Volume Structure: <b>${volumeStruct.name}</b>
-  </div>
-
-  <div class="muted neutral">
-    ${volumeStruct.label}
-  </div>
-
-  <div class="muted volume-hint">
-    ℹ Volume structure reflects pressure behavior, not trend direction
-  </div>
-
-${d.structure === "none" && d.volumeStructure?.name !== "none" ? `
-  <div class="muted neutral">
-    ⏳ Volume pressure detected — waiting for structure confirmation
+${d.candle12h ? `
+  <div class="muted ${d.candle12h.color === "green" ? "bull" : "bear"}">
+    ⏱ Last 12H Candle Close: ${d.candle12h.color.toUpperCase()}
   </div>
 ` : ""}
 
-${d.volAI ? `
-  <div class="muted ${
-    d.volAI.bias === "Bullish" ? "bull" :
-    d.volAI.bias === "Bearish" ? "bear" : "neutral"
-  }">
-    🧠 24h Volume AI
+
+<div class="muted neutral">
+  ⏱ 4H Context:
+<b>${(d.htfTrend || "neutral").toUpperCase()}</b>
+  RSI ${["normal","overbought","oversold"].includes(d.htfRSIState)
+  ? d.htfRSIState
+  : "normal"}
+  Support ${
+  d.htfStructure?.support
+    ? d.htfStructure.support
+    : isDailyRSIActive()
+      ? "HTF disabled"
+      : "N/A"
+}
+</div>
+
+${d.htfNote ? `
+  <div class="muted" style="opacity:0.75">
+    ℹ ${d.htfNote}
+  </div>
+` : ""}
+
+${d.hasFlipAttempt ? `
+  <div class="muted flip-attempt">
+    ⚠ <b>Polarity Flip Attempt</b><br>
+    🧭 ${d.fromPolarity === "bullish" ? "Bullish Polarity" : "Bearish Polarity"}
+    →
+    ${d.toPolarity === "bullish" ? "Bullish Polarity" : "Bearish Polarity"}
     <br>
-    <span class="muted">
-      ${(d.volAI.color ?? "Unknown")} candle · ${(d.volAI.location ?? "Unknown")} range
-    </span>
-    <br>
-    <span class="muted">
-      ${d.volAI.meaning ?? "No interpretation available"}
-    </span>
+    ⏱ ${formatTime?.(d.flipAttempt.timeFrom) ?? "—"}
+    →
+    ${formatTime?.(d.flipAttempt.timeTo) ?? "—"}
+  </div>
+` : ""}
+
+${d.flipAttemptCount > 0 && d.currentPolarity !== "neutral" ? `
+  <div class="muted">
+    🔁 ${d.currentPolarity === "bullish" ? "Bullish" : "Bearish"}
+    Polarity Flip Attempts (24h):
+    <b>${d.flipAttemptCount}</b>
   </div>
 ` : ""}
 
