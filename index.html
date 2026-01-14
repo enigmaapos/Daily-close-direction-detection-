@@ -5498,7 +5498,7 @@ logStep("FINAL", {
   volumeAlign
 });
 
-console.log("DECISION LOG:", decisionLog);
+
 
   
   
@@ -6770,6 +6770,10 @@ ${typeof tpProb === "number" ? `
   <b>${executionZone ?? "UNDEFINED"}</b>
 </div>
 
+<div class="muted ${log.level}">
+      ${log.icon} ${log.label}:
+      <b>${log.value}</b>
+    </div>
 
 
 
