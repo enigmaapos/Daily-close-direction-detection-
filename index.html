@@ -3745,6 +3745,29 @@ return {
   if (d.htfBullOk) bullScore += 2;
   if (d.htfBearOk) bearScore += 2;
 
+     // === DEBUG LOG ===
+  console.log("[DIRECTIONAL BIAS DEBUG]", {
+    input: {
+      rb: d.rb,
+      sb: d.sb,
+      bullishEMAAcceptance: d.bullishEMAAcceptance,
+      bearishEMAAcceptance: d.bearishEMAAcceptance,
+      volConfirmed: d.volConfirmed,
+      rsi15: d.rsi15,
+      rsi15Rising: d.rsi15Rising,
+      rsi50Above: d.rsi50Above,
+      rsi50Below: d.rsi50Below,
+      reactionR: d.reactionR,
+      reactionS: d.reactionS,
+      htfBullOk: d.htfBullOk,
+      htfBearOk: d.htfBearOk
+    },
+    bullScore,
+    bearScore,
+    diff: bullScore - bearScore,
+    reasons
+  });
+
   /* ================= FINAL ================= */
   if (bullScore >= bearScore + 2) {
     return {
