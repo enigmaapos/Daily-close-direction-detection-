@@ -1444,9 +1444,6 @@ function logFlipAttempt(sym, flip) {
     .toISOString()
     .slice(11, 16);
 
-  console.warn(
-    `[FLIP ATTEMPT] ${sym} ${tFrom} ${flip.from} → ${tTo} ${flip.to}`
-  );
   }
 
   /* ================= FLIP REGISTRY ================= */
@@ -4463,7 +4460,7 @@ const bearishBreakAccepted =
   htfBearOk
 });
 
-console.log(`[DIRECTIONAL BIAS] ${sym}`, directionalBias);
+
 
  // === DEBUG: BREAK ACCEPTANCE ===
 if (rb && !bullishBreakAccepted) {
@@ -4492,9 +4489,7 @@ if (sb && !bearishBreakAccepted) {
   });
 }
 
-console.log(
-  `[BREAK SUMMARY] ${sym} | Bull: ${bullishBreakAccepted} | Bear: ${bearishBreakAccepted}`
-); 
+
 
   
 let bias = "Neutral";
