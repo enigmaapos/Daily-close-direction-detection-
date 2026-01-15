@@ -6223,6 +6223,10 @@ ${d.directionalBias ? `
   </div>
 ` : ""}
 
+<div class="muted ${rsiStructClass}">
+      RSI Structure: <b>${rsiLabel}</b>
+    </div>
+
   <div class="muted ${
     structureBias === "bullish" ? "bull" :
     structureBias === "bearish" ? "bear" : "neutral"
@@ -6628,10 +6632,6 @@ ${d.intradayRSIDiv ? (() => {
     | Price ${d.rsiDivergence.pointB.price}
   </div>
 ` : ""}
-
-<div class="muted ${rsiStructClass}">
-      RSI Structure: <b>${rsiLabel}</b>
-    </div>
   
 
 
