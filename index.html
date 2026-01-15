@@ -3710,67 +3710,62 @@ return {
 
 
   function getDirectionalBias(d) {
-
-  // === ONLY WHEN STRUCTURE HAS NO EDGE ===
-  if (
-    d.structureQuality === "accepted" ||
-    d.structureQuality === "confirmed"
-  ) {
-    return null;
-  }
-
-  // === AI MUST AGREE STRUCTURE IS WEAK / NEUTRAL ===
-  if (
-    d.structure !== "none" ||
-    d.aiVerdict?.verdict &&
-    d.aiVerdict.verdict !== AI_VERDICTS.STRUCTURE_WEAK
-  ) {
-    return null;
-  }
-
   let bullScore = 0;
   let bearScore = 0;
 
-  /* ================= TREND PRESSURE ================= */
-  if (d.mainTrend === "bullish") bullScore += 2;
-  if (d.mainTrend === "bearish") bearScore += 2;
+  /* ================= LOCATION ================= */
+  if (d.rb) bearScore += 1; // near resistance = risk for longs
+  if (d.sb) bullScore += 1; // near support = risk for shorts
 
-  if (d.emaShortBias === "bullish") bullScore += 1;
-  if (d.emaShortBias === "bearish") bearScore += 1;
+  /* ================= EMA BEHAVIOR ================= */
+  if (d.bullishEMAAcceptance) bullScore += 2;
+  if (d.bearishEMAAcceptance) bearScore += 2;
 
-  /* ================= VOLUME FLOW ================= */
-  if (d.bull === true) bullScore += 1;
-  if (d.bull === false) bearScore += 1;
+  /* ================= VOLUME ================= */
+  if (d.volConfirmed) {
+    if (d.bullishEMAAcceptance) bullScore += 1;
+    if (d.bearishEMAAcceptance) bearScore += 1;
+  }
 
-  if (d.volAI?.intent === "Bullish") bullScore += 1;
-  if (d.volAI?.intent === "Bearish") bearScore += 1;
+  /* ================= RSI REGIME ================= */
+  if (d.rsi50Above) bullScore += 1;
+  if (d.rsi50Below) bearScore += 1;
 
-  /* ================= PARTICIPATION ================= */
-  if (d.marketDom?.net > 0) bullScore += 1;
-  if (d.marketDom?.net < 0) bearScore += 1;
+  if (d.rsi15 >= 70 && !d.rsi15Rising) bearScore += 1; // exhaustion
+  if (d.rsi15 <= 30 && d.rsi15Rising) bullScore += 1; // recovery
 
-  /* ================= MOMENTUM ================= */
-  if (d.rsiMomentumShift?.bullish) bullScore += 1;
-  if (d.rsiMomentumShift?.bearish) bearScore += 1;
+  /* ================= REACTIONS ================= */
+  if (d.reactionR === "REJECT") bearScore += 2;
+  if (d.reactionR === "ACCEPT") bullScore += 2;
 
-  /* ================= DECISION ================= */
+  if (d.reactionS === "REJECT") bullScore += 2;
+  if (d.reactionS === "ACCEPT") bearScore += 2;
+
+  /* ================= HTF ALIGNMENT ================= */
+  if (d.htfBullOk) bullScore += 2;
+  if (d.htfBearOk) bearScore += 2;
+
+  /* ================= FINAL ================= */
   if (bullScore >= bearScore + 2) {
     return {
-      bias: "Bullish (Conditional)",
-      reason: "Underlying bullish pressure during structural pause."
+      bias: "Bullish (Contextual)",
+      score: { bullScore, bearScore },
+      reason: "Bullish pressure dominates across EMA, momentum, and higher timeframe."
     };
   }
 
   if (bearScore >= bullScore + 2) {
     return {
-      bias: "Bearish (Conditional)",
-      reason: "Underlying bearish pressure during structural pause."
+      bias: "Bearish (Contextual)",
+      score: { bullScore, bearScore },
+      reason: "Bearish pressure dominates across EMA, momentum, and higher timeframe."
     };
   }
 
   return {
     bias: "Balanced / Compression",
-    reason: "Market rotating. Energy building before next expansion."
+    score: { bullScore, bearScore },
+    reason: "Signals are mixed. Market is coiling near structure."
   };
 }
   
