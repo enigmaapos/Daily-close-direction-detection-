@@ -3921,15 +3921,6 @@ return {
       "Lower-timeframe momentum is pushing against higher-timeframe bias — expect compression, rejection, or traps.";
   }
 
-  /* ================= DEBUG ================= */
-  console.log("[DIRECTIONAL BIAS DEBUG]", {
-    input: d,
-    bullScore,
-    bearScore,
-    diff: bullScore - bearScore,
-    htfConflict,
-    reasons
-  });
 
   return {
     bias,
