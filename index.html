@@ -4146,15 +4146,30 @@ const rZone = nearestR ? makeZone(nearestR) : null;
 const reactionS = sZone ? structureReaction(sZone, candles) : null;
 
   // === AVERAGE VOLUME (15m) ===
+// === SAFE NUMERIC VOLUME ===
+const vol = v.map(Number);
+
+// === GUARD ===
+if (vol.length < 5) {
+  // not enough data yet
+  return;
+}
+
+// === AVERAGE VOLUME (last 40 CLOSED candles) ===
+const lookback = 40;
+const end = vol.length - 1;          // exclude live candle
+const start = Math.max(0, end - lookback);
+
 const avgVol =
-  v.length >= 40
-    ? v.slice(-40).reduce((a, b) => a + b, 0) / 40
-    : v.reduce((a, b) => a + b, 0) / Math.max(1, v.length);
+  vol.slice(start, end).reduce((a, b) => a + b, 0) /
+  Math.max(1, end - start);
 
-  const recentVol = v.at(-1);
+// === LAST CLOSED CANDLE VOLUME ===
+const recentVol = vol[end - 1];
 
-const volConfirmed = recentVol >= avgVol * 1.2;   // HARD (continuation)
-const volSoftConfirmed = recentVol >= avgVol * 1.05; // SOFT (early phase)
+// === VOLUME CONFIRMATION (15m-calibrated) ===
+const volConfirmed     = recentVol >= avgVol * 1.10; // continuation
+const volSoftConfirmed = recentVol >= avgVol * 1.03; // early / attempt
   
   const rsi15Momentum = getRSI15Momentum(rsi15Arr);
 
