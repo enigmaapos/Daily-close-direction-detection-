@@ -2672,6 +2672,12 @@ function findSwings(h, l, c, v){
   return false;
   }
 
+  const isGreen = c => +c[4] > +c[1];
+const isRed   = c => +c[4] < +c[1];
+
+const range = c => +c[2] - +c[3];
+    
+
   function avgRange(k, start, end) {
   let sum = 0;
   let count = 0;
@@ -5396,11 +5402,7 @@ if (
 }
 
 
-  const isGreen = c => +c[4] > +c[1];
-const isRed   = c => +c[4] < +c[1];
-
-const range = c => +c[2] - +c[3];
-
+  
   // one place only
 const INTRADAY_LOOKBACK = 96;
 
