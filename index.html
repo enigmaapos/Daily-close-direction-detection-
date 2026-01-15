@@ -2672,17 +2672,24 @@ function findSwings(h, l, c, v){
   return false;
   }
 
-  const isGreen = c => +c[4] > +c[1];
-const isRed   = c => +c[4] < +c[1];
+  const isGreen = c =>
+  Array.isArray(c) && c.length >= 5 && +c[4] > +c[1];
 
-const range = c => +c[2] - +c[3];
+const isRed = c =>
+  Array.isArray(c) && c.length >= 5 && +c[4] < +c[1];
+
+const range = c =>
+  Array.isArray(c) ? +c[2] - +c[3] : 0;
     
 
-  function avgRange(k, start, end) {
+
+
+      function avgRange(k, start, end) {
   let sum = 0;
   let count = 0;
 
-  for (let i = start; i < end; i++) {
+  for (let i = Math.max(0, start); i < end; i++) {
+    if (!k[i]) continue;
     sum += range(k[i]);
     count++;
   }
@@ -5412,8 +5419,13 @@ let maxGreenIndex = -1;
 let maxRedVol = 0;
 let maxRedIndex = -1;
 
-for (let i = k.length - INTRADAY_LOOKBACK; i < k.length - 1; i++) {
+
+  const start = Math.max(0, k.length - INTRADAY_LOOKBACK);
+
+for (let i = start; i < k.length - 1; i++) {
+  if (!k[i]) continue;
   const vol = +v[i];
+}
 
   if (isGreen(k[i]) && vol > maxGreenVol) {
     maxGreenVol = vol;
