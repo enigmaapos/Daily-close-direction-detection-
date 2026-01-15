@@ -6084,7 +6084,7 @@ ${d.setupScore ? `
   ${d.bias ?? "Neutral"} — ${d.prob ?? "—"}%
 </div>
 
-  ${d.directionalBias ? `
+${d.directionalBias ? `
   <div class="muted ${
     d.directionalBias.bias.includes("Bullish") ? "bull" :
     d.directionalBias.bias.includes("Bearish") ? "bear" :
@@ -6092,7 +6092,7 @@ ${d.setupScore ? `
   }">
     🧭 Directional Bias: <b>${d.directionalBias.bias}</b>
     <br>
-    <span class="muted">${d.directionalBias.reasons}</span>
+    <span class="muted">${d.directionalBias.summary}</span>
   </div>
 ` : ""}
 
