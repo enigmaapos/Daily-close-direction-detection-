@@ -4262,7 +4262,7 @@ const bearishBreakAccepted =
 
  // === DEBUG: BREAK ACCEPTANCE ===
 if (rb && !bullishBreakAccepted) {
-  console.warn(`[BULL BREAK REJECTED] ${d.sym}`, {
+  console.warn(`[BULL BREAK REJECTED] ${sym}`, {
     priceAction: brokeAboveResistanceZone || holdingAboveResistance,
     ema: bullishEMAAcceptance,
     volume: volConfirmed,
@@ -4275,7 +4275,7 @@ if (rb && !bullishBreakAccepted) {
 }
 
 if (sb && !bearishBreakAccepted) {
-  console.warn(`[BEAR BREAK REJECTED] ${d.sym}`, {
+  console.warn(`[BEAR BREAK REJECTED] ${sym}`, {
     priceAction: brokeBelowSupportZone || holdingBelowSupport,
     ema: bearishEMAAcceptance,
     volume: volConfirmed,
@@ -4288,7 +4288,7 @@ if (sb && !bearishBreakAccepted) {
 }
 
 console.log(
-  `[BREAK SUMMARY] ${d.sym} | Bull: ${bullishBreakAccepted} | Bear: ${bearishBreakAccepted}`
+  `[BREAK SUMMARY] ${sym} | Bull: ${bullishBreakAccepted} | Bear: ${bearishBreakAccepted}`
 ); 
 
   
