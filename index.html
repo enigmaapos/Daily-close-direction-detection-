@@ -5420,10 +5420,12 @@ let maxRedVol = 0;
 let maxRedIndex = -1;
 
 
-  const start = Math.max(0, k.length - INTRADAY_LOOKBACK);
+  const volScanStart = Math.max(0, k.length - INTRADAY_LOOKBACK);
+const volScanEnd = k.length - 1;
 
-for (let i = start; i < k.length - 1; i++) {
-  if (!k[i]) continue;
+for (let idx = volScanStart; idx < volScanEnd; idx++) {
+  const c = k[idx];
+  if (!c) continue;
   const vol = +v[i];
 }
 
