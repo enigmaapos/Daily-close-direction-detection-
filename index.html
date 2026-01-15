@@ -430,6 +430,18 @@ button.secondary{
 .pv-strength-bar.weak {
   background: #ffaa00;
   }
+
+  .rsi-bullish {
+  color: #22c55e; /* green */
+}
+
+.rsi-bearish {
+  color: #ef4444; /* red */
+}
+
+.rsi-neutral {
+  color: #a1a1aa; /* muted gray */
+}
 </style>
 </head>
 
@@ -3233,6 +3245,53 @@ function analyzeRSI50Behavior(rsiArr, lookback = 5) {
 
   return "neutral";
   }
+
+  function getRSIWindow(rsiArr, window = 96) {
+  if (!rsiArr || rsiArr.length < window) return null;
+  return rsiArr.slice(-window);
+  }
+
+  function getRSILowest(rsiWindow) {
+  return Math.min(...rsiWindow);
+}
+
+function getRSIHighest(rsiWindow) {
+  return Math.max(...rsiWindow);
+  }
+
+  function isBullishRSILowHolding(rsiArr, lookback = 96, tolerance = 0.5) {
+  const window = getRSIWindow(rsiArr, lookback);
+  if (!window) return false;
+
+  const lowest = getRSILowest(window);
+  const current = window.at(-1);
+
+  // Allow tiny wick noise with tolerance
+  return current >= lowest - tolerance;
+  }
+
+  function isBearishRSIHighHolding(rsiArr, lookback = 96, tolerance = 0.5) {
+  const window = getRSIWindow(rsiArr, lookback);
+  if (!window) return false;
+
+  const highest = getRSIHighest(window);
+  const current = window.at(-1);
+
+  return current <= highest + tolerance;
+  }
+
+  function hasRSIReboundedFromLow(rsiArr, lookback = 96, rebound = 3) {
+  const window = rsiArr.slice(-lookback);
+  const lowest = Math.min(...window);
+  return window.at(-1) >= lowest + rebound;
+}
+
+function hasRSIRejectedFromHigh(rsiArr, lookback = 96, rejection = 3) {
+  const window = rsiArr.slice(-lookback);
+  const highest = Math.max(...window);
+  return window.at(-1) <= highest - rejection;
+}
+
   
 
   async function batchMap(items, batchSize, asyncFn){
@@ -5362,9 +5421,33 @@ const avgBody = average(bodySlice);
     }
   }
 }
+
+
+
+// ===============================
+// RSI STRUCTURE (15m – 24h window)
+// ===============================
+
+let rsiStructure = "NEUTRAL";
+
+if (
+  mainTrend === "bullish" &&
+  isBullishRSILowHolding(rsi15Arr) &&
+  hasRSIReboundedFromLow(rsi15Arr)
+) {
+  rsiStructure = "BULLISH_RSI_BASE_CONFIRMED";
+}
+
+if (
+  mainTrend === "bearish" &&
+  isBearishRSIHighHolding(rsi15Arr) &&
+  hasRSIRejectedFromHigh?.(rsi15Arr) // optional
+) {
+  rsiStructure = "BEARISH_RSI_TOP_CONFIRMED";
+}
   
 
-  return {sym,price,change,bull,prob,bias,structure,structureType,volumeStructure,structureQuality,volumeQuality,volumeAlign,defenseFailure,trendStructureRisk,S:sw.S,R:sw.R,dailyRSI,rsi15Context,rsi15,rsi15Momentum,volumeBreakout,
+  return {sym,price,change,bull,prob,bias,structure,structureType,volumeStructure,structureQuality,volumeQuality,volumeAlign,defenseFailure,trendStructureRisk,S:sw.S,R:sw.R,dailyRSI,rsi15Context,rsi15,rsi15Momentum,rsiStructure,volumeBreakout,
   breakoutAge,volumeBreakoutType,fakeVolumeBreak,postVolBreakRSIConfirm: postVolBreakRSIConfirmSafe,
   domV,
   lastVol,mainTrend,volAI,intradayRSIDiv,fundingRate,ema14: ema14Last,
@@ -5743,6 +5826,17 @@ else if (phase === "EARLY ACCUMULATION") {
     default: return "UNKNOWN";
   }
 }
+
+  function getRSIStructClass(rsiStructure) {
+  switch (rsiStructure) {
+    case "BULLISH_RSI_BASE_CONFIRMED":
+      return "rsi-bullish";
+    case "BEARISH_RSI_TOP_CONFIRMED":
+      return "rsi-bearish";
+    default:
+      return "rsi-neutral";
+  }
+  }
   
   
 /* ================= RENDER ================= */
@@ -6035,6 +6129,8 @@ const phaseIcon =
 
   const divIcon =
   d.rsiDivergenceType === "bearish" ? "🟥" : "🟩";
+
+    const rsiStructClass = getRSIStructClass(rsiStructure);
        
 
 card.innerHTML = `
@@ -6522,6 +6618,10 @@ ${d.intradayRSIDiv ? (() => {
     | Price ${d.rsiDivergence.pointB.price}
   </div>
 ` : ""}
+
+<div class="muted ${rsiStructClass}">
+  RSI Structure: <b>${getRSIStructLabel(rsiStructure)}</b>
+</div>
   
 
 
