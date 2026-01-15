@@ -5435,12 +5435,20 @@ for (let idx = volScanStart; idx < volScanEnd; idx++) {
     maxRedVol = vol;
     maxRedIndex = idx;
   }
-}
+  }
+
+  const bodyPctOfRange = c => {
+  const r = range(c);
+  if (!r) return 0;
+  return Math.abs(+c[4] - +c[1]) / r;
+};
   
 
   let isShortCovering = false;
 
-if (maxGreenIndex !== -1) {
+const hasRedDominance = maxRedIndex !== -1 && maxRedVol > 0;
+
+if (maxGreenIndex !== -1 && hasRedDominance) {
   const sc = k[maxGreenIndex];
 
   const avgR = avgRange(
@@ -5450,15 +5458,19 @@ if (maxGreenIndex !== -1) {
   );
 
   const highRange = range(sc) > avgR * 1.5;
+  const weakClose = bodyPctOfRange(sc) <= 0.4;
 
   isShortCovering =
     isGreen(sc) &&
-    highRange;
+    highRange &&
+    weakClose;
   }
 
   let isLongCovering = false;
 
-if (maxRedIndex !== -1) {
+    const hasGreenDominance = maxGreenIndex !== -1 && maxGreenVol > 0;
+
+if (maxRedIndex !== -1 && hasGreenDominance) {
   const lc = k[maxRedIndex];
 
   const avgR = avgRange(
@@ -5468,11 +5480,13 @@ if (maxRedIndex !== -1) {
   );
 
   const highRange = range(lc) > avgR * 1.5;
+  const weakClose = bodyPctOfRange(lc) <= 0.4;
 
   isLongCovering =
     isRed(lc) &&
-    highRange;
-  }
+    highRange &&
+    weakClose;
+}
 
       const shortCovering = isShortCovering
   ? {
