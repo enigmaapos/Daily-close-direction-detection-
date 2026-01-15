@@ -5855,11 +5855,6 @@ const id = `card-${scope}-${d.sym}`;
     card.className = "card";
     el.appendChild(card);
   }
-
-    const {
-    rsiStructure,
-    // other fields you already use
-  } = data;
   
 
   const fundingInfo = getFundingInfo(d.fundingRate);
@@ -6134,7 +6129,6 @@ const phaseIcon =
   const divIcon =
   d.rsiDivergenceType === "bearish" ? "🟥" : "🟩";
 
-    const rsiStructClass = getRSIStructClass(rsiStructure);
        
 
 card.innerHTML = `
