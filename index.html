@@ -6140,6 +6140,24 @@ ${d.setupScore ? `
   <b>${d.bull ? "BUYERS" : "SELLERS"}</b>
 </div>
 
+${d.volumeBreakout ? `
+  <div class="muted ${
+    d.volumeBreakoutType.includes("Bull") ? "bull" : "bear"
+  }">
+    🔥 ${d.volumeBreakoutType}
+    <br>
+    <span class="muted">
+      15m: ${d.lastVol.toLocaleString()}
+      &nbsp;›&nbsp;
+      24h High: ${d.domV.toLocaleString()}
+    </span>
+  </div>
+` : `
+  <div class="muted neutral">
+    📊 No 24h Volume Breakout
+  </div>
+`}
+
 
 <div class="prob ${
   d.bias?.includes?.("Bull") ? "bull" :
@@ -6252,23 +6270,11 @@ ${d.pvValid ? `
   </div>
 ` : ""}
 
-  ${d.volumeBreakout ? `
-  <div class="muted ${
-    d.volumeBreakoutType.includes("Bull") ? "bull" : "bear"
-  }">
-    🔥 ${d.volumeBreakoutType}
-    <br>
-    <span class="muted">
-      15m: ${d.lastVol.toLocaleString()}
-      &nbsp;›&nbsp;
-      24h High: ${d.domV.toLocaleString()}
-    </span>
-  </div>
-` : `
-  <div class="muted neutral">
-    📊 No 24h Volume Breakout
-  </div>
-`}
+<div class="muted neutral"
+     title="Volume-based context only. Describes the likely near-term behavior, not a trade signal.">
+  🔮 Volume Implication:
+  <b>${d.volAI?.futureOutcome ?? "Unknown"}</b>
+</div>
 
 
 ${(d.defenseFailure && d.defenseFailure !== "NONE") || d.trendStructureRisk
@@ -6592,13 +6598,6 @@ ${d.intradayRSIDiv ? (() => {
 ${d.S?.[1] != null ? `<div class="muted bear">S2: ${d.S[1].toFixed(4)}</div>` : ""}
 ${d.R?.[0] != null ? `<div class="muted bull">R1: ${d.R[0].toFixed(4)}</div>` : ""}
 ${d.R?.[1] != null ? `<div class="muted bull">R2: ${d.R[1].toFixed(4)}</div>` : ""}
-
-
-<div class="muted neutral"
-     title="Volume-based context only. Describes the likely near-term behavior, not a trade signal.">
-  🔮 Volume Implication:
-  <b>${d.volAI?.futureOutcome ?? "Unknown"}</b>
-</div>
 
 
 <div class="muted ${
