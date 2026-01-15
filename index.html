@@ -6129,7 +6129,9 @@ const phaseIcon =
   const divIcon =
   d.rsiDivergenceType === "bearish" ? "🟥" : "🟩";
 
-    const rsiStructClass = getRSIStructClass(rsiStructure);
+    
+    const rsiStructureSafe = d.rsiStructure ?? "NEUTRAL";
+const rsiStructClass = getRSIStructClass(rsiStructureSafe);
        
 
 card.innerHTML = `
