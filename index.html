@@ -5684,13 +5684,13 @@ else if (phase === "EARLY ACCUMULATION") {
 
   const text = intent;
 
-  const isBullishOutcome = text.startsWith("BEARS DEFENSE → FAILED");
-  const isBearishOutcome = text.startsWith("BULLS DEFENSE → FAILED");
+  const isBullishOutcome = text.startsWith("BEARISH RESISTANCE DEFENSE → FAILED");
+  const isBearishOutcome = text.startsWith("BULLISH SUPPORT DEFENSE → FAILED");
 
   if (text.includes("DEFENSE → HELD") && text.includes("STRONG")) {
     return {
       icon: "🛡",
-      cls: text.startsWith("BULLS") ? "bull" : "bear",
+      cls: text.startsWith("BULLISH SUPPORT") ? "bull" : "bear",
       text
     };
   }
