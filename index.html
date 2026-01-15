@@ -4228,7 +4228,68 @@ const bearishBreakAccepted =
   reactionS !== "DEFENDED" &&
   htfBearOk;
 
-  
+              console.log(
+  `[BREAK ACCEPTANCE] ${d.sym}`,
+  {
+    bullishBreakAccepted,
+    bearishBreakAccepted,
+
+    rb,
+    sb,
+
+    brokeAboveResistanceZone,
+    holdingAboveResistance,
+    brokeBelowSupportZone,
+    holdingBelowSupport,
+
+    bullishEMAAcceptance,
+    bearishEMAAcceptance,
+
+    volConfirmed,
+
+    rsi15,
+    rsi15Rising,
+    rsi50Above: rsi50State?.consistentlyAbove50,
+    rsi50Below: rsi50State?.consistentlyBelow50,
+
+    reactionR,
+    reactionS,
+
+    htfBullOk,
+    htfBearOk
+  }
+);
+
+ // === DEBUG: BREAK ACCEPTANCE ===
+if (rb && !bullishBreakAccepted) {
+  console.warn(`[BULL BREAK REJECTED] ${d.sym}`, {
+    priceAction: brokeAboveResistanceZone || holdingAboveResistance,
+    ema: bullishEMAAcceptance,
+    volume: volConfirmed,
+    rsi15,
+    rsi15Rising,
+    rsi50: rsi50State?.consistentlyAbove50,
+    reactionR,
+    htfBullOk
+  });
+}
+
+if (sb && !bearishBreakAccepted) {
+  console.warn(`[BEAR BREAK REJECTED] ${d.sym}`, {
+    priceAction: brokeBelowSupportZone || holdingBelowSupport,
+    ema: bearishEMAAcceptance,
+    volume: volConfirmed,
+    rsi15,
+    rsi15Rising,
+    rsi50: rsi50State?.consistentlyBelow50,
+    reactionS,
+    htfBearOk
+  });
+}
+
+console.log(
+  `[BREAK SUMMARY] ${d.sym} | Bull: ${bullishBreakAccepted} | Bear: ${bearishBreakAccepted}`
+); 
 
   
 let bias = "Neutral";
