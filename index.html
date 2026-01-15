@@ -2840,7 +2840,7 @@ function classifyBreakIntent(d) {
   const structureResult = normalizeTrendStructure(d.structure);
   const volumeResult = normalizeVolumeStructure(d.volumeStructure?.name);
 
-  const trendDefender = dominantBull ? "BULLS SUPPORT" : "BEARS RESISTANCE";
+  const trendDefender = dominantBull ? "BULLISH SUPPORT" : "BEARISH RESISTANCE";
 
   if (d.strongZoneDefended) {
     return `${trendDefender} DEFENSE → STRONG (${structureResult || "ZONE HELD"})`;
