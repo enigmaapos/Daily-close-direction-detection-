@@ -3709,43 +3709,90 @@ return {
   }
 
 
-  function getDirectionalBias(d) {
+function getDirectionalBias(d) {
   let bullScore = 0;
   let bearScore = 0;
+  const reasons = [];
 
   /* ================= LOCATION ================= */
-  if (d.rb) bearScore += 1; // near resistance = risk for longs
-  if (d.sb) bullScore += 1; // near support = risk for shorts
-
-  /* ================= EMA BEHAVIOR ================= */
-  if (d.bullishEMAAcceptance) bullScore += 2;
-  if (d.bearishEMAAcceptance) bearScore += 2;
-
-  /* ================= VOLUME ================= */
-  if (d.volConfirmed) {
-    if (d.bullishEMAAcceptance) bullScore += 1;
-    if (d.bearishEMAAcceptance) bearScore += 1;
+  if (d.rb) {
+    bearScore += 1;
+    reasons.push("rb → bear +1");
+  }
+  if (d.sb) {
+    bullScore += 1;
+    reasons.push("sb → bull +1");
   }
 
-  /* ================= RSI REGIME ================= */
-  if (d.rsi50Above) bullScore += 1;
-  if (d.rsi50Below) bearScore += 1;
+  /* ================= EMA ================= */
+  if (d.bullishEMAAcceptance) {
+    bullScore += 2;
+    reasons.push("bullishEMAAcceptance → bull +2");
+  }
+  if (d.bearishEMAAcceptance) {
+    bearScore += 2;
+    reasons.push("bearishEMAAcceptance → bear +2");
+  }
 
-  if (d.rsi15 >= 70 && !d.rsi15Rising) bearScore += 1; // exhaustion
-  if (d.rsi15 <= 30 && d.rsi15Rising) bullScore += 1; // recovery
+  /* ================= VOLUME ================= */
+  if (d.volConfirmed && d.bullishEMAAcceptance) {
+    bullScore += 1;
+    reasons.push("vol + bullishEMA → bull +1");
+  }
+  if (d.volConfirmed && d.bearishEMAAcceptance) {
+    bearScore += 1;
+    reasons.push("vol + bearishEMA → bear +1");
+  }
+
+  /* ================= RSI ================= */
+  if (d.rsi50Above) {
+    bullScore += 1;
+    reasons.push("rsi50Above → bull +1");
+  }
+  if (d.rsi50Below) {
+    bearScore += 1;
+    reasons.push("rsi50Below → bear +1");
+  }
+
+  if (d.rsi15 >= 70 && !d.rsi15Rising) {
+    bearScore += 1;
+    reasons.push("RSI exhaustion → bear +1");
+  }
+  if (d.rsi15 <= 30 && d.rsi15Rising) {
+    bullScore += 1;
+    reasons.push("RSI recovery → bull +1");
+  }
 
   /* ================= REACTIONS ================= */
-  if (d.reactionR === "REJECT") bearScore += 2;
-  if (d.reactionR === "ACCEPT") bullScore += 2;
+  if (d.reactionR === "REJECT") {
+    bearScore += 2;
+    reasons.push("reactionR REJECT → bear +2");
+  }
+  if (d.reactionR === "ACCEPT") {
+    bullScore += 2;
+    reasons.push("reactionR ACCEPT → bull +2");
+  }
 
-  if (d.reactionS === "REJECT") bullScore += 2;
-  if (d.reactionS === "ACCEPT") bearScore += 2;
+  if (d.reactionS === "REJECT") {
+    bullScore += 2;
+    reasons.push("reactionS REJECT → bull +2");
+  }
+  if (d.reactionS === "ACCEPT") {
+    bearScore += 2;
+    reasons.push("reactionS ACCEPT → bear +2");
+  }
 
-  /* ================= HTF ALIGNMENT ================= */
-  if (d.htfBullOk) bullScore += 2;
-  if (d.htfBearOk) bearScore += 2;
+  /* ================= HTF ================= */
+  if (d.htfBullOk) {
+    bullScore += 2;
+    reasons.push("htfBullOk → bull +2");
+  }
+  if (d.htfBearOk) {
+    bearScore += 2;
+    reasons.push("htfBearOk → bear +2");
+  }
 
-     // === DEBUG LOG ===
+  // === DEBUG LOG ===
   console.log("[DIRECTIONAL BIAS DEBUG]", {
     input: {
       rb: d.rb,
@@ -3772,25 +3819,22 @@ return {
   if (bullScore >= bearScore + 2) {
     return {
       bias: "Bullish (Contextual)",
-      score: { bullScore, bearScore },
-      reason: "Bullish pressure dominates across EMA, momentum, and higher timeframe."
+      score: { bullScore, bearScore }
     };
   }
 
   if (bearScore >= bullScore + 2) {
     return {
       bias: "Bearish (Contextual)",
-      score: { bullScore, bearScore },
-      reason: "Bearish pressure dominates across EMA, momentum, and higher timeframe."
+      score: { bullScore, bearScore }
     };
   }
 
   return {
     bias: "Balanced / Compression",
-    score: { bullScore, bearScore },
-    reason: "Signals are mixed. Market is coiling near structure."
+    score: { bullScore, bearScore }
   };
-}
+  }
   
 
   
