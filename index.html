@@ -6129,18 +6129,6 @@ const phaseIcon =
   const divIcon =
   d.rsiDivergenceType === "bearish" ? "🟥" : "🟩";
 
-    
-    const rsiStructure = d.rsiStructure || "NEUTRAL";
-
-  const rsiStructClass =
-    typeof getRSIStructClass === "function"
-      ? getRSIStructClass(rsiStructure)
-      : "rsi-neutral";
-
-  const rsiLabel =
-    typeof getRSIStructLabel === "function"
-      ? getRSIStructLabel(rsiStructure)
-      : rsiStructure;
        
 
 card.innerHTML = `
@@ -6293,9 +6281,7 @@ ${d.pvValid ? `
 })() : ""}
 
 
-<div class="muted ${rsiStructClass}">
-      RSI Structure: <b>${rsiLabel}</b>
-    </div>
+
 
     
       ${d.volAI ? `
