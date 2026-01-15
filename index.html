@@ -4430,38 +4430,7 @@ const bearishBreakAccepted =
   htfBearOk
 });
 
-
-
- // === DEBUG: BREAK ACCEPTANCE ===
-if (rb && !bullishBreakAccepted) {
-  console.warn(`[BULL BREAK REJECTED] ${sym}`, {
-    priceAction: brokeAboveResistanceZone || holdingAboveResistance,
-    ema: bullishEMAAcceptance,
-    volume: volConfirmed,
-    rsi15,
-    rsi15Rising,
-    rsi50: rsi50State?.consistentlyAbove50,
-    reactionR,
-    htfBullOk
-  });
-}
-
-if (sb && !bearishBreakAccepted) {
-  console.warn(`[BEAR BREAK REJECTED] ${sym}`, {
-    priceAction: brokeBelowSupportZone || holdingBelowSupport,
-    ema: bearishEMAAcceptance,
-    volume: volConfirmed,
-    rsi15,
-    rsi15Rising,
-    rsi50: rsi50State?.consistentlyBelow50,
-    reactionS,
-    htfBearOk
-  });
-}
-
-
-
-  
+ 
 let bias = "Neutral";
 let prob = 50;
 let structure = "none";
