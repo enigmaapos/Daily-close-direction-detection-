@@ -4340,6 +4340,24 @@ const bearishBreakAccepted =
   }
 );
 
+  const directionalBias = getDirectionalBias({
+  rb,
+  sb,
+  bullishEMAAcceptance,
+  bearishEMAAcceptance,
+  volConfirmed,
+  rsi15,
+  rsi15Rising,
+  rsi50Above: rsi50State?.consistentlyAbove50,
+  rsi50Below: rsi50State?.consistentlyBelow50,
+  reactionR,
+  reactionS,
+  htfBullOk,
+  htfBearOk
+});
+
+console.log(`[DIRECTIONAL BIAS] ${sym}`, directionalBias);
+
  // === DEBUG: BREAK ACCEPTANCE ===
 if (rb && !bullishBreakAccepted) {
   console.warn(`[BULL BREAK REJECTED] ${sym}`, {
