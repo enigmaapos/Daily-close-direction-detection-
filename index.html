@@ -6131,7 +6131,9 @@ const phaseIcon =
 
     
     const rsiStructureSafe = d.rsiStructure ?? "NEUTRAL";
-const rsiStructClass = getRSIStructClass(rsiStructureSafe);
+const rsiLabel = typeof getRSIStructLabel === "function"
+  ? getRSIStructLabel(rsiStructureSafe)
+  : rsiStructureSafe;
        
 
 card.innerHTML = `
