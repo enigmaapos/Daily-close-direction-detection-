@@ -717,6 +717,18 @@ button.secondary{
       <option value="asc">Ascending</option>
     </select>
   </div>
+
+  <!-- ===== TREND ===== -->
+    <div class="filter-group">
+    <h4>Trend</h4>
+      
+  <select id="filterMainTrend">
+  <option value="all">All Main Trends</option>
+  <option value="bullish">Bullish</option>
+  <option value="bearish">Bearish</option>
+  <option value="neutral">Neutral</option>
+  </select>
+    </div>
   
 </div>
 
@@ -5419,6 +5431,7 @@ const r15 = document.getElementById("filterRsi15Context")?.value || "all";
   const div = document.getElementById("filterDivergence")?.value || "all";
 const di  = document.getElementById("filterDivergenceIntent")?.value || "all";
   const pv = filterPV.value;
+  const mt = document.getElementById("filterMainTrend")?.value || "all";
   
 
   
@@ -5445,6 +5458,7 @@ const di  = document.getElementById("filterDivergenceIntent")?.value || "all";
     if (ez !== "all" && c.dataset.execution !== ez) ok = false;
     if (vai !== "all" && c.dataset.volai !== vai) ok = false;
     if (az !== "all" && c.dataset.activeZone !== az) ok = false;
+    if (mt !== "all" && c.dataset.trend !== mt) ok = false;
 
         if (pv !== "all") {
   if (pv === "none" && c.dataset.pvclass !== "none") ok = false;
@@ -5567,6 +5581,7 @@ if (di !== "all") {
            document.getElementById("filterDivergence").value = "all";
            document.getElementById("filterDivergenceIntent").value = "all";
            filterPV.value = "all";
+           document.getElementById("filterMainTrend").value = "all";
   
            
 
@@ -5800,6 +5815,7 @@ card.dataset.aiverdict = aiVerdict ? aiVerdict.verdict : "none";
     card.dataset.htfRsiState = d.htfRSIState || "normal";
     card.dataset.candle12h =
   (d.candle12h?.color || "unknown").toLowerCase();
+    card.dataset.trend = d.mainTrend || "neutral";
     
 
     card.dataset.rsiMomentumShift =
@@ -7241,7 +7257,8 @@ async function runSearch(){
     "filterActiveZone",
     "filterDivergence",
     "filterDivergenceIntent",
-    "filterPV"
+    "filterPV",
+    "filterMainTrend"
 ].forEach(id=>{
   document.getElementById(id)?.addEventListener("change", applyFilters);
 });
