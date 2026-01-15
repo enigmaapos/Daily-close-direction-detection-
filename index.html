@@ -5426,7 +5426,7 @@ const volScanEnd = k.length - 1;
 for (let idx = volScanStart; idx < volScanEnd; idx++) {
   const c = k[idx];
   if (!c) continue;
-  const vol = +v[idx]; // <- use idx, not i
+  const vol = +v[i];
 }
 
   if (isGreen(k[i]) && vol > maxGreenVol) {
