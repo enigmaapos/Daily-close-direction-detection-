@@ -1711,28 +1711,40 @@ const HTF_TTL = 15 * 60 * 1000; // 15 minutes
       `${API}/fapi/v1/klines?symbol=${sym}&interval=12h&limit=2`
     );
 
-    // Use the last CLOSED candle
+    // HARD GUARDS
+    if (!Array.isArray(k) || k.length < 2) {
+      return null;
+    }
+
     const c = k[k.length - 2];
 
-    const open  = +c[1];
-    const high  = +c[2];
-    const low   = +c[3];
-    const close = +c[4];
+    if (!Array.isArray(c) || c.length < 5) {
+      return null;
+    }
 
-    const body = Math.abs(close - open);
-const range = high - low;
+    const open  = Number(c[1]);
+    const high  = Number(c[2]);
+    const low   = Number(c[3]);
+    const close = Number(c[4]);
 
-let color = "doji";
+    if (![open, high, low, close].every(Number.isFinite)) {
+      return null;
+    }
 
-if (range > 0) {
-  if (body / range <= 0.2) {
-    color = "doji";
-  } else if (close > open) {
-    color = "green";
-  } else if (close < open) {
-    color = "red";
-  }
-}
+    const body  = Math.abs(close - open);
+    const range = high - low;
+
+    let color = "doji";
+
+    if (range > 0) {
+      if (body / range <= 0.2) {
+        color = "doji";
+      } else if (close > open) {
+        color = "green";
+      } else if (close < open) {
+        color = "red";
+      }
+    }
 
     return {
       open,
@@ -1747,7 +1759,7 @@ if (range > 0) {
     console.error("12H candle fetch failed:", sym, e);
     return null;
   }
-      }
+}
 
   
 /* ================= COUNTDOWN ================= */
@@ -6129,6 +6141,18 @@ const phaseIcon =
   const divIcon =
   d.rsiDivergenceType === "bearish" ? "🟥" : "🟩";
 
+        const rsiStructure = d.rsiStructure || "NEUTRAL";
+
+  const rsiStructClass =
+    typeof getRSIStructClass === "function"
+      ? getRSIStructClass(rsiStructure)
+      : "rsi-neutral";
+
+  const rsiLabel =
+    typeof getRSIStructLabel === "function"
+      ? getRSIStructLabel(rsiStructure)
+      : rsiStructure;
+
        
 
 card.innerHTML = `
@@ -6281,7 +6305,9 @@ ${d.pvValid ? `
 })() : ""}
 
 
-
+<div class="muted ${rsiStructClass}">
+      RSI Structure: <b>${rsiLabel}</b>
+    </div>
 
     
       ${d.volAI ? `
