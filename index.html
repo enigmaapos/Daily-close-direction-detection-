@@ -6130,10 +6130,17 @@ const phaseIcon =
   d.rsiDivergenceType === "bearish" ? "🟥" : "🟩";
 
     
-    const rsiStructureSafe = d.rsiStructure ?? "NEUTRAL";
-const rsiLabel = typeof getRSIStructLabel === "function"
-  ? getRSIStructLabel(rsiStructureSafe)
-  : rsiStructureSafe;
+    const rsiStructure = d.rsiStructure || "NEUTRAL";
+
+  const rsiStructClass =
+    typeof getRSIStructClass === "function"
+      ? getRSIStructClass(rsiStructure)
+      : "rsi-neutral";
+
+  const rsiLabel =
+    typeof getRSIStructLabel === "function"
+      ? getRSIStructLabel(rsiStructure)
+      : rsiStructure;
        
 
 card.innerHTML = `
@@ -6623,8 +6630,8 @@ ${d.intradayRSIDiv ? (() => {
 ` : ""}
 
 <div class="muted ${rsiStructClass}">
-  RSI Structure: <b>${getRSIStructLabel(rsiStructure)}</b>
-</div>
+      RSI Structure: <b>${rsiLabel}</b>
+    </div>
   
 
 
