@@ -3819,14 +3819,16 @@ function getDirectionalBias(d) {
   if (bullScore >= bearScore + 2) {
     return {
       bias: "Bullish (Contextual)",
-      score: { bullScore, bearScore }
+      score: { bullScore, bearScore },
+      reasons
     };
   }
 
   if (bearScore >= bullScore + 2) {
     return {
       bias: "Bearish (Contextual)",
-      score: { bullScore, bearScore }
+      score: { bullScore, bearScore },
+      reasons
     };
   }
 
