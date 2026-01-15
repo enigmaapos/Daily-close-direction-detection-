@@ -5425,11 +5425,8 @@ const volScanEnd = k.length - 1;
 
 for (let idx = volScanStart; idx < volScanEnd; idx++) {
   const c = k[idx];
-  if (!Array.isArray(c) || c.length < 5) continue;
-
-  const vol = Array.isArray(v) && v[idx] ? +v[idx] : 0;
-  const candleRange = +c[2] - +c[3]; // optional, inline range
-  const isGreenCandle = +c[4] > +c[1];
+  if (!c) continue;
+  const vol = +v[idx]; // <- use idx, not i
 }
 
   if (isGreen(k[i]) && vol > maxGreenVol) {
