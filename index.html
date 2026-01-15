@@ -5401,7 +5401,8 @@ const isRed   = c => +c[4] < +c[1];
 
 const range = c => +c[2] - +c[3];
 
-  const LOOKBACK = 96;
+  // one place only
+const INTRADAY_LOOKBACK = 96;
 
 let maxGreenVol = 0;
 let maxGreenIndex = -1;
@@ -5409,7 +5410,7 @@ let maxGreenIndex = -1;
 let maxRedVol = 0;
 let maxRedIndex = -1;
 
-for (let i = k.length - LOOKBACK; i < k.length - 1; i++) {
+for (let i = k.length - INTRADAY_LOOKBACK; i < k.length - 1; i++) {
   const vol = +v[i];
 
   if (isGreen(k[i]) && vol > maxGreenVol) {
