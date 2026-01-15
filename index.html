@@ -6092,6 +6092,11 @@ ${d.setupScore ? `
   }
 </div>
 
+ <div class="muted dom-vol ${d.bull ? "bull" : "bear"}">
+  Dominant Volume:
+  <b>${d.bull ? "BUYERS" : "SELLERS"}</b>
+</div>
+
 
 <div class="prob ${
   d.bias?.includes?.("Bull") ? "bull" :
@@ -6137,11 +6142,6 @@ ${d.structure === "none" && d.volumeStructure?.name !== "none" ? `
   </div>
 ` : ""}
 
-
-  <div class="muted dom-vol ${d.bull ? "bull" : "bear"}">
-  Dominant Volume:
-  <b>${d.bull ? "BUYERS" : "SELLERS"}</b>
-</div>
 
 ${d.pvValid ? `
 <div class="pv-strength">
