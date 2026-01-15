@@ -3709,135 +3709,156 @@ return {
   }
 
 
-function getDirectionalBias(d) {
+      function getDirectionalBias(d) {
   let bullScore = 0;
   let bearScore = 0;
-  const reasons = [];
+
+  // === Structured Reasons (by market layer) ===
+  const reasons = {
+    location: [],
+    momentum: [],
+    participation: [],
+    regime: [],
+    reactions: [],
+    higherTF: []
+  };
 
   /* ================= LOCATION ================= */
   if (d.rb) {
     bearScore += 1;
-    reasons.push("rb → bear +1");
-  }
-  if (d.sb) {
-    bullScore += 1;
-    reasons.push("sb → bull +1");
+    reasons.location.push("Price at resistance");
   }
 
-  /* ================= EMA ================= */
+  if (d.sb) {
+    bullScore += 1;
+    reasons.location.push("Price at support");
+  }
+
+  /* ================= EMA / MOMENTUM ================= */
   if (d.bullishEMAAcceptance) {
     bullScore += 2;
-    reasons.push("bullishEMAAcceptance → bull +2");
+    reasons.momentum.push("Bullish EMA acceptance");
   }
+
   if (d.bearishEMAAcceptance) {
     bearScore += 2;
-    reasons.push("bearishEMAAcceptance → bear +2");
+    reasons.momentum.push("Bearish EMA acceptance");
   }
 
   /* ================= VOLUME ================= */
   if (d.volConfirmed && d.bullishEMAAcceptance) {
     bullScore += 1;
-    reasons.push("vol + bullishEMA → bull +1");
+    reasons.participation.push("Volume confirms bullish momentum");
   }
+
   if (d.volConfirmed && d.bearishEMAAcceptance) {
     bearScore += 1;
-    reasons.push("vol + bearishEMA → bear +1");
+    reasons.participation.push("Volume confirms bearish momentum");
   }
 
   /* ================= RSI ================= */
   if (d.rsi50Above) {
     bullScore += 1;
-    reasons.push("rsi50Above → bull +1");
+    reasons.regime.push("RSI holding above 50");
   }
+
   if (d.rsi50Below) {
     bearScore += 1;
-    reasons.push("rsi50Below → bear +1");
+    reasons.regime.push("RSI holding below 50");
   }
 
   if (d.rsi15 >= 70 && !d.rsi15Rising) {
     bearScore += 1;
-    reasons.push("RSI exhaustion → bear +1");
+    reasons.regime.push("RSI short-term exhaustion");
   }
+
   if (d.rsi15 <= 30 && d.rsi15Rising) {
     bullScore += 1;
-    reasons.push("RSI recovery → bull +1");
+    reasons.regime.push("RSI short-term recovery");
   }
 
   /* ================= REACTIONS ================= */
   if (d.reactionR === "REJECT") {
     bearScore += 2;
-    reasons.push("reactionR REJECT → bear +2");
+    reasons.reactions.push("Rejection at resistance");
   }
+
   if (d.reactionR === "ACCEPT") {
     bullScore += 2;
-    reasons.push("reactionR ACCEPT → bull +2");
+    reasons.reactions.push("Acceptance above resistance");
   }
 
   if (d.reactionS === "REJECT") {
     bullScore += 2;
-    reasons.push("reactionS REJECT → bull +2");
+    reasons.reactions.push("Rejection at support");
   }
+
   if (d.reactionS === "ACCEPT") {
     bearScore += 2;
-    reasons.push("reactionS ACCEPT → bear +2");
+    reasons.reactions.push("Acceptance below support");
   }
 
   /* ================= HTF ================= */
   if (d.htfBullOk) {
     bullScore += 2;
-    reasons.push("htfBullOk → bull +2");
-  }
-  if (d.htfBearOk) {
-    bearScore += 2;
-    reasons.push("htfBearOk → bear +2");
+    reasons.higherTF.push("Higher timeframe bullish context");
   }
 
-  // === DEBUG LOG ===
+  if (d.htfBearOk) {
+    bearScore += 2;
+    reasons.higherTF.push("Higher timeframe bearish context");
+  }
+
+  /* ================= CONFLICT / COMPRESSION DETECTION ================= */
+  const ltfBullish =
+    d.bullishEMAAcceptance && d.volConfirmed && d.rsi50Above;
+
+  const ltfBearish =
+    d.bearishEMAAcceptance && d.volConfirmed && d.rsi50Below;
+
+  const htfConflict =
+    (ltfBullish && d.htfBearOk) ||
+    (ltfBearish && d.htfBullOk);
+
+  let bias = "Balanced / Compression";
+  let summary =
+    "No clear directional dominance — market is compressing.";
+
+  /* ================= FINAL DECISION ================= */
+  if (bullScore >= bearScore + 2 && !htfConflict) {
+    bias = "Bullish (Contextual)";
+    summary = "Bullish momentum aligned with higher-timeframe context.";
+  }
+
+  else if (bearScore >= bullScore + 2 && !htfConflict) {
+    bias = "Bearish (Contextual)";
+    summary = "Bearish momentum aligned with higher-timeframe context.";
+  }
+
+  else if (htfConflict) {
+    bias = "Compression / Counter-Trend Pressure";
+    summary =
+      "Lower-timeframe momentum is pushing against higher-timeframe bias — expect compression, rejection, or traps.";
+  }
+
+  /* ================= DEBUG ================= */
   console.log("[DIRECTIONAL BIAS DEBUG]", {
-    input: {
-      rb: d.rb,
-      sb: d.sb,
-      bullishEMAAcceptance: d.bullishEMAAcceptance,
-      bearishEMAAcceptance: d.bearishEMAAcceptance,
-      volConfirmed: d.volConfirmed,
-      rsi15: d.rsi15,
-      rsi15Rising: d.rsi15Rising,
-      rsi50Above: d.rsi50Above,
-      rsi50Below: d.rsi50Below,
-      reactionR: d.reactionR,
-      reactionS: d.reactionS,
-      htfBullOk: d.htfBullOk,
-      htfBearOk: d.htfBearOk
-    },
+    input: d,
     bullScore,
     bearScore,
     diff: bullScore - bearScore,
+    htfConflict,
     reasons
   });
 
-  /* ================= FINAL ================= */
-  if (bullScore >= bearScore + 2) {
-    return {
-      bias: "Bullish (Contextual)",
-      score: { bullScore, bearScore },
-      reasons
-    };
-  }
-
-  if (bearScore >= bullScore + 2) {
-    return {
-      bias: "Bearish (Contextual)",
-      score: { bullScore, bearScore },
-      reasons
-    };
-  }
-
   return {
-    bias: "Balanced / Compression",
+    bias,
+    summary,
     score: { bullScore, bearScore },
     reasons
   };
-  }
+    }
+      
   
 
   
