@@ -6223,9 +6223,6 @@ ${d.directionalBias ? `
   </div>
 ` : ""}
 
-<div class="muted ${rsiStructClass}">
-      RSI Structure: <b>${rsiLabel}</b>
-    </div>
 
   <div class="muted ${
     structureBias === "bullish" ? "bull" :
@@ -6295,6 +6292,12 @@ ${d.pvValid ? `
   return out;
 })() : ""}
 
+
+<div class="muted ${rsiStructClass}">
+      RSI Structure: <b>${rsiLabel}</b>
+    </div>
+
+    
       ${d.volAI ? `
   <div class="muted ${
     d.volAI.bias === "Bullish" ? "bull" :
