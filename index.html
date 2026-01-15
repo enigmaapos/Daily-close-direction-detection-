@@ -2672,6 +2672,18 @@ function findSwings(h, l, c, v){
   return false;
   }
 
+  function avgRange(k, start, end) {
+  let sum = 0;
+  let count = 0;
+
+  for (let i = start; i < end; i++) {
+    sum += range(k[i]);
+    count++;
+  }
+
+  return count ? sum / count : 0;
+  }
+
 
   function detect24hRSIMomentumShift(closes15m, rsi15m, mainTrend) {
   if (mainTrend !== "bullish" && mainTrend !== "bearish") return null;
@@ -5382,6 +5394,87 @@ if (
 ) {
   rsiStructure = "BEARISH_RSI_TOP_CONFIRMED";
 }
+
+
+  const isGreen = c => +c[4] > +c[1];
+const isRed   = c => +c[4] < +c[1];
+
+const range = c => +c[2] - +c[3];
+
+  const LOOKBACK = 96;
+
+let maxGreenVol = 0;
+let maxGreenIndex = -1;
+
+let maxRedVol = 0;
+let maxRedIndex = -1;
+
+for (let i = k.length - LOOKBACK; i < k.length - 1; i++) {
+  const vol = +v[i];
+
+  if (isGreen(k[i]) && vol > maxGreenVol) {
+    maxGreenVol = vol;
+    maxGreenIndex = i;
+  }
+
+  if (isRed(k[i]) && vol > maxRedVol) {
+    maxRedVol = vol;
+    maxRedIndex = i;
+  }
+  }
+
+  let isShortCovering = false;
+
+if (maxGreenIndex !== -1) {
+  const sc = k[maxGreenIndex];
+
+  const avgR = avgRange(
+    k,
+    maxGreenIndex - 10,
+    maxGreenIndex
+  );
+
+  const highRange = range(sc) > avgR * 1.5;
+
+  isShortCovering =
+    isGreen(sc) &&
+    highRange;
+  }
+
+  let isLongCovering = false;
+
+if (maxRedIndex !== -1) {
+  const lc = k[maxRedIndex];
+
+  const avgR = avgRange(
+    k,
+    maxRedIndex - 10,
+    maxRedIndex
+  );
+
+  const highRange = range(lc) > avgR * 1.5;
+
+  isLongCovering =
+    isRed(lc) &&
+    highRange;
+  }
+
+      const shortCovering = isShortCovering
+  ? {
+      type: "SHORT_COVERING",
+      candleIndex: maxGreenIndex,
+      strength: "HIGH_VOL_HIGH_RANGE"
+    }
+  : null;
+
+const longCovering = isLongCovering
+  ? {
+      type: "LONG_COVERING",
+      candleIndex: maxRedIndex,
+      strength: "HIGH_VOL_HIGH_RANGE"
+    }
+  : null;
+  
   
 
   return {sym,price,change,bull,prob,bias,structure,structureType,volumeStructure,structureQuality,volumeQuality,volumeAlign,defenseFailure,trendStructureRisk,S:sw.S,R:sw.R,dailyRSI,rsi15Context,rsi15,rsi15Momentum,rsiStructure,volumeBreakout,
@@ -5417,7 +5510,13 @@ pvPointA,
 pvPointB,
 pvStrength,
 pvValid: !!pvSignalType,
-pvDominantAligned: !!pvSignalType};
+pvDominantAligned: !!pvSignalType,shortCovering,
+longCovering,
+liquidationEvent: shortCovering
+  ? "SHORT_COVERING"
+  : longCovering
+  ? "LONG_COVERING"
+  : null};
 }
 
 
@@ -6414,6 +6513,22 @@ ${(d.defenseFailure && d.defenseFailure !== "NONE") || d.trendStructureRisk
 ${d.candle12h ? `
   <div class="muted ${d.candle12h.color === "green" ? "bull" : "bear"}">
     ⏱ Last 12H Candle Close: ${d.candle12h.color.toUpperCase()}
+  </div>
+` : ""}
+
+  ${d.liquidationEvent ? `
+  <div class="muted ${
+    d.liquidationEvent === "SHORT_COVERING"
+      ? "bull"
+      : d.liquidationEvent === "LONG_COVERING"
+      ? "bear"
+      : "neutral"
+  }">
+    ${
+      d.liquidationEvent === "SHORT_COVERING"
+        ? "🟢 Short covering detected — forced buy pressure (temporary)"
+        : "🔴 Long covering detected — forced sell pressure (temporary)"
+    }
   </div>
 ` : ""}
 
