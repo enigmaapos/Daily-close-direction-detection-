@@ -2759,21 +2759,23 @@ const bodyPctOfRange = c => {
   return Math.abs(+c[4] - +c[1]) / r;
 };
 
-function avgRange(k, start, end) {
+  /**
+ * Modified avgRange to support optional volume array
+ */
+function avgRange(k, start, end, volArr) {
   let sum = 0;
   let count = 0;
 
   for (let i = Math.max(0, start); i < end; i++) {
     if (!k[i]) continue;
-    const r = range(k[i]);
+    const r = Math.abs(+k[i][2] - +k[i][3]); // candle range
     if (!r) continue;
-    sum += r;
+    sum += volArr ? (volArr[i] || 0) : r;
     count++;
   }
 
   return count ? sum / count : 0;
 }
-
 
 
   function detect24hRSIMomentumShift(closes15m, rsi15m, mainTrend) {
@@ -4161,6 +4163,72 @@ function getSetupGradeClass(score) {
   function average(arr) {
   if (!arr || arr.length === 0) return 0;
   return arr.reduce((sum, v) => sum + v, 0) / arr.length;
+}
+
+
+  /**
+ * Detects trend exhaustion using RSI, EMA, and volume.
+ * Returns an object with type, strength, and explanation.
+ */
+function detectTrendExhaustion({ k, v, rsiArr, ema200Arr, lookback = 96 }) {
+  if (!k || !rsiArr || !ema200Arr) return null;
+
+  const latestCandle = k[k.length - 1];
+  const latestRSI = rsiArr[rsiArr.length - 1];
+  const latestEMA200 = ema200Arr[ema200Arr.length - 1];
+  const latestVol = Array.isArray(v) ? v[v.length - 1] : null;
+
+  if (!latestCandle || latestCandle.length < 5) return null;
+
+  const close = +latestCandle[4];
+  const open = +latestCandle[1];
+  const candleRange = Math.abs(+latestCandle[2] - +latestCandle[3]);
+  const bodyPct = Math.abs(close - open) / candleRange;
+
+  // === RSI Exhaustion ===
+  let rsiExhaustion = null;
+  if (latestRSI >= 70) rsiExhaustion = "BEARISH_EXHAUSTION"; // overbought
+  else if (latestRSI <= 30) rsiExhaustion = "BULLISH_EXHAUSTION"; // oversold
+
+  // === EMA Distance ===
+  const ema200 = latestEMA200;
+  const distPct = ((close - ema200) / ema200) * 100;
+  let emaExhaustion = null;
+  if (distPct > 5) emaExhaustion = "BULLISH_EXHAUSTION";    // price far above EMA200
+  else if (distPct < -5) emaExhaustion = "BEARISH_EXHAUSTION"; // price far below EMA200
+
+  // === Volume Exhaustion ===
+  const avgVol = avgRange(k, k.length - lookback, k.length - 1, v); // weighted avg
+  let volExhaustion = null;
+  if (latestVol && avgVol) {
+    if (latestVol < avgVol * 0.5) volExhaustion = "TREND_WEAK_VOLUME"; // volume drying
+    else if (latestVol > avgVol * 3) volExhaustion = "TREND_CLIMAX_VOLUME"; // volume spike
+  }
+
+  // === Combine signals ===
+  let type = null;
+  if (rsiExhaustion === "BEARISH_EXHAUSTION" || emaExhaustion === "BEARISH_EXHAUSTION") type = "BEARISH_EXHAUSTION";
+  if (rsiExhaustion === "BULLISH_EXHAUSTION" || emaExhaustion === "BULLISH_EXHAUSTION") type = "BULLISH_EXHAUSTION";
+
+  if (!type && volExhaustion) type = volExhaustion;
+
+  // === Strength assessment ===
+  let strength = "LOW";
+  if (rsiExhaustion && emaExhaustion) strength = "HIGH";
+  else if (rsiExhaustion || emaExhaustion || volExhaustion) strength = "MEDIUM";
+
+  return {
+    type,
+    strength,
+    bodyPct,
+    distPct,
+    rsi: latestRSI,
+    ema200,
+    volume: latestVol,
+    explanation: `RSI: ${latestRSI}, EMA200 dist: ${distPct.toFixed(2)}%, candle body: ${(
+      bodyPct * 100
+    ).toFixed(1)}%, volume: ${latestVol}`
+  };
 }
 
   
@@ -5602,6 +5670,15 @@ if (mainTrend === "bearish") {
   }
 }
 
+  const exhaustion = detectTrendExhaustion({
+  k: candles,
+  v: volumes,
+  rsiArr: rsi15Arr,
+  ema200Arr: ema200Arr
+});
+
+
+
 
   
   
@@ -5644,7 +5721,7 @@ longCovering,
 liquidationEvent:
   shortCovering?.type ||
   longCovering?.type ||
-  null};
+  null,exhaustion};
 }
 
 
@@ -6450,6 +6527,26 @@ ${d.liquidationEvent ? `
             d.brokeBelowSupport ? " (may stabilize if defended)" : " (panic flush risk)"
           } | Trigger volume: ${formatVolume(d.longCovering?.volume)} | Candle index: ${d.longCovering?.candleIndex}`
     }
+  </div>
+` : ""}
+
+  ${d.exhaustion ? `
+  <div class="muted ${
+    d.exhaustion.type === "BULLISH_EXHAUSTION"
+      ? "bull"
+      : d.exhaustion.type === "BEARISH_EXHAUSTION"
+      ? "bear"
+      : "neutral"
+  }">
+    ${
+      d.exhaustion.type === "BULLISH_EXHAUSTION"
+        ? `🟢 Trend Exhaustion (Bullish) — Strength: ${d.exhaustion.strength}`
+        : d.exhaustion.type === "BEARISH_EXHAUSTION"
+        ? `🔴 Trend Exhaustion (Bearish) — Strength: ${d.exhaustion.strength}`
+        : `⚪ Trend Exhaustion — Neutral`
+    }
+    <br>
+    <small>${d.exhaustion.explanation}</small>
   </div>
 ` : ""}
 
