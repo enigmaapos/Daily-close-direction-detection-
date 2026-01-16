@@ -2299,9 +2299,9 @@ function withTier(verdict, reason, d) {
 
   return {
     verdict,
-    tier: t.tier,
-    tierLabel: t.label,
-    verdictClass: t.verdictClass,
+    tier: tierInfo.tier,
+    tierLabel: tierInfo.label,
+    verdictClass: tierInfo.verdictClass,
 
     tradeSide,
     executionZone: finalExecutionZone,
