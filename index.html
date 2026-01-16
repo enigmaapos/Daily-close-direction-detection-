@@ -5144,6 +5144,36 @@ prob = applyHTFProbabilityAdjustment({
   htfStructure: htf.htfStructure
 });
 
+
+  /* ================= SCAN CONFIG ================= */
+
+const INTRADAY_LOOKBACK = 96;
+const volScanStart = Math.max(0, k.length - INTRADAY_LOOKBACK);
+const volScanEnd = k.length - 1;
+
+/* ================= MAX VOL CANDLES ================= */
+
+let maxGreenVol = 0, maxGreenIndex = -1;
+let maxRedVol = 0, maxRedIndex = -1;
+
+for (let idx = volScanStart; idx < volScanEnd; idx++) {
+  const candle = k[idx];
+  if (!Array.isArray(candle) || candle.length < 5) continue;
+
+  const vol = Array.isArray(v) && v[idx] ? +v[idx] : 0;
+  if (!vol) continue;
+
+  if (isGreen(candle) && vol > maxGreenVol) {
+    maxGreenVol = vol;
+    maxGreenIndex = idx;
+  }
+
+  if (isRed(candle) && vol > maxRedVol) {
+    maxRedVol = vol;
+    maxRedIndex = idx;
+  }
+}
+
     
 
 
@@ -5198,6 +5228,68 @@ const structureIntent = classifyStructureIntent({
   reaction: activeReaction,
   score: structureScore
 });
+
+
+
+  /* ================= SHORT COVERING ================= */
+
+let shortCovering = null;
+
+if (
+  maxGreenIndex !== -1 &&
+  structureIntent === "REJECTION" &&
+  nearestResistanceZone
+) {
+  const scIndex = Math.min(maxGreenIndex + 1, k.length - 1);
+  const sc = k[scIndex];
+
+  const avgR = avgRange(k, scIndex - 20, scIndex - 1);
+
+  if (avgR > 0) {
+    const highRange = range(sc) > avgR * 1.5;
+    const bodyPct = bodyPctOfRange(sc);
+    const weakClose = bodyPct > 0.15 && bodyPct < 0.4;
+
+    if (isGreen(sc) && highRange && weakClose) {
+      shortCovering = {
+        type: "SHORT_COVERING",
+        candleIndex: scIndex,
+        context: "STRUCTURE_REJECTION",
+        strength: "HIGH_VOL_HIGH_RANGE"
+      };
+    }
+  }
+}
+
+/* ================= LONG COVERING ================= */
+
+let longCovering = null;
+
+if (
+  maxRedIndex !== -1 &&
+  structureIntent === "REJECTION" &&
+  nearestSupportZone
+) {
+  const lcIndex = Math.min(maxRedIndex + 1, k.length - 1);
+  const lc = k[lcIndex];
+
+  const avgR = avgRange(k, lcIndex - 20, lcIndex - 1);
+
+  if (avgR > 0) {
+    const highRange = range(lc) > avgR * 1.5;
+    const bodyPct = bodyPctOfRange(lc);
+    const weakClose = bodyPct > 0.15 && bodyPct < 0.4;
+
+    if (isRed(lc) && highRange && weakClose) {
+      longCovering = {
+        type: "LONG_COVERING",
+        candleIndex: lcIndex,
+        context: "STRUCTURE_REJECTION",
+        strength: "HIGH_VOL_HIGH_RANGE"
+      };
+    }
+  }
+}
 
 
   
@@ -5414,95 +5506,6 @@ if (
   hasRSIRejectedFromHigh?.(rsi15Arr) // optional
 ) {
   rsiStructure = "BEARISH_RSI_TOP_CONFIRMED";
-}
-
-
-  
-/* ================= SCAN CONFIG ================= */
-
-const INTRADAY_LOOKBACK = 96;
-const volScanStart = Math.max(0, k.length - INTRADAY_LOOKBACK);
-const volScanEnd = k.length - 1;
-
-/* ================= MAX VOL CANDLES ================= */
-
-let maxGreenVol = 0, maxGreenIndex = -1;
-let maxRedVol = 0, maxRedIndex = -1;
-
-for (let idx = volScanStart; idx < volScanEnd; idx++) {
-  const candle = k[idx];
-  if (!Array.isArray(candle) || candle.length < 5) continue;
-
-  const vol = Array.isArray(v) && v[idx] ? +v[idx] : 0;
-  if (!vol) continue;
-
-  if (isGreen(candle) && vol > maxGreenVol) {
-    maxGreenVol = vol;
-    maxGreenIndex = idx;
-  }
-
-  if (isRed(candle) && vol > maxRedVol) {
-    maxRedVol = vol;
-    maxRedIndex = idx;
-  }
-}
-
-/* ================= DOMINANCE ================= */
-
-const hasGreenDominance =
-  maxGreenVol > maxRedVol * 1.1;
-
-const hasRedDominance =
-  maxRedVol > maxGreenVol * 1.1;
-
-/* ================= SHORT COVERING ================= */
-
-let shortCovering = null;
-
-if (hasRedDominance && maxGreenIndex !== -1) {
-  const scIndex = Math.min(maxGreenIndex + 1, k.length - 1);
-  const sc = k[scIndex];
-
-  const avgR = avgRange(k, scIndex - 20, scIndex - 1);
-
-  if (avgR > 0) {
-    const highRange = range(sc) > avgR * 1.5;
-    const bodyPct = bodyPctOfRange(sc);
-    const weakClose = bodyPct > 0.15 && bodyPct < 0.4;
-
-    if (isGreen(sc) && highRange && weakClose) {
-      shortCovering = {
-        type: "SHORT_COVERING",
-        candleIndex: scIndex,
-        strength: "HIGH_VOL_HIGH_RANGE"
-      };
-    }
-  }
-}
-
-/* ================= LONG COVERING ================= */
-
-let longCovering = null;
-
-if (hasGreenDominance && maxRedIndex !== -1) {
-  const lcIndex = Math.min(maxRedIndex + 1, k.length - 1);
-  const lc = k[lcIndex];
-
-  const avgR = avgRange(k, lcIndex - 20, lcIndex - 1);
-
-  if (avgR > 0) {
-    const highRange = range(lc) > avgR * 1.5;
-    const bodyPct = bodyPctOfRange(lc);
-    const weakClose = bodyPct > 0.15 && bodyPct < 0.4;
-
-    if (isRed(lc) && highRange && weakClose) {
-      longCovering = {
-        type: "LONG_COVERING",
-        candleIndex: lcIndex,
-        strength: "HIGH_VOL_HIGH_RANGE"
-      };
-    }
-  }
 }
 
 
