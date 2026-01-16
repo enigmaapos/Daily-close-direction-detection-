@@ -2672,30 +2672,38 @@ function findSwings(h, l, c, v){
   return false;
   }
 
-  const isGreen = c =>
+  /* ================= HELPERS ================= */
+
+const isGreen = c =>
   Array.isArray(c) && c.length >= 5 && +c[4] > +c[1];
 
 const isRed = c =>
   Array.isArray(c) && c.length >= 5 && +c[4] < +c[1];
 
 const range = c =>
-  Array.isArray(c) ? +c[2] - +c[3] : 0;
-    
+  Array.isArray(c) ? Math.abs(+c[2] - +c[3]) : 0;
 
+const bodyPctOfRange = c => {
+  const r = range(c);
+  if (!r) return 0;
+  return Math.abs(+c[4] - +c[1]) / r;
+};
 
-
-      function avgRange(k, start, end) {
+function avgRange(k, start, end) {
   let sum = 0;
   let count = 0;
 
   for (let i = Math.max(0, start); i < end; i++) {
     if (!k[i]) continue;
-    sum += range(k[i]);
+    const r = range(k[i]);
+    if (!r) continue;
+    sum += r;
     count++;
   }
 
   return count ? sum / count : 0;
-  }
+}
+
 
 
   function detect24hRSIMomentumShift(closes15m, rsi15m, mainTrend) {
@@ -5410,99 +5418,94 @@ if (
 
 
   
-  // one place only
+/* ================= SCAN CONFIG ================= */
+
 const INTRADAY_LOOKBACK = 96;
-
-
-  const volScanStart = Math.max(0, k.length - INTRADAY_LOOKBACK);
+const volScanStart = Math.max(0, k.length - INTRADAY_LOOKBACK);
 const volScanEnd = k.length - 1;
+
+/* ================= MAX VOL CANDLES ================= */
 
 let maxGreenVol = 0, maxGreenIndex = -1;
 let maxRedVol = 0, maxRedIndex = -1;
 
 for (let idx = volScanStart; idx < volScanEnd; idx++) {
-  const c = k[idx];
-  if (!Array.isArray(c) || c.length < 5) continue;
+  const candle = k[idx];
+  if (!Array.isArray(candle) || candle.length < 5) continue;
 
   const vol = Array.isArray(v) && v[idx] ? +v[idx] : 0;
+  if (!vol) continue;
 
-  if (isGreen(c) && vol > maxGreenVol) {
+  if (isGreen(candle) && vol > maxGreenVol) {
     maxGreenVol = vol;
     maxGreenIndex = idx;
   }
 
-  if (isRed(c) && vol > maxRedVol) {
+  if (isRed(candle) && vol > maxRedVol) {
     maxRedVol = vol;
     maxRedIndex = idx;
   }
-  }
-
-  const bodyPctOfRange = c => {
-  const r = range(c);
-  if (!r) return 0;
-  return Math.abs(+c[4] - +c[1]) / r;
-};
-  
-
-  let isShortCovering = false;
-
-const hasRedDominance = maxRedIndex !== -1 && maxRedVol > 0;
-
-if (maxGreenIndex !== -1 && hasRedDominance) {
-  const sc = k[maxGreenIndex];
-
-  const avgR = avgRange(
-    k,
-    maxGreenIndex - 10,
-    maxGreenIndex
-  );
-
-  const highRange = range(sc) > avgR * 1.5;
-  const weakClose = bodyPctOfRange(sc) <= 0.4;
-
-  isShortCovering =
-    isGreen(sc) &&
-    highRange &&
-    weakClose;
-  }
-
-  let isLongCovering = false;
-
-    const hasGreenDominance = maxGreenIndex !== -1 && maxGreenVol > 0;
-
-if (maxRedIndex !== -1 && hasGreenDominance) {
-  const lc = k[maxRedIndex];
-
-  const avgR = avgRange(
-    k,
-    maxRedIndex - 10,
-    maxRedIndex
-  );
-
-  const highRange = range(lc) > avgR * 1.5;
-  const weakClose = bodyPctOfRange(lc) <= 0.4;
-
-  isLongCovering =
-    isRed(lc) &&
-    highRange &&
-    weakClose;
 }
 
-      const shortCovering = isShortCovering
-  ? {
-      type: "SHORT_COVERING",
-      candleIndex: maxGreenIndex,
-      strength: "HIGH_VOL_HIGH_RANGE"
-    }
-  : null;
+/* ================= DOMINANCE ================= */
 
-const longCovering = isLongCovering
-  ? {
-      type: "LONG_COVERING",
-      candleIndex: maxRedIndex,
-      strength: "HIGH_VOL_HIGH_RANGE"
+const hasGreenDominance =
+  maxGreenVol > maxRedVol * 1.1;
+
+const hasRedDominance =
+  maxRedVol > maxGreenVol * 1.1;
+
+/* ================= SHORT COVERING ================= */
+
+let shortCovering = null;
+
+if (hasRedDominance && maxGreenIndex !== -1) {
+  const scIndex = Math.min(maxGreenIndex + 1, k.length - 1);
+  const sc = k[scIndex];
+
+  const avgR = avgRange(k, scIndex - 20, scIndex - 1);
+
+  if (avgR > 0) {
+    const highRange = range(sc) > avgR * 1.5;
+    const bodyPct = bodyPctOfRange(sc);
+    const weakClose = bodyPct > 0.15 && bodyPct < 0.4;
+
+    if (isGreen(sc) && highRange && weakClose) {
+      shortCovering = {
+        type: "SHORT_COVERING",
+        candleIndex: scIndex,
+        strength: "HIGH_VOL_HIGH_RANGE"
+      };
     }
-  : null;
+  }
+}
+
+/* ================= LONG COVERING ================= */
+
+let longCovering = null;
+
+if (hasGreenDominance && maxRedIndex !== -1) {
+  const lcIndex = Math.min(maxRedIndex + 1, k.length - 1);
+  const lc = k[lcIndex];
+
+  const avgR = avgRange(k, lcIndex - 20, lcIndex - 1);
+
+  if (avgR > 0) {
+    const highRange = range(lc) > avgR * 1.5;
+    const bodyPct = bodyPctOfRange(lc);
+    const weakClose = bodyPct > 0.15 && bodyPct < 0.4;
+
+    if (isRed(lc) && highRange && weakClose) {
+      longCovering = {
+        type: "LONG_COVERING",
+        candleIndex: lcIndex,
+        strength: "HIGH_VOL_HIGH_RANGE"
+      };
+    }
+  }
+}
+
+
   
   
 
@@ -5541,11 +5544,10 @@ pvStrength,
 pvValid: !!pvSignalType,
 pvDominantAligned: !!pvSignalType,shortCovering,
 longCovering,
-liquidationEvent: shortCovering
-  ? "SHORT_COVERING"
-  : longCovering
-  ? "LONG_COVERING"
-  : null};
+liquidationEvent:
+  shortCovering?.type ||
+  longCovering?.type ||
+  null};
 }
 
 
