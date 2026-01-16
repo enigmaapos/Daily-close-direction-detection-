@@ -5279,16 +5279,18 @@ if (maxGreenIndex !== -1 && nearestResistanceZone) {
     const weakClose = bodyPct > 0.1 && bodyPct < 0.5; // more lenient
 
     if (isGreen(sc) && highRange && weakClose) {
-      shortCovering = {
-        type: "SHORT_COVERING",
-        candleIndex: scIndex,
-        context: "STRUCTURE_REJECTION_OR_RESISTANCE",
-        strength: "HIGH_VOL_HIGH_RANGE",
-        volume: Array.isArray(v) && v[lcIndex] ? +v[lcIndex] : null
-      };
-    }
+  shortCovering = {
+    type: "SHORT_COVERING",
+    candleIndex: scIndex,
+    context: "STRUCTURE_REJECTION_OR_RESISTANCE",
+    strength: "HIGH_VOL_HIGH_RANGE",
+    volume: Array.isArray(v) && v[scIndex] ? +v[scIndex] : null
+  };
+  }
   }
 }
+
+  
 
 /* ================= LONG COVERING ================= */
 
@@ -5306,14 +5308,14 @@ if (maxRedIndex !== -1 && nearestSupportZone) {
     const weakClose = bodyPct > 0.1 && bodyPct < 0.5;
 
     if (isRed(lc) && highRange && weakClose) {
-      longCovering = {
-        type: "LONG_COVERING",
-        candleIndex: lcIndex,
-        context: "STRUCTURE_REJECTION_OR_SUPPORT",
-        strength: "HIGH_VOL_HIGH_RANGE",
-        volume: Array.isArray(v) && v[scIndex] ? +v[scIndex] : null
-      };
-    }
+  longCovering = {
+    type: "LONG_COVERING",
+    candleIndex: lcIndex,
+    context: "STRUCTURE_REJECTION_OR_SUPPORT",
+    strength: "HIGH_VOL_HIGH_RANGE",
+    volume: Array.isArray(v) && v[lcIndex] ? +v[lcIndex] : null
+  };
+}
   }
 } 
 
