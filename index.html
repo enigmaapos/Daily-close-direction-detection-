@@ -1989,6 +1989,9 @@ const htfExhausted =
 
 const htfIndecision =
   htfDoji && htfRSI !== "normal";
+
+  const directional = getDirectionalBias(d);
+const dirBias = directional.bias;
   
 
   let verdict = AI_VERDICTS.AVOID;
@@ -2204,6 +2207,42 @@ if (
     verdict = AI_VERDICTS.WAIT_FOR_PULLBACK;
     reason += " Weak drop likely represents a pullback.";
   }
+
+  /* ================= DIRECTIONAL BIAS ADJUSTMENT ================= */
+
+// If verdict suggests continuation but directional bias disagrees → downgrade
+if (
+  (verdict === AI_VERDICTS.STRONG_CONTINUATION ||
+   verdict === AI_VERDICTS.CONTROLLED_CONTINUATION) &&
+  (
+    (dirBias.includes("Bullish") && d.mainTrend === "bearish") ||
+    (dirBias.includes("Bearish") && d.mainTrend === "bullish")
+  )
+) {
+  verdict = AI_VERDICTS.WAIT_FOR_PULLBACK;
+  reason += " Directional bias conflicts with continuation.";
+}
+
+// If structure is weak but directional bias is strong → soften wording
+if (
+  verdict === AI_VERDICTS.STRUCTURE_WEAK &&
+  (
+    dirBias.includes("Bullish") ||
+    dirBias.includes("Bearish")
+  )
+) {
+  verdict = AI_VERDICTS.WAIT_FOR_PULLBACK;
+  reason += " Directional bias exists but lacks structural confirmation.";
+}
+
+// Compression bias increases trap sensitivity
+if (
+  dirBias.includes("Compression") &&
+  verdict === AI_VERDICTS.CONTROLLED_CONTINUATION
+) {
+  verdict = AI_VERDICTS.WAIT_FOR_PULLBACK;
+  reason += " Compression detected — risk of fake continuation.";
+}
 
   return withTier(verdict, reason, d);
     }
@@ -5036,7 +5075,9 @@ moveStrength,
   htfTrend: htf.htfTrend,
   htfRSIState: htf.htfRSIState,
   htfStructure: htf.htfStructure,
-    volumeContext
+    volumeContext,
+    directionalBias,
+    directionalBiasSummary
 });
 
   
