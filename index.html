@@ -4249,28 +4249,6 @@ function detectTrendExhaustion({ k, v, rsiArr, ema200Arr, lookback = 96 }) {
     else if (signalsCount === 1) strength = "MEDIUM";
 
 
-    console.log(
-  `[TREND EXHAUSTION]`,
-  {
-    type,
-    strength,
-    candleIndex: idx,
-    RSI: latestRSI != null ? latestRSI.toFixed(2) : "N/A",
-    EMA200: latestEMA200 != null ? latestEMA200.toFixed(2) : "N/A",
-    EMA200_Dist: distPct != null ? distPct.toFixed(2) + "%" : "N/A",
-    BodyPct: bodyPct != null && Number.isFinite(bodyPct)
-      ? (bodyPct * 100).toFixed(1) + "%"
-      : "N/A",
-    Volume: Number.isFinite(latestVol)
-      ? formatVolume(latestVol)
-      : "N/A",
-    Signals: {
-      rsiExhaustion,
-      emaExhaustion,
-      volExhaustion
-    }
-  }
-);
 
     if (type) {
       return {
@@ -5734,6 +5712,14 @@ if (mainTrend === "bearish") {
   }
 }
 
+  
+  console.log("🔥 detectTrendExhaustion called", {
+  kLen: k?.length,
+  vLen: v?.length,
+  rsiLen: rsiArr?.length,
+  emaLen: ema200Arr?.length
+});
+  
   const exhaustion = detectTrendExhaustion({
   k: candles,    
   v: v,          
