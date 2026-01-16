@@ -4248,26 +4248,8 @@ function detectTrendExhaustion({ k, v, rsiArr, ema200Arr, lookback = 96 }) {
     if (signalsCount >= 2) strength = "HIGH";
     else if (signalsCount === 1) strength = "MEDIUM";
 
-    if (type) {
-      return {
-        type,
-        strength,
-        rsi: latestRSI,
-        ema200DistPct: distPct,
-        bodyPct,
-        volume: latestVol,
-        candleIndex: idx,
-        explanation: [
-          `RSI: ${latestRSI != null ? latestRSI.toFixed(2) : "N/A"}`,
-          `EMA200 dist: ${distPct != null ? distPct.toFixed(2) + "%" : "N/A"}`,
-          `Body: ${bodyPct != null ? (bodyPct * 100).toFixed(1) + "%" : "N/A"}`,
-          `Volume: ${formatVolume(latestVol)}`
-        ].join(" | ")
-      };
-    }
-  }
 
-  console.log(
+    console.log(
   `[TREND EXHAUSTION]`,
   {
     type,
@@ -4289,6 +4271,25 @@ function detectTrendExhaustion({ k, v, rsiArr, ema200Arr, lookback = 96 }) {
     }
   }
 );
+
+    if (type) {
+      return {
+        type,
+        strength,
+        rsi: latestRSI,
+        ema200DistPct: distPct,
+        bodyPct,
+        volume: latestVol,
+        candleIndex: idx,
+        explanation: [
+          `RSI: ${latestRSI != null ? latestRSI.toFixed(2) : "N/A"}`,
+          `EMA200 dist: ${distPct != null ? distPct.toFixed(2) + "%" : "N/A"}`,
+          `Body: ${bodyPct != null ? (bodyPct * 100).toFixed(1) + "%" : "N/A"}`,
+          `Volume: ${formatVolume(latestVol)}`
+        ].join(" | ")
+      };
+    }
+  }
 
   return null;
 }
