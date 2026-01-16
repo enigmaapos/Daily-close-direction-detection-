@@ -6549,31 +6549,6 @@ ${d.liquidationEvent ? `
   </div>
 ` : ""}
 
-  ${d.exhaustion ? `
-  <div class="muted ${
-    d.exhaustion.type === "BULLISH_EXHAUSTION"
-      ? "bull"
-      : d.exhaustion.type === "BEARISH_EXHAUSTION"
-      ? "bear"
-      : "neutral"
-  }">
-    ${
-      d.exhaustion.type === "BULLISH_EXHAUSTION"
-        ? `🟢 Trend Exhaustion (Bullish) — Strength: ${d.exhaustion.strength}`
-        : d.exhaustion.type === "BEARISH_EXHAUSTION"
-        ? `🔴 Trend Exhaustion (Bearish) — Strength: ${d.exhaustion.strength}`
-        : `⚪ Trend Exhaustion — Neutral`
-    }
-    <br>
-    <small>
-      RSI: ${formatRSI(d.exhaustion.rsi)} | 
-      EMA200 distance: ${formatPercent(d.exhaustion.ema200DistPct)} | 
-      Candle body: ${formatBodyPct(d.exhaustion.bodyPct)} | 
-      Volume: ${formatVolume(d.exhaustion.volume)} | 
-      Candle index: ${d.exhaustion.candleIndex}
-    </small>
-  </div>
-` : ""}
 
 
 <div class="prob ${
@@ -6668,6 +6643,43 @@ ${d.pvValid ? `
 <div class="muted ${rsiStructClass}">
       RSI Structure: <b>${rsiLabel}</b>
     </div>
+
+  ${d.exhaustion && d.exhaustion.type ? `
+  <div class="muted ${
+    d.exhaustion.type === "BULLISH_EXHAUSTION"
+      ? "bull"
+      : d.exhaustion.type === "BEARISH_EXHAUSTION"
+      ? "bear"
+      : "neutral"
+  }">
+    ${
+      d.exhaustion.type === "BULLISH_EXHAUSTION"
+        ? `🟢 Trend Exhaustion (Bullish)`
+        : `🔴 Trend Exhaustion (Bearish)`
+    }
+    — <b>Strength:</b> ${d.exhaustion.strength || "N/A"}
+    <br>
+    <small>
+      RSI: ${d.exhaustion.rsi?.toFixed?.(2) ?? "N/A"} |
+      EMA200 dist: ${
+        d.exhaustion.ema200DistPct != null
+          ? d.exhaustion.ema200DistPct.toFixed(2) + "%"
+          : "N/A"
+      } |
+      Body: ${
+        d.exhaustion.bodyPct != null
+          ? (d.exhaustion.bodyPct * 100).toFixed(1) + "%"
+          : "N/A"
+      } |
+      Volume: ${
+        d.exhaustion.volume != null
+          ? formatVolume(d.exhaustion.volume)
+          : "N/A"
+      } |
+      Candle: ${d.exhaustion.candleIndex ?? "N/A"}
+    </small>
+  </div>
+` : ""}
 
     
       ${d.volAI ? `
