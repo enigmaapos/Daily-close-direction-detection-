@@ -5262,62 +5262,69 @@ const structureIntent = classifyStructureIntent({
 
 
 
-/* ================= SHORT COVERING ================= */
+/* ================= SHORT COVERING (STRICT) ================= */
 
 let shortCovering = null;
 
-if (maxGreenIndex !== -1 && nearestResistanceZone) {
-  // Check the candle **after** the max green vol
-  const scIndex = Math.min(maxGreenIndex + 1, k.length - 1);
-  const sc = k[scIndex];
+for (let idx = k.length - 1; idx >= Math.max(0, k.length - INTRADAY_LOOKBACK); idx--) {
+  const candle = k[idx];
+  if (!Array.isArray(candle) || candle.length < 5) continue;
 
-  const avgR = avgRange(k, scIndex - 20, scIndex - 1);
+  const vol = Array.isArray(v) && v[idx] ? +v[idx] : 0;
+  if (!vol) continue;
 
-  if (avgR > 0) {
-    const highRange = range(sc) > avgR * 1.5; 
-    const bodyPct = bodyPctOfRange(sc);
-    const weakClose = bodyPct > 0.15 && bodyPct < 0.4; 
+  if (!isGreen(candle)) continue;
 
-    if (isGreen(sc) && highRange && weakClose) {
-  shortCovering = {
-    type: "SHORT_COVERING",
-    candleIndex: scIndex,
-    context: "STRUCTURE_REJECTION_OR_RESISTANCE",
-    strength: "HIGH_VOL_HIGH_RANGE",
-    volume: Array.isArray(v) && v[scIndex] ? +v[scIndex] : null
-  };
-  }
+  const avgR = avgRange(k, idx - 20, idx - 1);
+  if (avgR <= 0) continue;
+
+  const highRange = range(candle) > avgR * 1.5;       // STRICT: 50% bigger than avg
+  const bodyPct = bodyPctOfRange(candle);
+  const weakClose = bodyPct > 0.15 && bodyPct < 0.35; // STRICT weak close
+
+  if (highRange && weakClose && nearestResistanceZone) {
+    shortCovering = {
+      type: "SHORT_COVERING",
+      candleIndex: idx,
+      context: "STRUCTURE_REJECTION_OR_RESISTANCE",
+      strength: "HIGH_VOL_HIGH_RANGE",
+      volume: vol
+    };
+    break; // stop at the most recent candle
   }
 }
 
-  
-
-/* ================= LONG COVERING ================= */
+/* ================= LONG COVERING (STRICT) ================= */
 
 let longCovering = null;
 
-if (maxRedIndex !== -1 && nearestSupportZone) {
-  const lcIndex = Math.min(maxRedIndex + 1, k.length - 1);
-  const lc = k[lcIndex];
+for (let idx = k.length - 1; idx >= Math.max(0, k.length - INTRADAY_LOOKBACK); idx--) {
+  const candle = k[idx];
+  if (!Array.isArray(candle) || candle.length < 5) continue;
 
-  const avgR = avgRange(k, lcIndex - 20, lcIndex - 1);
+  const vol = Array.isArray(v) && v[idx] ? +v[idx] : 0;
+  if (!vol) continue;
 
-  if (avgR > 0) {
-    const highRange = range(lc) > avgR * 1.5;
-    const bodyPct = bodyPctOfRange(lc);
-    const weakClose = bodyPct > 0.15 && bodyPct < 0.4;
+  if (!isRed(candle)) continue;
 
-    if (isRed(lc) && highRange && weakClose) {
-  longCovering = {
-    type: "LONG_COVERING",
-    candleIndex: lcIndex,
-    context: "STRUCTURE_REJECTION_OR_SUPPORT",
-    strength: "HIGH_VOL_HIGH_RANGE",
-    volume: Array.isArray(v) && v[lcIndex] ? +v[lcIndex] : null
-  };
-}
+  const avgR = avgRange(k, idx - 20, idx - 1);
+  if (avgR <= 0) continue;
+
+  const highRange = range(candle) > avgR * 1.5;       // STRICT: 50% bigger than avg
+  const bodyPct = bodyPctOfRange(candle);
+  const weakClose = bodyPct > 0.15 && bodyPct < 0.35; // STRICT weak close
+
+  if (highRange && weakClose && nearestSupportZone) {
+    longCovering = {
+      type: "LONG_COVERING",
+      candleIndex: idx,
+      context: "STRUCTURE_REJECTION_OR_SUPPORT",
+      strength: "HIGH_VOL_HIGH_RANGE",
+      volume: vol
+    };
+    break; // stop at the most recent candle
   }
-} 
+}
 
 
   const aiVerdict = getAIFinalVerdict({
@@ -6397,10 +6404,10 @@ ${d.liquidationEvent ? `
       d.liquidationEvent === "SHORT_COVERING"
         ? `🟢 Short covering — forced buy pressure${
             d.brokeAboveResistance ? " (may fade if not accepted)" : " (exit liquidity risk)"
-          } | Trigger volume: ${formatVolume(d.shortCovering?.volume)}`
+          } | Trigger volume: ${formatVolume(d.shortCovering?.volume)} | Candle index: ${d.shortCovering?.candleIndex}`
         : `🔴 Long covering — forced sell pressure${
             d.brokeBelowSupport ? " (may stabilize if defended)" : " (panic flush risk)"
-          } | Trigger volume: ${formatVolume(d.longCovering?.volume)}`
+          } | Trigger volume: ${formatVolume(d.longCovering?.volume)} | Candle index: ${d.longCovering?.candleIndex}`
     }
   </div>
 ` : ""}
