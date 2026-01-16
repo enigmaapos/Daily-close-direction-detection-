@@ -4196,13 +4196,20 @@ function detectTrendExhaustion({ k, v, rsiArr, ema200Arr, lookback = 96 }) {
     }
 
     // --- EMA Distance Exhaustion ---
-    let emaExhaustion = null;
-    let distPct = null;
-    if (latestEMA200 != null) {
-      distPct = ((close - latestEMA200) / latestEMA200) * 100;
-      if (distPct > 5) emaExhaustion = "BULLISH_EXHAUSTION";
-      else if (distPct < -5) emaExhaustion = "BEARISH_EXHAUSTION";
-    }
+let emaExhaustion = null;
+let distPct = null;
+
+if (latestEMA200 != null && close != null && latestEMA200 !== 0) {
+  distPct = ((close - latestEMA200) / latestEMA200) * 100;
+
+  // Strict exhaustion thresholds
+  if (distPct >= 5) {
+    emaExhaustion = "BULLISH_EXHAUSTION"; // Price far above EMA200
+  } else if (distPct <= -5) {
+    emaExhaustion = "BEARISH_EXHAUSTION"; // Price far below EMA200
+  }
+}
+
 
     // --- Volume Exhaustion ---
     const avgVol = avgRange(v, idx - 20, idx - 1);
