@@ -1991,7 +1991,9 @@ const htfIndecision =
   htfDoji && htfRSI !== "normal";
 
   const directional = getDirectionalBias(d);
-const dirBias = directional.bias;
+const dirBias = d.directional.bias;
+
+  const shortCovering = d.shortCovering;
   
 
   let verdict = AI_VERDICTS.AVOID;
@@ -2244,25 +2246,47 @@ if (
   reason += " Compression detected — risk of fake continuation.";
 }
 
+  // ================= SHORT / LONG COVERING OVERRIDE =================
+if (d.shortCovering) {
+  return withTier(
+    "SHORT_COVERING",                       // verdict
+    "Short covering detected — forced buy pressure (temporary)", // reason
+    d
+  );
+}
+
+if (d.longCovering) {
+  return withTier(
+    "LONG_COVERING",
+    "Long covering detected — forced sell pressure (temporary)",
+    d
+  );
+}
+
   return withTier(verdict, reason, d);
     }
 
 
-
-/* ================= TIER WRAPPER ================= */
-
-function withTier(verdict, reason, d){
+      /* ================= TIER WRAPPER ================= */
+function withTier(verdict, reason, d) {
   const t = AI_VERDICT_TIERS[verdict] || {
     tier: 6,
     label: "TIER 6 — UNKNOWN",
     verdictClass: "verdict-avoid"
   };
 
-  // ✅ inject verdict FIRST
+    // ✅ inject verdict FIRST
   const dWithVerdict = {
-    ...d,
-    aiVerdict: verdict
+    ...d,                       // preserve all existing data
+    aiVerdict: verdict,          // main verdict
+    aiReason: reason,            // explanation / reasoning
+    aiTier: tierInfo.tier,       // numeric tier
+    aiLabel: tierInfo.label,     // human-readable label
+    aiClass: tierInfo.verdictClass, // CSS class for UI
+    directionalBias: d.directionalBias || d.bias || "Neutral", // include bias
+    liquidationEvent: d.shortCovering?.type || d.longCovering?.type || null // include covering
   };
+
 
   const tradeSide = getTradeSide(dWithVerdict);
   const executionZone = getExecutionZone(dWithVerdict, tradeSide);
@@ -5076,7 +5100,8 @@ moveStrength,
   htfRSIState: htf.htfRSIState,
   htfStructure: htf.htfStructure,
     volumeContext,
-    directionalBias
+    directionalBias,
+  shortCovering
 });
 
   
