@@ -5335,6 +5335,14 @@ if (maxRedIndex !== -1 && nearestSupportZone) {
   }
 }
 
+  if (shortCovering) {
+  console.log("🟢 Short covering triggered by candle volume:", v[shortCovering.candleIndex]);
+}
+
+if (longCovering) {
+  console.log("🔴 Long covering triggered by candle volume:", v[longCovering.candleIndex]);
+}
+
   
 
 
@@ -6389,6 +6397,32 @@ ${d.volumeBreakout ? `
   </div>
 `}
 
+      ${d.candle12h ? `
+  <div class="muted ${d.candle12h.color === "green" ? "bull" : "bear"}">
+    ⏱ Last 12H Candle Close: ${d.candle12h.color.toUpperCase()}
+  </div>
+` : ""}
+
+  ${d.liquidationEvent ? `
+  <div class="muted ${
+    d.liquidationEvent === "SHORT_COVERING"
+      ? "bull"
+      : d.liquidationEvent === "LONG_COVERING"
+      ? "bear"
+      : "neutral"
+  }">
+    ${
+      d.liquidationEvent === "SHORT_COVERING"
+        ? `🟢 Short covering — forced buy pressure${
+            d.brokeAboveResistance ? " (may fade if not accepted)" : " (exit liquidity risk)"
+          } | Trigger volume: ${v[d.shortCovering?.candleIndex] ?? "N/A"}`
+        : `🔴 Long covering — forced sell pressure${
+            d.brokeBelowSupport ? " (may stabilize if defended)" : " (panic flush risk)"
+          } | Trigger volume: ${v[d.longCovering?.candleIndex] ?? "N/A"}`
+    }
+  </div>
+` : ""}
+
 
 <div class="prob ${
   d.bias?.includes?.("Bull") ? "bull" :
@@ -6641,32 +6675,6 @@ ${(d.defenseFailure && d.defenseFailure !== "NONE") || d.trendStructureRisk
 
   return out;
 })() : ""}
-
-${d.candle12h ? `
-  <div class="muted ${d.candle12h.color === "green" ? "bull" : "bear"}">
-    ⏱ Last 12H Candle Close: ${d.candle12h.color.toUpperCase()}
-  </div>
-` : ""}
-
-  ${d.liquidationEvent ? `
-  <div class="muted ${
-    d.liquidationEvent === "SHORT_COVERING"
-      ? "bull"
-      : d.liquidationEvent === "LONG_COVERING"
-      ? "bear"
-      : "neutral"
-  }">
-    ${
-      d.liquidationEvent === "SHORT_COVERING"
-        ? `🟢 Short covering — forced buy pressure${
-            d.brokeAboveResistance ? " (may fade if not accepted)" : " (exit liquidity risk)"
-          }`
-        : `🔴 Long covering — forced sell pressure${
-            d.brokeBelowSupport ? " (may stabilize if defended)" : " (panic flush risk)"
-          }`
-    }
-  </div>
-` : ""}
 
 
 <div class="muted neutral">
