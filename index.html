@@ -3371,6 +3371,24 @@ function getRSIHighest(rsiWindow) {
   return Math.max(...rsiWindow);
   }
 
+  function isBullishRSIExhausted(rsiArr, lookback = 96, overbought = 70, rejection = 3) {
+  const window = getRSIWindow(rsiArr, lookback);
+  if (!window) return false;
+  const current = window.at(-1);
+  const highest = getRSIHighest(window);
+  // Overbought and rejecting from high
+  return current >= overbought && current <= highest - rejection;
+}
+
+function isBearishRSIExhausted(rsiArr, lookback = 96, oversold = 30, rebound = 3) {
+  const window = getRSIWindow(rsiArr, lookback);
+  if (!window) return false;
+  const current = window.at(-1);
+  const lowest = getRSILowest(window);
+  // Oversold and rebounding
+  return current <= oversold && current >= lowest + rebound;
+}
+
   function isBullishRSILowHolding(rsiArr, lookback = 96, tolerance = 0.5) {
   const window = getRSIWindow(rsiArr, lookback);
   if (!window) return false;
@@ -5566,20 +5584,22 @@ const avgBody = average(bodySlice);
 
 let rsiStructure = "NEUTRAL";
 
-if (
-  mainTrend === "bullish" &&
-  isBullishRSILowHolding(rsi15Arr) &&
-  hasRSIReboundedFromLow(rsi15Arr)
-) {
-  rsiStructure = "BULLISH_RSI_BASE_CONFIRMED";
+if (mainTrend === "bullish") {
+  if (isBullishRSILowHolding(rsi15Arr) && hasRSIReboundedFromLow(rsi15Arr)) {
+    rsiStructure = "BULLISH_RSI_BASE_CONFIRMED";
+  }
+  if (isBullishRSIExhausted(rsi15Arr)) {
+    rsiStructure = "BULLISH_RSI_EXHAUSTION"; // new label
+  }
 }
 
-if (
-  mainTrend === "bearish" &&
-  isBearishRSIHighHolding(rsi15Arr) &&
-  hasRSIRejectedFromHigh?.(rsi15Arr) // optional
-) {
-  rsiStructure = "BEARISH_RSI_TOP_CONFIRMED";
+if (mainTrend === "bearish") {
+  if (isBearishRSIHighHolding(rsi15Arr) && hasRSIRejectedFromHigh(rsi15Arr)) {
+    rsiStructure = "BEARISH_RSI_TOP_CONFIRMED";
+  }
+  if (isBearishRSIExhausted(rsi15Arr)) {
+    rsiStructure = "BEARISH_RSI_EXHAUSTION"; // new label
+  }
 }
 
 
@@ -6305,6 +6325,8 @@ const phaseIcon =
     typeof getRSIStructLabel === "function"
       ? getRSIStructLabel(rsiStructure)
       : rsiStructure;
+
+    
 
        
 
