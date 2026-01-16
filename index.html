@@ -6116,6 +6116,19 @@ else if (phase === "EARLY ACCUMULATION") {
   if (vol >= 1e3) return (vol / 1e3).toFixed(1) + "K";
   return vol.toString();
   }
+
+    function formatPercent(num) {
+  return num != null && !isNaN(num) ? num.toFixed(2) + "%" : "N/A";
+}
+
+function formatRSI(num) {
+  return num != null && !isNaN(num) ? num.toFixed(2) : "N/A";
+}
+
+
+function formatBodyPct(pct) {
+  return pct != null && !isNaN(pct) ? (pct * 100).toFixed(2) + "%" : "N/A";
+}
   
   
 /* ================= RENDER ================= */
@@ -6546,7 +6559,13 @@ ${d.liquidationEvent ? `
         : `⚪ Trend Exhaustion — Neutral`
     }
     <br>
-    <small>${d.exhaustion.explanation}</small>
+    <small>
+      RSI: ${formatRSI(d.exhaustion.rsi)} | 
+      EMA200 distance: ${formatPercent(d.exhaustion.ema200DistPct)} | 
+      Candle body: ${formatBodyPct(d.exhaustion.bodyPct)} | 
+      Volume: ${formatVolume(d.exhaustion.volume)} | 
+      Candle index: ${d.exhaustion.candleIndex}
+    </small>
   </div>
 ` : ""}
 
