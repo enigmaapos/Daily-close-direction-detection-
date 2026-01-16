@@ -6538,26 +6538,6 @@ ${d.volumeBreakout ? `
   </div>
 ` : ""}
 
-${d.liquidationEvent ? `
-  <div class="muted ${
-    d.liquidationEvent === "SHORT_COVERING"
-      ? "bull"
-      : d.liquidationEvent === "LONG_COVERING"
-      ? "bear"
-      : "neutral"
-  }">
-    ${
-      d.liquidationEvent === "SHORT_COVERING"
-        ? `🟢 Short covering — forced buy pressure${
-            d.brokeAboveResistance ? " (may fade if not accepted)" : " (exit liquidity risk)"
-          } | Trigger volume: ${formatVolume(d.shortCovering?.volume)} | Candle index: ${d.shortCovering?.candleIndex}`
-        : `🔴 Long covering — forced sell pressure${
-            d.brokeBelowSupport ? " (may stabilize if defended)" : " (panic flush risk)"
-          } | Trigger volume: ${formatVolume(d.longCovering?.volume)} | Candle index: ${d.longCovering?.candleIndex}`
-    }
-  </div>
-` : ""}
-
 
 
 <div class="prob ${
@@ -6676,6 +6656,26 @@ ${d.exhaustion && d.exhaustion.type ? `
       } |
       Candle: ${d.exhaustion.candleIndex ?? "N/A"}
     </small>
+  </div>
+` : ""}
+
+${d.liquidationEvent ? `
+  <div class="muted ${
+    d.liquidationEvent === "SHORT_COVERING"
+      ? "bear"
+      : d.liquidationEvent === "LONG_COVERING"
+      ? "bull"
+      : "neutral"
+  }">
+    ${
+      d.liquidationEvent === "SHORT_COVERING"
+        ? `🟢 Short covering — forced buy pressure${
+            d.brokeAboveResistance ? " (may fade if not accepted)" : " (exit liquidity risk)"
+          } | Trigger volume: ${formatVolume(d.shortCovering?.volume)} | Candle index: ${d.shortCovering?.candleIndex}`
+        : `🔴 Long covering — forced sell pressure${
+            d.brokeBelowSupport ? " (may stabilize if defended)" : " (panic flush risk)"
+          } | Trigger volume: ${formatVolume(d.longCovering?.volume)} | Candle index: ${d.longCovering?.candleIndex}`
+    }
   </div>
 ` : ""}
 
