@@ -5985,6 +5985,14 @@ else if (phase === "EARLY ACCUMULATION") {
       return "rsi-neutral";
   }
   }
+
+  function formatVolume(vol) {
+  if (vol === null || vol === undefined) return "N/A";
+  if (vol >= 1e9) return (vol / 1e9).toFixed(2) + "B";
+  if (vol >= 1e6) return (vol / 1e6).toFixed(2) + "M";
+  if (vol >= 1e3) return (vol / 1e3).toFixed(1) + "K";
+  return vol.toString();
+  }
   
   
 /* ================= RENDER ================= */
@@ -6389,10 +6397,10 @@ ${d.liquidationEvent ? `
       d.liquidationEvent === "SHORT_COVERING"
         ? `🟢 Short covering — forced buy pressure${
             d.brokeAboveResistance ? " (may fade if not accepted)" : " (exit liquidity risk)"
-          } | Trigger volume: ${d.shortCovering?.volume ?? "N/A"}`
+          } | Trigger volume: ${formatVolume(d.shortCovering?.volume)}`
         : `🔴 Long covering — forced sell pressure${
             d.brokeBelowSupport ? " (may stabilize if defended)" : " (panic flush risk)"
-          } | Trigger volume: ${d.longCovering?.volume ?? "N/A"}`
+          } | Trigger volume: ${formatVolume(d.longCovering?.volume)}`
     }
   </div>
 ` : ""}
