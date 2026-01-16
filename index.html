@@ -5278,22 +5278,13 @@ if (maxGreenIndex !== -1 && nearestResistanceZone) {
     const bodyPct = bodyPctOfRange(sc);
     const weakClose = bodyPct > 0.1 && bodyPct < 0.5; // more lenient
 
-    console.log("SHORT COVERING DEBUG", {
-      scIndex,
-      range: range(sc),
-      avgR,
-      highRange,
-      bodyPct,
-      weakClose,
-      isGreen: isGreen(sc)
-    });
-
     if (isGreen(sc) && highRange && weakClose) {
       shortCovering = {
         type: "SHORT_COVERING",
         candleIndex: scIndex,
         context: "STRUCTURE_REJECTION_OR_RESISTANCE",
-        strength: "HIGH_VOL_HIGH_RANGE"
+        strength: "HIGH_VOL_HIGH_RANGE",
+        volume: Array.isArray(v) && v[lcIndex] ? +v[lcIndex] : null
       };
     }
   }
@@ -5314,36 +5305,17 @@ if (maxRedIndex !== -1 && nearestSupportZone) {
     const bodyPct = bodyPctOfRange(lc);
     const weakClose = bodyPct > 0.1 && bodyPct < 0.5;
 
-    console.log("LONG COVERING DEBUG", {
-      lcIndex,
-      range: range(lc),
-      avgR,
-      highRange,
-      bodyPct,
-      weakClose,
-      isRed: isRed(lc)
-    });
-
     if (isRed(lc) && highRange && weakClose) {
       longCovering = {
         type: "LONG_COVERING",
         candleIndex: lcIndex,
         context: "STRUCTURE_REJECTION_OR_SUPPORT",
-        strength: "HIGH_VOL_HIGH_RANGE"
+        strength: "HIGH_VOL_HIGH_RANGE",
+        volume: Array.isArray(v) && v[scIndex] ? +v[scIndex] : null
       };
     }
   }
-}
-
-  if (shortCovering) {
-  console.log("🟢 Short covering triggered by candle volume:", v[shortCovering.candleIndex]);
-}
-
-if (longCovering) {
-  console.log("🔴 Long covering triggered by candle volume:", v[longCovering.candleIndex]);
-}
-
-  
+} 
 
 
   const aiVerdict = getAIFinalVerdict({
@@ -6403,7 +6375,7 @@ ${d.volumeBreakout ? `
   </div>
 ` : ""}
 
-  ${d.liquidationEvent ? `
+${d.liquidationEvent ? `
   <div class="muted ${
     d.liquidationEvent === "SHORT_COVERING"
       ? "bull"
@@ -6415,10 +6387,10 @@ ${d.volumeBreakout ? `
       d.liquidationEvent === "SHORT_COVERING"
         ? `🟢 Short covering — forced buy pressure${
             d.brokeAboveResistance ? " (may fade if not accepted)" : " (exit liquidity risk)"
-          } | Trigger volume: ${v[d.shortCovering?.candleIndex] ?? "N/A"}`
+          } | Trigger volume: ${d.shortCovering?.volume ?? "N/A"}`
         : `🔴 Long covering — forced sell pressure${
             d.brokeBelowSupport ? " (may stabilize if defended)" : " (panic flush risk)"
-          } | Trigger volume: ${v[d.longCovering?.candleIndex] ?? "N/A"}`
+          } | Trigger volume: ${d.longCovering?.volume ?? "N/A"}`
     }
   </div>
 ` : ""}
