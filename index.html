@@ -6008,8 +6008,27 @@ else if (phase === "EARLY ACCUMULATION") {
       return "rsi-bullish";
     case "BEARISH_RSI_TOP_CONFIRMED":
       return "rsi-bearish";
+    case "BULLISH_RSI_EXHAUSTION":   // new
+      return "rsi-bullish-exhaustion";
+    case "BEARISH_RSI_EXHAUSTION":   // new
+      return "rsi-bearish-exhaustion";
     default:
       return "rsi-neutral";
+  }
+  }
+
+  function getRSIStructLabel(rsiStructure) {
+  switch (rsiStructure) {
+    case "BULLISH_RSI_BASE_CONFIRMED":
+      return "BULLISH BASE CONFIRMED";
+    case "BEARISH_RSI_TOP_CONFIRMED":
+      return "BEARISH TOP CONFIRMED";
+    case "BULLISH_RSI_EXHAUSTION":   // new
+      return "BULLISH RSI EXHAUSTION — Trend weakening";
+    case "BEARISH_RSI_EXHAUSTION":   // new
+      return "BEARISH RSI EXHAUSTION — Trend weakening";
+    default:
+      return "NEUTRAL";
   }
   }
 
