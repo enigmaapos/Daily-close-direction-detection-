@@ -5271,7 +5271,7 @@ if (
   structureIntent === "REJECTION" &&
   nearestResistanceZone
 ) {
-  const scIndex = Math.min(maxGreenIndex + 1, k.length - 1);
+  const scIndex = Math.min(maxGreenIndex, k.length - 1);
   const sc = k[scIndex];
 
   const avgR = avgRange(k, scIndex - 20, scIndex - 1);
@@ -5301,7 +5301,7 @@ if (
   structureIntent === "REJECTION" &&
   nearestSupportZone
 ) {
-  const lcIndex = Math.min(maxRedIndex + 1, k.length - 1);
+  const lcIndex = Math.min(maxRedIndex, k.length - 1);
   const lc = k[lcIndex];
 
   const avgR = avgRange(k, lcIndex - 20, lcIndex - 1);
