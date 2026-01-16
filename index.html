@@ -6620,8 +6620,12 @@ ${d.candle12h ? `
   }">
     ${
       d.liquidationEvent === "SHORT_COVERING"
-        ? "🟢 Short covering detected — forced buy pressure (temporary)"
-        : "🔴 Long covering detected — forced sell pressure (temporary)"
+        ? `🟢 Short covering — forced buy pressure${
+            d.brokeAboveResistance ? " (may fade if not accepted)" : " (exit liquidity risk)"
+          }`
+        : `🔴 Long covering — forced sell pressure${
+            d.brokeBelowSupport ? " (may stabilize if defended)" : " (panic flush risk)"
+          }`
     }
   </div>
 ` : ""}
