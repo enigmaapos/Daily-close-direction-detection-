@@ -5073,38 +5073,6 @@ const postVolBreakRSIConfirmSafe =
   const fundingRate = await getFundingRate(sym);
 
   
-  const aiVerdict = getAIFinalVerdict({
-  sym,
-  price,
-  prob,
-  bias,
-  structure,
-  structureType,
-  volumeStructure,
-  structureQuality,
-  volumeAlign,
-  mainTrend,
-  emaShortBias,
-  emaShortCross,
-  rsi15,
-  rsi15Momentum,
-  volumeBreakout,
-  fakeVolumeBreak,
-  dailyRSI,
-  fundingRate,
-    defenseFailure,
-  changeState,
-    moveType,
-moveStrength,
-  htfTrend: htf.htfTrend,
-  htfRSIState: htf.htfRSIState,
-  htfStructure: htf.htfStructure,
-    volumeContext,
-    directionalBias,
-  shortCovering
-});
-
-  
 
   /* ================= RSI MOMENTUM SHIFT PROBABILITY ADJUSTMENT ================= */
 
@@ -5362,6 +5330,38 @@ if (
     }
   }
 }
+
+
+  const aiVerdict = getAIFinalVerdict({
+  sym,
+  price,
+  prob,
+  bias,
+  structure,
+  structureType,
+  volumeStructure,
+  structureQuality,
+  volumeAlign,
+  mainTrend,
+  emaShortBias,
+  emaShortCross,
+  rsi15,
+  rsi15Momentum,
+  volumeBreakout,
+  fakeVolumeBreak,
+  dailyRSI,
+  fundingRate,
+    defenseFailure,
+  changeState,
+    moveType,
+moveStrength,
+  htfTrend: htf.htfTrend,
+  htfRSIState: htf.htfRSIState,
+  htfStructure: htf.htfStructure,
+    volumeContext,
+    directionalBias,
+  shortCovering
+});
 
 
   
