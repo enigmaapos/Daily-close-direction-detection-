@@ -5274,9 +5274,9 @@ if (maxGreenIndex !== -1 && nearestResistanceZone) {
   const avgR = avgRange(k, scIndex - 20, scIndex - 1);
 
   if (avgR > 0) {
-    const highRange = range(sc) > avgR * 1.5; // slightly lenient
+    const highRange = range(sc) > avgR * 1.5; 
     const bodyPct = bodyPctOfRange(sc);
-    const weakClose = bodyPct > 0.1 && bodyPct < 0.5; // more lenient
+    const weakClose = bodyPct > 0.15 && bodyPct < 0.4; 
 
     if (isGreen(sc) && highRange && weakClose) {
   shortCovering = {
@@ -5305,7 +5305,7 @@ if (maxRedIndex !== -1 && nearestSupportZone) {
   if (avgR > 0) {
     const highRange = range(lc) > avgR * 1.5;
     const bodyPct = bodyPctOfRange(lc);
-    const weakClose = bodyPct > 0.1 && bodyPct < 0.5;
+    const weakClose = bodyPct > 0.15 && bodyPct < 0.4;
 
     if (isRed(lc) && highRange && weakClose) {
   longCovering = {
