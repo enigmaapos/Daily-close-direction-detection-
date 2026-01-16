@@ -5175,15 +5175,6 @@ if (marketPhase === "CONTINUATION DOWN") {
 
 prob = Math.max(40, Math.min(prob, 95));
 
-prob = applyHTFProbabilityAdjustment({
-  probability: prob,
-  aiVerdict,
-  tradeSide: aiVerdict.tradeSide,
-  htfTrend: htf.htfTrend,
-  htfRSIState: htf.htfRSIState,
-  htfStructure: htf.htfStructure
-});
-
 
   /* ================= SCAN CONFIG ================= */
 
@@ -5364,7 +5355,14 @@ moveStrength,
 });
 
 
-  
+  prob = applyHTFProbabilityAdjustment({
+  probability: prob,
+  aiVerdict,
+  tradeSide: aiVerdict.tradeSide,
+  htfTrend: htf.htfTrend,
+  htfRSIState: htf.htfRSIState,
+  htfStructure: htf.htfStructure
+});
 
 
 
