@@ -4166,21 +4166,16 @@ function getSetupGradeClass(score) {
 }
 
 
- /**
+          /**
  * Detects trend exhaustion using RSI, EMA, and volume.
  * Returns an object with type, strength, and explanation.
  */
 function detectTrendExhaustion({ k, v, rsiArr, ema200Arr, lookback = 96 }) {
   if (!Array.isArray(k) || !Array.isArray(v) || !Array.isArray(rsiArr) || !Array.isArray(ema200Arr)) {
-    console.warn("❌ [Exhaustion] Invalid inputs");
     return null;
   }
 
   const startIdx = Math.max(0, k.length - lookback);
-
-  if (DEBUG_EXHAUSTION) {
-    console.log(`🔍 [Exhaustion] Scanning last ${lookback} candles`);
-  }
 
   for (let idx = k.length - 1; idx >= startIdx; idx--) {
     const candle = k[idx];
@@ -4194,30 +4189,17 @@ function detectTrendExhaustion({ k, v, rsiArr, ema200Arr, lookback = 96 }) {
     if (!Number.isFinite(close) || !Number.isFinite(open)) continue;
 
     const range = Math.abs(high - low);
-    const bodyPct = range > 0 ? Math.abs(close - open) / range : null;
-
-    const latestRSI =
-      Number.isFinite(rsiArr[idx]) ? rsiArr[idx] : null;
-
-    const latestEMA200 =
-      Number.isFinite(ema200Arr[idx]) && ema200Arr[idx] !== 0
-        ? ema200Arr[idx]
+    const candleRange = range > 0 ? range : null;
+    const bodyPct =
+      candleRange != null
+        ? Math.abs(close - open) / candleRange
         : null;
 
-    const latestVol =
-      Number.isFinite(v[idx]) ? v[idx] : null;
-
-    if (DEBUG_EXHAUSTION) {
-      console.log(
-        `🕯️ [Candle ${idx}]`,
-        {
-          close,
-          RSI: latestRSI,
-          EMA200: latestEMA200,
-          volume: latestVol
-        }
-      );
-    }
+    const latestRSI    = Number.isFinite(rsiArr[idx]) ? rsiArr[idx] : null;
+    const latestEMA200 = Number.isFinite(ema200Arr[idx]) && ema200Arr[idx] !== 0
+      ? ema200Arr[idx]
+      : null;
+    const latestVol    = Number.isFinite(v[idx]) ? v[idx] : null;
 
     // --- RSI Exhaustion ---
     let rsiExhaustion = null;
@@ -4226,7 +4208,7 @@ function detectTrendExhaustion({ k, v, rsiArr, ema200Arr, lookback = 96 }) {
       else if (latestRSI <= 30) rsiExhaustion = "BULLISH_EXHAUSTION";
     }
 
-    // --- EMA Distance Exhaustion ---
+    // --- EMA Distance Exhaustion (FIXED) ---
     let emaExhaustion = null;
     let distPct = null;
 
@@ -4250,13 +4232,6 @@ function detectTrendExhaustion({ k, v, rsiArr, ema200Arr, lookback = 96 }) {
       else if (latestVol > avgVol * 3) volExhaustion = "TREND_CLIMAX_VOLUME";
     }
 
-    if (DEBUG_EXHAUSTION && (rsiExhaustion || emaExhaustion || volExhaustion)) {
-      console.log(
-        `⚠️ [Signals @ ${idx}]`,
-        { rsiExhaustion, emaExhaustion, volExhaustion, distPct }
-      );
-    }
-
     // --- Combine signals ---
     let type = null;
     if (rsiExhaustion === "BEARISH_EXHAUSTION" || emaExhaustion === "BEARISH_EXHAUSTION") {
@@ -4274,13 +4249,6 @@ function detectTrendExhaustion({ k, v, rsiArr, ema200Arr, lookback = 96 }) {
     else if (signalsCount === 1) strength = "MEDIUM";
 
     if (type) {
-      if (DEBUG_EXHAUSTION) {
-        console.log(
-          `✅ [EXHAUSTION CONFIRMED @ ${idx}]`,
-          { type, strength }
-        );
-      }
-
       return {
         type,
         strength,
@@ -4299,12 +4267,32 @@ function detectTrendExhaustion({ k, v, rsiArr, ema200Arr, lookback = 96 }) {
     }
   }
 
-  if (DEBUG_EXHAUSTION) {
-    console.log("ℹ️ [Exhaustion] No exhaustion detected");
+  console.log(
+  `[TREND EXHAUSTION]`,
+  {
+    type,
+    strength,
+    candleIndex: idx,
+    RSI: latestRSI != null ? latestRSI.toFixed(2) : "N/A",
+    EMA200: latestEMA200 != null ? latestEMA200.toFixed(2) : "N/A",
+    EMA200_Dist: distPct != null ? distPct.toFixed(2) + "%" : "N/A",
+    BodyPct: bodyPct != null && Number.isFinite(bodyPct)
+      ? (bodyPct * 100).toFixed(1) + "%"
+      : "N/A",
+    Volume: Number.isFinite(latestVol)
+      ? formatVolume(latestVol)
+      : "N/A",
+    Signals: {
+      rsiExhaustion,
+      emaExhaustion,
+      volExhaustion
+    }
   }
+);
 
   return null;
-    }
+}
+  
 
   
 
