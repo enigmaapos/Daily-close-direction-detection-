@@ -565,6 +565,13 @@ button.secondary{
   <option value="support">Support</option>
   <option value="resistance">Resistance</option>
     </select>
+
+    <select id="filterLiquidation">
+  <option value="all">All</option>
+  <option value="short">Short Covering</option>
+  <option value="long">Long Covering</option>
+  <option value="none">No Covering</option>
+    </select>
   </div>
 
   <!-- ===== RSI CONTEXT ===== -->
@@ -5585,6 +5592,7 @@ const r15 = document.getElementById("filterRsi15Context")?.value || "all";
 const di  = document.getElementById("filterDivergenceIntent")?.value || "all";
   const pv = filterPV.value;
   const mt = document.getElementById("filterMainTrend")?.value || "all";
+  const lc = document.getElementById("filterLiquidation")?.value || "all";
   
 
   
@@ -5699,6 +5707,15 @@ if (di !== "all") {
   if (divIntent !== di) ok = false;
 }
 
+    /* ===== LIQUIDATION FILTER ===== */
+if (lc !== "all") {
+  const le = c.dataset.liquidation || "none";
+
+  if (lc === "short" && le !== "SHORT_COVERING") ok = false;
+  if (lc === "long"  && le !== "LONG_COVERING")  ok = false;
+  if (lc === "none"  && le !== "none")           ok = false;
+}
+
     c.style.display = ok ? "" : "none";
   });
     }
@@ -5735,6 +5752,7 @@ if (di !== "all") {
            document.getElementById("filterDivergenceIntent").value = "all";
            filterPV.value = "all";
            document.getElementById("filterMainTrend").value = "all";
+           document.getElementById("filterLiquidation").value = "all";
   
            
 
@@ -6029,6 +6047,8 @@ card.dataset.trapRisk = d.trapRisk || "LOW";
 card.dataset.pvclass = d.pvValid
   ? (d.pvSignalType.includes("EFFICIENCY") ? "efficiency" : "exhaustion")
   : "none";
+
+    card.dataset.liquidation = d.liquidationEvent || "none";
         
 
 
@@ -7456,7 +7476,8 @@ async function runSearch(){
     "filterDivergence",
     "filterDivergenceIntent",
     "filterPV",
-    "filterMainTrend"
+    "filterMainTrend",
+    "filterLiquidation"
 ].forEach(id=>{
   document.getElementById(id)?.addEventListener("change", applyFilters);
 });
