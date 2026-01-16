@@ -2269,7 +2269,7 @@ if (d.longCovering) {
 
       /* ================= TIER WRAPPER ================= */
 function withTier(verdict, reason, d) {
-  const t = AI_VERDICT_TIERS[verdict] || {
+  const tierInfo = AI_VERDICT_TIERS[verdict] || {
     tier: 6,
     label: "TIER 6 — UNKNOWN",
     verdictClass: "verdict-avoid"
