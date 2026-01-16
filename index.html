@@ -5262,30 +5262,37 @@ const structureIntent = classifyStructureIntent({
 
 
 
-  /* ================= SHORT COVERING ================= */
+/* ================= SHORT COVERING ================= */
 
 let shortCovering = null;
 
-if (
-  maxGreenIndex !== -1 &&
-  structureIntent === "REJECTION" &&
-  nearestResistanceZone
-) {
-  const scIndex = Math.min(maxGreenIndex, k.length - 1);
+if (maxGreenIndex !== -1 && nearestResistanceZone) {
+  // Check the candle **after** the max green vol
+  const scIndex = Math.min(maxGreenIndex + 1, k.length - 1);
   const sc = k[scIndex];
 
   const avgR = avgRange(k, scIndex - 20, scIndex - 1);
 
   if (avgR > 0) {
-    const highRange = range(sc) > avgR * 0.80;
+    const highRange = range(sc) > avgR * 0.8; // slightly lenient
     const bodyPct = bodyPctOfRange(sc);
-    const weakClose = bodyPct > 0.15 && bodyPct < 0.4;
+    const weakClose = bodyPct > 0.1 && bodyPct < 0.5; // more lenient
+
+    console.log("SHORT COVERING DEBUG", {
+      scIndex,
+      range: range(sc),
+      avgR,
+      highRange,
+      bodyPct,
+      weakClose,
+      isGreen: isGreen(sc)
+    });
 
     if (isGreen(sc) && highRange && weakClose) {
       shortCovering = {
         type: "SHORT_COVERING",
         candleIndex: scIndex,
-        context: "STRUCTURE_REJECTION",
+        context: "STRUCTURE_REJECTION_OR_RESISTANCE",
         strength: "HIGH_VOL_HIGH_RANGE"
       };
     }
@@ -5296,12 +5303,8 @@ if (
 
 let longCovering = null;
 
-if (
-  maxRedIndex !== -1 &&
-  structureIntent === "REJECTION" &&
-  nearestSupportZone
-) {
-  const lcIndex = Math.min(maxRedIndex, k.length - 1);
+if (maxRedIndex !== -1 && nearestSupportZone) {
+  const lcIndex = Math.min(maxRedIndex + 1, k.length - 1);
   const lc = k[lcIndex];
 
   const avgR = avgRange(k, lcIndex - 20, lcIndex - 1);
@@ -5309,31 +5312,30 @@ if (
   if (avgR > 0) {
     const highRange = range(lc) > avgR * 0.8;
     const bodyPct = bodyPctOfRange(lc);
-    const weakClose = bodyPct > 0.15 && bodyPct < 0.4;
+    const weakClose = bodyPct > 0.1 && bodyPct < 0.5;
+
+    console.log("LONG COVERING DEBUG", {
+      lcIndex,
+      range: range(lc),
+      avgR,
+      highRange,
+      bodyPct,
+      weakClose,
+      isRed: isRed(lc)
+    });
 
     if (isRed(lc) && highRange && weakClose) {
       longCovering = {
         type: "LONG_COVERING",
         candleIndex: lcIndex,
-        context: "STRUCTURE_REJECTION",
+        context: "STRUCTURE_REJECTION_OR_SUPPORT",
         strength: "HIGH_VOL_HIGH_RANGE"
       };
     }
   }
 }
 
-  console.log("BTRUSDT debug:", {
-  maxGreenIndex,
-  structureIntent,
-  nearestResistanceZone,
-  scIndex,
-  avgR,
-  currentRange: range(sc),
-  highRange: range(sc) > avgR * 1.5,
-  bodyPct: bodyPctOfRange(sc),
-  weakClose: bodyPctOfRange(sc) > 0.15 && bodyPctOfRange(sc) < 0.4,
-  isGreen: isGreen(sc)
-});
+  
 
 
   const aiVerdict = getAIFinalVerdict({
