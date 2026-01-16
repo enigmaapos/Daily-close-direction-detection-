@@ -5322,11 +5322,18 @@ if (
   }
 }
 
-  console.log(
-    sym,
-    "COVERING DETECTED",
-    shortCovering || longCovering
-  );
+  console.log("BTRUSDT debug:", {
+  maxGreenIndex,
+  structureIntent,
+  nearestResistanceZone,
+  scIndex,
+  avgR,
+  currentRange: range(sc),
+  highRange: range(sc) > avgR * 1.5,
+  bodyPct: bodyPctOfRange(sc),
+  weakClose: bodyPctOfRange(sc) > 0.15 && bodyPctOfRange(sc) < 0.4,
+  isGreen: isGreen(sc)
+});
 
 
   const aiVerdict = getAIFinalVerdict({
