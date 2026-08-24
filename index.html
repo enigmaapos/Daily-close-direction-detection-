@@ -4185,6 +4185,16 @@ function getLongTermTargets(item){
   }
 }
 
+/* ---------- AUTHORITATIVE CORRECTION CONFIRMATION ---------- */
+// IMPORTANT: never infer confirmation from a label containing the word "CONFIRMED".
+// "NOT CONFIRMED" also contains that word. The only authoritative confirmation
+// remains: price below the 15m EMA200, represented by a negative EMA200 stretch.
+function isSignificantCorrectionConfirmed(item){
+  const cg=item?.correctionGuide||{};
+  const stretch=Number(cg.ema200Stretch15);
+  return Number.isFinite(stretch) && stretch < 0;
+}
+
 /* ---------- Short-term recommendation generator ---------- */
 function getShortTermRecommendation(item){
   const r=item||{};
@@ -4194,7 +4204,7 @@ function getShortTermRecommendation(item){
   const phase=String(r.phase?.phase||r.phase||'Unknown');
   const close=Number(r.closeNow||0);
   const cg=r.correctionGuide||{};
-  const confirmed=String(cg.label||'').toUpperCase().includes('CONFIRMED');
+  const confirmed=isSignificantCorrectionConfirmed(r);
   const targets=r.longTargets||getLongTermTargets(r);
 
   function recentLowFrom(arr, lookback){
@@ -4256,7 +4266,7 @@ function getFinalRecommendation(item){
   const phaseLc=phase.toLowerCase();
   const cg=r.correctionGuide||{};
   const cgLabel=String(cg.label||'').toUpperCase();
-  const confirmed=cgLabel.includes('CONFIRMED');
+  const confirmed=isSignificantCorrectionConfirmed(r);
   const developing=cgLabel.includes('DEVELOPING');
   const rtn=!!r.returnToNormal?.isReturn;
   const isAccumPhase=/accumulation|re-accumulation/.test(phaseLc);
@@ -4781,7 +4791,7 @@ function renderCards(results){
           Correction Status: <strong>${cg.label||'🟢 NOT CONFIRMED / PRE-CORRECTION'}</strong> (${cg.confidence||0}%)<br>
           15m EMA200 stretch: ${ema200==null?'n/a':Number(ema200).toFixed(2)+'%'}<br>
           Funding: ${Number(r.fundingRate||0).toFixed(6)} • Peak drawdown: ${Number(r.dropPctFromPeak||0).toFixed(1)}%<br>
-          <span class="small" style="color:var(--muted)">Legacy diagnostic state: ${rec.state} • ${rec.rationale}</span>
+          <span class="small" style="color:var(--muted)">Decision state: ${confirmed ? '🔴 SIGNIFICANT CORRECTION CONFIRMED' : '🟢 SIGNIFICANT CORRECTION NOT CONFIRMED'} • ${rec.rationale}</span>
         </div>
           </div>
         </details>
