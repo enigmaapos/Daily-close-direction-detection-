@@ -1147,12 +1147,26 @@ function calculateTopDetectionStack(item){
 }
 
 function renderTopDetectionStack(r){
-  const t=r?.topDetection || calculateTopDetectionStack(r||{});
+  // IMPORTANT: do not trust a stale/cached topDetection.level.
+  // The authoritative post-top override is re-evaluated at render time
+  // from the current correctionGuide. This prevents old cached analyzer
+  // results from displaying "TREND HEALTHY" after EMA200 correction
+  // has already been confirmed.
+  const t={...(r?.topDetection || calculateTopDetectionStack(r||{}))};
   const c=t.components||{};
+  const renderCorrectionConfirmed =
+    Number(r?.correctionGuide?.ema200Stretch15) < 0;
+
+  // 0–24 + confirmed correction => POST-TOP / CORRECTION PHASE.
+  // This renderer-level guard intentionally overrides stale topDetection.level.
+  if(renderCorrectionConfirmed && Number(t.score||0) < 25){
+    t.level='🔵 POST-TOP / CORRECTION PHASE';
+  }
+
   const pct=(v)=>`${Math.round(Number(v)||0)}%`;
   const bar=(label,v)=>`<div class="topDetRow"><span>${label}</span><div class="topDetBar"><i style="width:${Math.max(0,Math.min(100,Number(v)||0))}%"></i></div><b>${pct(v)}</b></div>`;
   const postTop=String(t.level||'').includes('POST-TOP');
-  const tone=postTop?'info':t.score>=80?'danger':t.score>=65?'danger':t.score>=45?'warn':t.score>=25?'watch':'good';
+  const tone=postTop?'info':t.score>=70?'danger':t.score>=45?'warn':t.score>=25?'watch':'good';
   const postTopNote=postTop ? '<div class="topDetPostNote">Correction is already confirmed by the 15m EMA200 layer. Top-detection signals are now context only; this is a post-top/correction state, not a new top call.</div>' : '';
   return `<div class="topDetPanel">${postTopNote}
     <div class="topDetHeader"><span>🎯 TOP-DETECTION STACK</span><strong class="topDetScore ${tone}">${t.score}/100</strong></div>
@@ -5574,6 +5588,7 @@ if('Notification' in window){ try{ Notification.requestPermission().catch(()=>{}
 .professional-read .label{font-weight:700}
 
 /* v9 TOP-DETECTION STACK */
+/* RENDERER STALE-RESULT GUARD: re-check EMA200 correction at render time */
 .topDetPanel{margin-top:12px;padding:14px;border:1px solid rgba(255,255,255,.10);border-radius:14px;background:rgba(255,255,255,.035)}
 .topDetHeader{display:flex;justify-content:space-between;align-items:center;gap:10px;font-weight:800}
 .topDetScore{font-size:18px;padding:4px 9px;border-radius:9px}
