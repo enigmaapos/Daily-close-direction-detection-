@@ -690,8 +690,10 @@ table{min-width:0!important;width:100%}.tableScroll{width:100%;overflow-x:auto;-
       <div class="dashboardStatusItem">
         <div class="dashboardStatusLabel">Live Updates</div>
         <div class="dashboardStatusValue">
-          <button id="singleLiveBtn" class="alt" title="Pause/resume automatic updates">⏸ Live Updates</button>
+          <button id="singleLiveBtn" class="alt" title="Pause/resume Single Analyze automatic updates">⏸ Live Updates</button>
           <span id="singleLiveStatus" style="display:block;margin-top:4px;color:var(--muted);font-size:10px">Live: ON • 60s</span>
+          <button id="favoritesLiveBtn" class="alt" title="Pause/resume Favorites automatic updates" style="margin-top:6px">⏸ Favorites Live</button>
+          <span id="favoritesLiveStatus" style="display:block;margin-top:4px;color:var(--muted);font-size:10px">Favorites Live: ON • 60s</span>
         </div>
       </div>
     </div>
@@ -2178,9 +2180,12 @@ function getActiveBaseResults(){
   return [];
 }
 
-// Favorites no longer has an independent refresh timer.
-// Keep this cleanup hook for compatibility with mode-switch code.
-function clearFavoritesRefreshTimer(){}
+function clearFavoritesRefreshTimer(){
+  if(favoritesLiveTimer){
+    clearTimeout(favoritesLiveTimer);
+    favoritesLiveTimer = null;
+  }
+}
 
 function setActiveMode(mode, scannerMode){
   // If leaving Market Scan for Single/Favorites, preserve the remaining auto-refresh time.
@@ -2263,7 +2268,11 @@ let singleViewLocked = false;
 let singleLiveTimer = null;
 let singleLiveUpdating = false;
 let singleLiveEnabled = true;
-const SINGLE_LIVE_INTERVAL_MS = 60000; // refresh the 10-coin watchlist every 60s
+const SINGLE_LIVE_INTERVAL_MS = 60000;
+const FAVORITES_LIVE_INTERVAL_MS = 60000;
+let favoritesLiveEnabled = true;
+let favoritesLiveTimer = null;
+let favoritesLiveUpdating = false; // refresh the 10-coin watchlist every 60s
 
 let showFavoritesOnly = false;
 const closedSymbols = new Set();
@@ -3713,6 +3722,92 @@ function updateFavoritesButton(){
   }
 }
 
+function updateFavoritesLiveStatus(extra=''){
+  const btn = document.getElementById('favoritesLiveBtn');
+  const st = document.getElementById('favoritesLiveStatus');
+  if(btn) btn.innerText = favoritesLiveEnabled ? '⏸ Favorites Live' : '▶ Resume Favorites';
+  if(st){
+    if(!favoritesLiveEnabled) st.innerText = 'Favorites Live: PAUSED';
+    else if(favoritesLiveUpdating) st.innerText = 'Favorites Live: updating…';
+    else st.innerText = `Favorites Live: ON • ${Math.round(FAVORITES_LIVE_INTERVAL_MS/1000)}s${extra ? ' • '+extra : ''}`;
+  }
+}
+
+function scheduleFavoritesLiveUpdate(){
+  clearFavoritesRefreshTimer();
+  if(!favoritesLiveEnabled || !favoriteSymbols.size) return;
+  favoritesLiveTimer = setTimeout(refreshFavoritesLive, FAVORITES_LIVE_INTERVAL_MS);
+}
+
+async function refreshFavoritesLive(){
+  clearFavoritesRefreshTimer();
+  if(!favoritesLiveEnabled || !favoriteSymbols.size || favoritesLiveUpdating || running){
+    scheduleFavoritesLiveUpdate();
+    return;
+  }
+
+  const session = modeSession;
+  const symbols = [...favoriteSymbols];
+  favoritesLiveUpdating = true;
+  updateFavoritesLiveStatus();
+
+  try{
+    const refreshed = [];
+    for(const sym of symbols){
+      if(session !== modeSession || !favoritesLiveEnabled) break;
+      try{
+        // Fresh favorite analysis. This is owned by Favorites Live, not by opening the view.
+        const fresh = await analyzeSymbol(sym, { allowIfNotRunning:true, useCache:false });
+        if(fresh && fresh.symbol){
+          refreshed.push(fresh);
+        }
+      }catch(e){
+        console.warn('Favorites live refresh failed for', sym, e);
+      }
+    }
+
+    if(session === modeSession && refreshed.length){
+      saveFavoriteResultSnapshots(refreshed);
+
+      const bySymbol = new Map(
+        refreshed.map(r => [String(r.symbol).toUpperCase(), r])
+      );
+
+      // Update the favorite view only. Do not mutate Market Scan or Single Analyze datasets.
+      favoriteViewResults = symbols
+        .map(sym => bySymbol.get(String(sym).toUpperCase()) || favoriteViewResults.find(
+          r => String(r?.symbol || '').toUpperCase() === String(sym).toUpperCase()
+        ))
+        .filter(Boolean);
+
+      if(activeViewMode === 'favorite'){
+        renderActiveView();
+      }
+
+      updateFavoritesLiveStatus('updated '+new Date().toLocaleTimeString());
+    }
+  }finally{
+    favoritesLiveUpdating = false;
+    updateFavoritesLiveStatus();
+    scheduleFavoritesLiveUpdate();
+  }
+}
+
+const favoritesLiveBtn = document.getElementById('favoritesLiveBtn');
+if(favoritesLiveBtn){
+  favoritesLiveBtn.addEventListener('click', ()=>{
+    favoritesLiveEnabled = !favoritesLiveEnabled;
+    if(favoritesLiveEnabled){
+      updateFavoritesLiveStatus();
+      scheduleFavoritesLiveUpdate();
+      if(favoriteSymbols.size) refreshFavoritesLive();
+    }else{
+      clearFavoritesRefreshTimer();
+      updateFavoritesLiveStatus();
+    }
+  });
+}
+
 function renderActiveView(){
   const base = getActiveBaseResults();
   window.lastScanResults = base.slice();
@@ -4867,6 +4962,8 @@ function pauseMarketAutoRefresh(){
       favoriteViewResults = restoreFavoriteResultSnapshots();
       renderActiveView();
       updateFavoritesButton();
+      updateFavoritesLiveStatus();
+      scheduleFavoritesLiveUpdate();
       return;
     }
 
@@ -5060,6 +5157,8 @@ el.favoritesBtn.addEventListener('click', () => {
     }
 
     renderActiveView();
+    updateFavoritesLiveStatus();
+    scheduleFavoritesLiveUpdate();
     if(session === modeSession) persistActiveMode();
   }else{
     // Return to the underlying mode. No favorite-specific data refresh occurs.
