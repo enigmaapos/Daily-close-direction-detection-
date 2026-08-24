@@ -1080,9 +1080,31 @@ function calculateTopDetectionStack(item){
     };
 
     // Weighted stack. Distribution/structure are deliberately stronger than raw RSI.
-    const weights={blowoff:.20,momentumExhaustion:.12,rsiDivergence:.15,distribution:.16,failedBreakout:.12,lowerHighCHoCH:.10,volumeExhaustion:.07,parabolicExtension:.08};
+    const weights={blowoff:.18,momentumExhaustion:.12,rsiDivergence:.12,distribution:.18,failedBreakout:.10,lowerHighCHoCH:.14,volumeExhaustion:.06,parabolicExtension:.10};
     let score=0; for(const k2 of Object.keys(weights)) score += components[k2]*weights[k2];
-    score=clamp(Math.round(score));
+
+    // Context alignment prevents the aggregate score from understating a
+    // genuine topping setup when several moderate structural warnings agree.
+    const phaseText=String(item.phase?.phase || item.phase || item.structurePhase || '').toLowerCase();
+    const distributionPhase=/distribution|breakdown/.test(phaseText);
+    const weakSupport=Number(item.accumCombined?.confidence ?? item.accum ?? 100) < 50;
+    const overextended=(emaStretch>=20 || ema20Stretch>=12);
+    const overheated=rsiNow>=70;
+    let contextBoost=0;
+    if(distributionPhase) contextBoost += 8;
+    if(lowerHighSignal) contextBoost += 7;
+    if(weakSupport) contextBoost += 5;
+    if(overextended) contextBoost += 6;
+    if(overheated) contextBoost += 4;
+    score=clamp(Math.round(score + contextBoost));
+
+    // A structural distribution/breakdown setup with weak support and/or
+    // significant extension must not be labelled "Trend Healthy" merely
+    // because no single climax detector fired.
+    const alignedRisk=(distributionPhase && (lowerHighSignal || overextended || weakSupport)) ||
+                      (lowerHighSignal && overextended && overheated);
+    if(alignedRisk) score=Math.max(score,35);
+    if(distributionPhase && lowerHighSignal && (overextended || weakSupport)) score=Math.max(score,42);
 
     let level='🟢 TREND HEALTHY';
     if(score>=80) level='💥 CLIMAX / TOP STRUCTURE';
@@ -1099,6 +1121,8 @@ function calculateTopDetectionStack(item){
     if(lowerHighSignal) reasons.push('Lower-high / structure weakening');
     if(components.volumeExhaustion>=55) reasons.push('Volume participation weakening near highs');
     if(parabolic) reasons.push(`Parabolic EMA extension (${emaStretch.toFixed(1)}%)`);
+    if(distributionPhase) reasons.push('Market phase is Distribution / Breakdown');
+    if(weakSupport) reasons.push(`Weak accumulation support (${Math.round(Number(item.accumCombined?.confidence ?? item.accum ?? 0))}%)`);
     if(!reasons.length) reasons.push('No strong top-development alignment');
 
     return {score,level,components,reasons,meta:{rsiNow, rsiPrev, priceHH, rsiLH, volSpike, volumeFalling, wickRatio, emaStretch, ema20Stretch, recentHigh, priorRangeHigh, failedBreakout, lowerHighSignal}};
@@ -1127,7 +1151,7 @@ function renderTopDetectionStack(r){
       ${bar('🚀 Parabolic Extension',c.parabolicExtension)}
     </div>
     <div class="topDetReasons"><strong>Evidence:</strong> ${t.reasons.map(x=>mspEscape(x)).join(' • ')}</div>
-    <div class="topDetNote">Top risk is an early-warning/formation detector. It does not override the scanner's separate correction-confirmation layer.</div>
+    <div class="topDetNote">Top risk is an early-warning/formation detector. It does not confirm a correction and never overrides the scanner's separate 15m EMA200 confirmation layer.</div>
   </div>`;
 }
 
