@@ -559,7 +559,8 @@ table{min-width:0!important;width:100%}.tableScroll{width:100%;overflow-x:auto;-
             <option value="accum">Accum confidence</option>
             <option value="preCrash">Exhaustion Warning</option>
             <option value="rsi4h">RSI (4H)</option>
-            <option value="ema70DistPct">EMA stretch %</option>
+            <option value="ema70DistPct">EMA70 stretch %</option>
+            <option value="ema200Stretch15">15m EMA200 stretch %</option>
             <option value="last">Last price</option>
             <option value="symbol">Symbol</option>
             <option value="volSpike">Vol Spike</option>
@@ -3902,6 +3903,15 @@ function getValueForKey(r, key) {
     }
     case 'rsi4h': return getNumeric(r.rsi4h, 0);
     case 'ema70DistPct': return Math.abs(getNumeric(r.ema70DistPct, 0));
+    // Signed 15m EMA200 stretch: negative = price below EMA200 (confirmed correction),
+    // positive = price above EMA200. Do NOT use Math.abs() here because direction matters.
+    case 'ema200Stretch15': {
+      const cg = r.correctionGuide || {};
+      const direct = r.ema200Stretch15;
+      const guide = cg.ema200Stretch15;
+      const n = Number(direct ?? guide);
+      return Number.isFinite(n) ? n : -Infinity;
+    }
     case 'last': return getNumeric(r.closeNow, 0);
     case 'symbol': return getText(r.symbol);
     case 'volSpike': return getNumeric(r.volSpike4, 0);
