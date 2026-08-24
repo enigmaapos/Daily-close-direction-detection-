@@ -6,7 +6,7 @@
 
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Blowoff + Multi-Detector Top Scanner — v9 Safe Batch Live</title>
+<title>Blowoff + Multi-Detector Top Scanner — v9 Safe Batch Live • Post-Top State</title>
 <style>
   :root{
     --bg:#07101a;
@@ -1106,16 +1106,19 @@ function calculateTopDetectionStack(item){
     if(alignedRisk) score=Math.max(score,35);
     if(distributionPhase && lowerHighSignal && (overextended || weakSupport)) score=Math.max(score,42);
 
-    // Once the authoritative 15m EMA200 correction confirmation is active,
-    // a low top score must not be labelled "TREND HEALTHY". The market
-    // has already moved beyond the top-detection phase.
+    // Top Stack classification is independent from the correction score,
+    // except for the authoritative post-top override:
+    // 0–24 + confirmed correction => POST-TOP / CORRECTION PHASE
+    // 0–24 + no correction       => TREND HEALTHY
+    // 25–44                      => TOP RISK INCREASING
+    // 45–69                      => TOPPING DEVELOPING
+    // 70+                        => HIGH TOP RISK
     const ema200CorrectionConfirmed = Number(item.correctionGuide?.ema200Stretch15) < 0;
     let level;
-    if(ema200CorrectionConfirmed) level='🔵 POST-TOP / CORRECTION PHASE';
-    else if(score>=80) level='💥 CLIMAX / TOP STRUCTURE';
-    else if(score>=65) level='🔴 HIGH TOP RISK';
+    if(score>=70) level='🔴 HIGH TOP RISK';
     else if(score>=45) level='🟠 TOPPING DEVELOPING';
     else if(score>=25) level='🟡 TOP RISK INCREASING';
+    else if(ema200CorrectionConfirmed) level='🔵 POST-TOP / CORRECTION PHASE';
     else level='🟢 TREND HEALTHY';
 
     const reasons=[];
@@ -4759,7 +4762,7 @@ function renderCards(results){
           Last: ${r.closeNow}<br>
           RSI4H: ${rsi4h.toFixed(1)} • Vol×${Number(r.volSpike4||0).toFixed(2)} • Wick: ${wick.toFixed(2)}<br>
           EMA70 Extension: ${ema70.toFixed(2)}% • 15m EMA200 Stretch: ${ema200==null?'n/a':Number(ema200).toFixed(2)+'%'} • Funding: ${Number(r.fundingRate||0).toFixed(6)}<br>
-          <small style="color:#cfe8ff">${renderPhaseComparison(r)}${renderTopDetectionStack(r)}${renderMarketStructurePsychology(r)}<div style="margin-top:7px">Blowoff: <strong>${r.score??0}/8</strong> • Top Stack: <strong>${r.topDetection?.score??0}/100</strong> • <strong>${r.expl?.label||'None'}</strong></div></small>
+          <small style="color:#cfe8ff">${renderPhaseComparison(r)}${renderMarketStructurePsychology(r)}<div style="margin-top:7px">Blowoff: <strong>${r.score??0}/8</strong> • Top Stack: <strong>${r.topDetection?.score??0}/100</strong> • <strong>${r.expl?.label||'None'}</strong></div></small>
         </div>
 
         <div class="proRead" style="border-left:4px solid ${state.tone==='red'?'#ff5c5c':state.tone==='orange'?'#ff9f43':state.tone==='yellow'?'#ffd966':state.tone==='green'?'#2dd4bf':'#7edcff'};background:rgba(255,255,255,.025);padding:12px;border-radius:10px;margin-top:0">
@@ -5574,9 +5577,9 @@ if('Notification' in window){ try{ Notification.requestPermission().catch(()=>{}
 .topDetPanel{margin-top:12px;padding:14px;border:1px solid rgba(255,255,255,.10);border-radius:14px;background:rgba(255,255,255,.035)}
 .topDetHeader{display:flex;justify-content:space-between;align-items:center;gap:10px;font-weight:800}
 .topDetScore{font-size:18px;padding:4px 9px;border-radius:9px}
-.topDetScore.good{background:rgba(46,204,113,.14);color:#8ff0b0}.topDetScore.watch{background:rgba(241,196,15,.14);color:#ffe58a}.topDetScore.warn{background:rgba(243,156,18,.15);color:#ffc27a}.topDetScore.danger{background:rgba(231,76,60,.15);color:#ff9b8e}
-.topDetLevel{margin:9px 0 11px;padding:8px 10px;border-radius:9px;font-weight:800}.topDetLevel.good{background:rgba(46,204,113,.08)}.topDetLevel.watch{background:rgba(241,196,15,.08)}.topDetLevel.warn{background:rgba(243,156,18,.08)}.topDetLevel.danger{background:rgba(231,76,60,.08)}
-.topDetGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px 16px}.topDetRow{display:grid;grid-template-columns:145px 1fr 38px;gap:7px;align-items:center;font-size:12px}.topDetBar{height:6px;background:rgba(255,255,255,.09);border-radius:99px;overflow:hidden}.topDetBar i{display:block;height:100%;background:currentColor;border-radius:99px}.topDetRow b{text-align:right}.topDetReasons{margin-top:12px;font-size:12px;line-height:1.55;color:var(--muted)}.topDetNote{margin-top:8px;font-size:11px;color:var(--muted)}
+.topDetScore.good{background:rgba(46,204,113,.14);color:#8ff0b0}.topDetScore.watch{background:rgba(241,196,15,.14);color:#ffe58a}.topDetScore.warn{background:rgba(243,156,18,.15);color:#ffc27a}.topDetScore.danger{background:rgba(231,76,60,.15);color:#ff9b8e}.topDetScore.info{background:rgba(126,220,255,.14);color:#bdeeff}
+.topDetLevel{margin:9px 0 11px;padding:8px 10px;border-radius:9px;font-weight:800}.topDetLevel.good{background:rgba(46,204,113,.08)}.topDetLevel.watch{background:rgba(241,196,15,.08)}.topDetLevel.warn{background:rgba(243,156,18,.08)}.topDetLevel.danger{background:rgba(231,76,60,.08)}.topDetLevel.info{background:rgba(126,220,255,.08);color:#bdeeff}
+.topDetGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px 16px}.topDetRow{display:grid;grid-template-columns:145px 1fr 38px;gap:7px;align-items:center;font-size:12px}.topDetBar{height:6px;background:rgba(255,255,255,.09);border-radius:99px;overflow:hidden}.topDetBar i{display:block;height:100%;background:currentColor;border-radius:99px}.topDetRow b{text-align:right}.topDetPostNote{margin-bottom:10px;padding:8px 10px;border-left:3px solid #7edcff;border-radius:7px;background:rgba(126,220,255,.07);color:#cfeeff;font-size:11px;line-height:1.45;font-weight:700}.topDetReasons{margin-top:12px;font-size:12px;line-height:1.55;color:var(--muted)}.topDetNote{margin-top:8px;font-size:11px;color:var(--muted)}
 @media(max-width:700px){.topDetGrid{grid-template-columns:1fr}.topDetRow{grid-template-columns:132px 1fr 34px}}
 </style>
 <script>
