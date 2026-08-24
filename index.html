@@ -533,9 +533,9 @@ table{min-width:0!important;width:100%}.tableScroll{width:100%;overflow-x:auto;-
           <div class="dashboardHint">How many symbols enter the scan.</div>
         </div>
         <div class="controlItem">
-          <label class="controlLabel">Request Delay — ms</label>
+          <label class="controlLabel">Batch UI Yield — ms</label>
           <input id="delay" type="number" value="700" min="50" max="2000"/>
-          <div class="dashboardHint">Controls API request pacing.</div>
+          <div class="dashboardHint">Small pause after each completed batch; Binance pacing is controlled centrally for safety.</div>
         </div>
         <div class="controlItem">
           <label class="controlLabel">Refresh Interval — sec</label>
@@ -1344,52 +1344,40 @@ async function scanAllPerpsForBelow50({minDelay=FULL_SCAN_MIN_DELAY_MS, batchSiz
     }
   }
 
-  // sequential scan (safe). We keep this sequential to avoid bursts that trigger rate limits.
-  for (let i = 0; i < symbols.length; i++) {
-    const sym = symbols[i];
-    try {
-      el.scanStatus && (el.scanStatus.innerText = `(${i+1}/${symbols.length}) ${sym} — analyzing...`);
-      const res = await safeAnalyze(sym);
-
-      if(!res || res.error) {
-        errors.push({ symbol: sym, error: res ? res.error : 'no response' });
+  // v8 controlled batches: several symbol analyses may overlap while
+  // safeFetch() keeps Binance request starts globally paced and protected.
+  const concurrency=Math.max(1,Math.min(SCAN_BATCH_SIZE,Number(batchSize)||SCAN_BATCH_SIZE));
+  let completed=0;
+  for(let start=0;start<symbols.length;start+=concurrency){
+    if(typeof checkSafetyAndMaybePause==='function' && checkSafetyAndMaybePause()){
+      await delay(RATE_LIMIT_PAUSE_MS);
+      if(checkSafetyAndMaybePause()) break;
+    }
+    const batch=symbols.slice(start,start+concurrency);
+    const batchResults=await Promise.all(batch.map(async sym=>{
+      try{return await analyzeSymbol(sym,{allowIfNotRunning:true});}
+      catch(err){return {error:err.message||String(err),symbol:sym};}
+    }));
+    for(let j=0;j<batchResults.length;j++){
+      const sym=batch[j],res=batchResults[j];
+      completed++;
+      if(!res||res.error){
+        errors.push({symbol:sym,error:res?res.error:'no response'});
         continue;
       }
-
-      // ensure we have the computed fields (these are created inside analyzeSymbol)
-      const accumConf = (res.accumCombined && typeof res.accumCombined.confidence === 'number') ? res.accumCombined.confidence : null;
-      const preCrashConf = (res.preCrash && typeof res.preCrash.confidence === 'number') ? res.preCrash.confidence : null;
-
-      // accumulate results if below threshold
-      if (accumConf !== null && accumConf < THRESH) {
-        const cycle = getCycleDisplay(res);
-        lowAccum.push({
-          symbol: sym,
-          accumConfidence: accumConf,
-          simPhase: cycle.cyclePhase,
-          similarity: cycle.similarityPct,
-          phase: res.phase || null
-        });
+      const accumConf=(res.accumCombined&&typeof res.accumCombined.confidence==='number')?res.accumCombined.confidence:null;
+      const preCrashConf=(res.preCrash&&typeof res.preCrash.confidence==='number')?res.preCrash.confidence:null;
+      if(accumConf!==null&&accumConf<THRESH){
+        const cycle=getCycleDisplay(res);
+        lowAccum.push({symbol:sym,accumConfidence:accumConf,simPhase:cycle.cyclePhase,similarity:cycle.similarityPct,phase:res.phase||null});
       }
-      if (preCrashConf !== null && preCrashConf < THRESH) {
-        const cycle = getCycleDisplay(res);
-        lowPreCrash.push({
-          symbol: sym,
-          preCrashConfidence: preCrashConf,
-          simPhase: cycle.cyclePhase,
-          similarity: cycle.similarityPct,
-          phase: res.phase || null
-        });
+      if(preCrashConf!==null&&preCrashConf<THRESH){
+        const cycle=getCycleDisplay(res);
+        lowPreCrash.push({symbol:sym,preCrashConfidence:preCrashConf,simPhase:cycle.cyclePhase,similarity:cycle.similarityPct,phase:res.phase||null});
       }
-
-    } catch (err) {
-      errors.push({ symbol: sym, error: err.message || String(err) });
     }
-    // small safeguard: if safety triggers, break early (or continue after pause)
-    if (typeof checkSafetyAndMaybePause === 'function' && checkSafetyAndMaybePause()) {
-      // Wait long enough for safety pause to clear
-      await delay( (typeof SAFETY_PAUSE === 'number' ? SAFETY_PAUSE : 30) * 1000 + 500 );
-    }
+    el.scanStatus&&(el.scanStatus.innerText=`Below-50: ${completed}/${symbols.length} analyzed • lowAccum ${lowAccum.length} • lowPreCrash ${lowPreCrash.length}`);
+    await delay(0);
   }
 
   el.scanStatus && (el.scanStatus.innerText = `Scan complete. lowAccum: ${lowAccum.length}, lowPreCrash: ${lowPreCrash.length}, errors: ${errors.length}`);
@@ -1595,88 +1583,56 @@ function getTopNByChange(tickers, n = 30, positive = true) {
 }
 
 // Run safe batch analysis with rate limit to avoid API throttling
-async function analyzeSymbolBatch(symbols, opts = { mode:'resistance', minDelay: 300 }) {
+async function analyzeSymbolBatch(symbols, opts = {}) {
   const session = opts.session ?? modeSession;
+  const batchSize = Math.max(1, Math.min(SCAN_BATCH_SIZE, Number(opts.batchSize) || SCAN_BATCH_SIZE));
   const results = [];
-  for(let i=0;i<symbols.length;i++){
-    if(session !== modeSession || activeViewMode !== 'scan') break;
-    const sym = (symbols[i].symbol || symbols[i]).toUpperCase();
+
+  const analyzeOne = async (item) => {
+    const sym = (item.symbol || item).toUpperCase();
     try{
-      // small delay to avoid bursts
-      if(i>0) await delay(opts.minDelay);
-      if(session === modeSession && activeViewMode === 'scan') el.scanStatus.innerText = `Analyzing ${i+1}/${symbols.length} • ${sym}`;
-      const res = await analyzeSymbol(sym, { allowIfNotRunning: true });
+      if(session!==modeSession || activeViewMode!=='scan') return null;
+      el.scanStatus.innerText=`Analyzing ${sym}...`;
+      const res=await analyzeSymbol(sym,{allowIfNotRunning:true,useCache:false});
+      const normalizePhaseField=(val)=>{
+        if(!val)return '';
+        if(typeof val==='string')return val.toLowerCase();
+        if(typeof val==='object'){
+          if(typeof val.phase==='string')return val.phase.toLowerCase();
+          if(typeof val.phaseName==='string')return val.phaseName.toLowerCase();
+          try{return JSON.stringify(val).toLowerCase();}catch(e){return '';}
+        }
+        return String(val).toLowerCase();
+      };
+      const resistanceKeywords=['blowoff','climax','distribution','mania','bull','top','blowoff forming','takeoff/early pump','climax candle','blowoff / mania','distribution / breakdown'];
+      const bearishKeywords=['breakdown','capitulation','post-crash','flatline','despair','selloff','distribution','breakdown / crash','capitulation / despair'];
+      const phaseStr=normalizePhaseField(res.phase), simStr=normalizePhaseField(res.simPhase||res.sim);
+      const anyMatch=(str,keywords)=>str&&keywords.some(k=>str.includes(k));
+      let keep=false,keepReason='no-match';
+      if(opts.mode==='resistance'){
+        if(anyMatch(phaseStr,resistanceKeywords)){keep=true;keepReason='phase-match';}
+        else if(anyMatch(simStr,resistanceKeywords)){keep=true;keepReason='simPhase-match';}
+      }else if(opts.mode==='bearish'){
+        if(anyMatch(phaseStr,bearishKeywords)){keep=true;keepReason='phase-match';}
+        else if(anyMatch(simStr,bearishKeywords)){keep=true;keepReason='simPhase-match';}
+      }else{keep=true;keepReason='mode-all';}
+      if(keep){res._scanMode=opts.mode;res._matchedBy=keepReason;return res;}
+    }catch(err){console.warn('batch analyze error',sym,err.message);}
+    return null;
+  };
 
-      // decide if it matches mode filters
-      // resistance mode -> look for Blowoff / Blowoff Forming / Mania / Distribution (peak/resistance)
-      // bearish mode -> look for Breakdown / Capitulation / Post-Crash (bearish at support)
-      // --- robust phase extraction + matching ---
-function normalizePhaseField(val){
-  if(!val) return '';
-  if(typeof val === 'string') return val.toLowerCase();
-  if(typeof val === 'object'){
-    if(typeof val.phase === 'string') return val.phase.toLowerCase();
-    if(typeof val.phaseName === 'string') return val.phaseName.toLowerCase();
-    try { return JSON.stringify(val).toLowerCase(); } catch(e){ return ''; }
-  }
-  return String(val).toLowerCase();
-}
-
-const RESISTANCE_KEYWORDS = [
-  'blowoff','climax','distribution','mania','bull','top',
-  'blowoff forming','takeoff/early pump','climax candle',
-  'blowoff / mania','distribution / breakdown'
-];
-
-const BEARISH_KEYWORDS = [
-  'breakdown','capitulation','post-crash','flatline','despair',
-  'selloff','distribution','breakdown / crash','capitulation / despair'
-];
-
-const rawPhase = res.phase;
-const rawSim = res.simPhase || res.sim;
-const phaseStr = normalizePhaseField(rawPhase);
-const simStr = normalizePhaseField(rawSim);
-
-function anyMatch(str, keywords){
-  if(!str) return false;
-  return keywords.some(k => str.includes(k));
-}
-
-
-let keep = false;
-let keepReason = 'no-match';
-
-// mode logic
-if(opts.mode === 'resistance'){
-  if(anyMatch(phaseStr, RESISTANCE_KEYWORDS)) { keep = true; keepReason='phase-match'; }
-  else if(anyMatch(simStr, RESISTANCE_KEYWORDS)) { keep = true; keepReason='simPhase-match'; }
-}
-else if(opts.mode === 'bearish'){
-  if(anyMatch(phaseStr, BEARISH_KEYWORDS)) { keep = true; keepReason='phase-match'; }
-  else if(anyMatch(simStr, BEARISH_KEYWORDS)) { keep = true; keepReason='simPhase-match'; }
-}
-else {
-  keep = true; keepReason='mode-all';
-}
-
-console.log(`scan ${sym} -> phase="${phaseStr}" sim="${simStr}" keep=${keep} reason=${keepReason}`);
-
-if(keep){
-  res._scanMode = opts.mode;
-  res._matchedBy = keepReason;
-  results.push(res);
-}
-
-    } catch(err) {
-      console.warn('batch analyze error', sym, err.message);
-      // continue
+  for(let start=0;start<symbols.length && session===modeSession && activeViewMode==='scan';start+=batchSize){
+    const batch=symbols.slice(start,start+batchSize);
+    const batchResults=(await Promise.all(batch.map(analyzeOne))).filter(Boolean);
+    results.push(...batchResults);
+    if(typeof opts.onBatch==='function'){
+      try{opts.onBatch(batchResults,results.slice(),Math.min(start+batch.length,symbols.length),symbols.length);}
+      catch(e){console.warn('onBatch error',e);}
     }
   }
-  el.scanStatus.innerText = `Batch analysis done: ${results.length} matches`;
+  el.scanStatus.innerText=`Batch analysis done: ${results.length} matches`;
   return results;
 }
-
 // top-level orchestrator: fetch tickers, pick top30 gainers or losers, analyze and render matches
 async function runTop30Scan({ positive = true, mode = 'resistance' } = {}) {
   try{
@@ -1690,7 +1646,18 @@ async function runTop30Scan({ positive = true, mode = 'resistance' } = {}) {
     el.scanStatus.innerText = `Found ${top.length} symbols — starting analysis...`;
     // Build minimal list: we can pass array of objects with symbol property
     const session = modeSession;
-    const matches = await analyzeSymbolBatch(top, { mode: mode, minDelay: 600 /* adjust for safe */, session });
+    const matches = await analyzeSymbolBatch(top, {
+      mode, session, batchSize: SCAN_BATCH_SIZE,
+      onBatch: (_batch, allMatches, done, total) => {
+        if(session!==modeSession || activeViewMode!=='scan') return;
+        marketScanResults=allMatches.slice();
+        window.lastScanResults=marketScanResults.slice();
+        const display=filterResultsForDist(marketScanResults.slice());
+        sortResults(display);
+        renderResponsiveResults(display);
+        el.scanStatus.innerText=`Analyzed ${done}/${total} symbols • ${allMatches.length} matches`;
+      }
+    });
     if(session !== modeSession || activeViewMode !== 'scan') return;
     // Top30 Gainers/Losers is a market scan: never show Quick Trading Interpretations here.
     clearQuickTradingInterpretation();
@@ -2563,7 +2530,8 @@ const RATE_LIMIT_WINDOW_MS = 60 * 1000;
 const RATE_LIMIT_MAX_REQUESTS = 90;          // hard local request-count ceiling
 const RATE_LIMIT_MAX_EST_WEIGHT = 1200;       // conservative local weight budget
 const RATE_LIMIT_MAX_SERVER_WEIGHT = 1800;    // stop early vs documented 2400/min ceiling
-const RATE_LIMIT_MIN_GAP_MS = 700;            // global gap between Binance requests
+const RATE_LIMIT_MIN_GAP_MS = 700;            // minimum start gap between Binance requests
+const SCAN_BATCH_SIZE = 5;                      // controlled symbol concurrency
 const RATE_LIMIT_PAUSE_MS = 12000;
 const RATE_LIMIT_BACKOFF_MAX_MS = 60000;
 
@@ -2713,12 +2681,17 @@ async function safeFetch(url, opts = {}) {
     throw new Error('Not running (call Start first)');
   }
 
-  // Serialize every Binance request through one global promise chain.
-  let resolveQueue;
+  /*
+   * Reserve the next API start slot globally, then release the scheduler
+   * BEFORE fetch(). Request starts remain rate-limited, while independent
+   * network requests may overlap.
+   */
+  let releaseScheduler;
   const previous = apiQueue;
-  apiQueue = new Promise(resolve => { resolveQueue = resolve; });
+  apiQueue = new Promise(resolve => { releaseScheduler = resolve; });
 
   await previous;
+  let released = false;
   try {
     await waitForApiSlot();
 
@@ -2732,6 +2705,9 @@ async function safeFetch(url, opts = {}) {
         `Req/min: ${requestsThisWindow} • Est. weight: ${estimatedWeightThisWindow} • Binance weight: ${serverWeightThisMinute}`;
     }
 
+    releaseScheduler();
+    released = true;
+
     let response;
     try {
       response = await fetch(url, opts);
@@ -2741,21 +2717,17 @@ async function safeFetch(url, opts = {}) {
     }
 
     const backoffMs = noteRateLimitResponse(response);
-
     if(!response.ok){
       const body = await response.text().catch(()=>'<no body>');
-
-      // Do not hammer Binance after a rate-limit response.
       if(response.status === 429 || response.status === 418){
         await delay(Math.min(backoffMs || RATE_LIMIT_PAUSE_MS, RATE_LIMIT_BACKOFF_MAX_MS));
       }
-
       throw new Error(`HTTP ${response.status} ${response.statusText} — ${body.slice(0,200)}`);
     }
-
     return await response.json();
-  } finally {
-    resolveQueue();
+  } catch(err) {
+    if(!released && releaseScheduler) releaseScheduler();
+    throw err;
   }
 }
 
@@ -5005,37 +4977,62 @@ async function runScan(once=false, suppliedSession=null){
     if(session !== modeSession || activeViewMode !== 'scan') return;
     queue = []; totalTasks = top.length; doneTasks = 0; updateProgress(); const results = [];
 
-    top.forEach(t => queueSymbolAnalysis(t.symbol, results));
-    while(queue.length && running && session === modeSession && activeViewMode === 'scan'){
-      if(checkSafetyAndMaybePause()) break;
-      const job = queue.shift();
-      try{ await job(); } catch(e){ el.debug.innerText += `\nJob error: ${e.message}`; }
-      doneTasks++; updateProgress();
-      await delay(delayMs);
+    // v8 Safe Batch Scanner: 5 symbols concurrently. safeFetch() remains
+    // the single global safety controller for Binance request starts.
+    const scanBatchSize = SCAN_BATCH_SIZE;
+    const finalizeBatch = (batch) => {
+      batch.forEach(r => {
+        try{
+          r.phase = detectPhaseForSymbol(r);
+          r.dropPctFromPeak = r.phase.dropPctFromPeak || 0;
+          const rtn = detectReturnToNormal(r, {sensitivity: parseInt(el.sensitivity.value,10) || 50});
+          r.returnToNormal = rtn;
+          if(rtn.isReturn){
+            if(r.phase && r.phase.reasons) r.phase.reasons.unshift(`Return-to-normal (${rtn.confidence}%)`);
+            else r.phase = {phase:'Return-to-normal', confidence:rtn.confidence, reasons:[`Return-to-normal (${rtn.confidence}%)`]};
+            r.phase.isReturnToNormal = true;
+          }
+          r.correctionGuide = getCorrectionGuide(r);
+          applyCycleScores(r);
+        }catch(e){
+          el.debug.innerText += `\nPost-process error ${r.symbol || ''}: ${e.message}`;
+        }
+      });
+    };
+
+    for(let batchStart=0; batchStart<top.length && running && session===modeSession && activeViewMode==='scan'; batchStart+=scanBatchSize){
+      if(checkSafetyAndMaybePause()){
+        await delay(RATE_LIMIT_PAUSE_MS);
+        if(checkSafetyAndMaybePause()) break;
+      }
+
+      const batch = top.slice(batchStart,batchStart+scanBatchSize);
+      const batchResults = await Promise.all(batch.map(async t=>{
+        try{
+          return await analyzeSymbol(t.symbol,{allowIfNotRunning:true,useCache:false});
+        }catch(e){
+          el.debug.innerText += `\nError ${t.symbol}: ${e.message}`;
+          return null;
+        }
+      }));
+
+      const valid=batchResults.filter(Boolean);
+      results.push(...valid);
+      doneTasks += batch.length;
+      updateProgress();
+
+      finalizeBatch(valid);
+      if(session!==modeSession || activeViewMode!=='scan') return;
+      marketScanResults=results.slice();
+      window.lastScanResults=marketScanResults.slice();
+      const displayBatch=filterResultsForDist(marketScanResults.slice());
+      sortResults(displayBatch);
+      renderResponsiveResults(displayBatch);
+
+      await delay(Math.max(0,Math.min(delayMs,150)));
     }
 
-    if(session !== modeSession || activeViewMode !== 'scan') return;
-
-    // core phase detection
-    results.forEach(r => { r.phase = detectPhaseForSymbol(r); r.dropPctFromPeak = r.phase.dropPctFromPeak || 0; });
-
-    // RUN RETURN-TO-NORMAL DETECTOR & ANNOTATE
-    results.forEach(r => {
-      const rtn = detectReturnToNormal(r, {sensitivity: parseInt(el.sensitivity.value,10) || 50});
-      r.returnToNormal = rtn;
-      if(rtn.isReturn){
-        if(r.phase && r.phase.reasons) r.phase.reasons.unshift(`Return-to-normal (${rtn.confidence}%)`);
-        else r.phase = {phase: 'Return-to-normal', confidence: rtn.confidence, reasons: [`Return-to-normal (${rtn.confidence}%)`] };
-        r.phase.isReturnToNormal = true;
-      }
-    });
-
-    // NEW: apply the correction guide after all phase/accumulation fields exist
-    results.forEach(r => { r.correctionGuide = getCorrectionGuide(r); });
-
-    // ---------------------------
-// Cycle Match is context; Blowoff remains score/explanation based; Correction Guide stays separate.
-    results.forEach(r => applyCycleScores(r));
+    if(session!==modeSession || activeViewMode!=='scan') return;
 
     // Store the complete market scan separately. Favorites are only a view/filter.
     marketScanResults = results.slice();
