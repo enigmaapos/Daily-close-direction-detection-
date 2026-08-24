@@ -1106,11 +1106,17 @@ function calculateTopDetectionStack(item){
     if(alignedRisk) score=Math.max(score,35);
     if(distributionPhase && lowerHighSignal && (overextended || weakSupport)) score=Math.max(score,42);
 
-    let level='🟢 TREND HEALTHY';
-    if(score>=80) level='💥 CLIMAX / TOP STRUCTURE';
+    // Once the authoritative 15m EMA200 correction confirmation is active,
+    // a low top score must not be labelled "TREND HEALTHY". The market
+    // has already moved beyond the top-detection phase.
+    const ema200CorrectionConfirmed = Number(item.correctionGuide?.ema200Stretch15) < 0;
+    let level;
+    if(ema200CorrectionConfirmed) level='🔵 POST-TOP / CORRECTION PHASE';
+    else if(score>=80) level='💥 CLIMAX / TOP STRUCTURE';
     else if(score>=65) level='🔴 HIGH TOP RISK';
     else if(score>=45) level='🟠 TOPPING DEVELOPING';
     else if(score>=25) level='🟡 TOP RISK INCREASING';
+    else level='🟢 TREND HEALTHY';
 
     const reasons=[];
     if(components.blowoff>=50) reasons.push('Blowoff/climax evidence');
@@ -1123,9 +1129,15 @@ function calculateTopDetectionStack(item){
     if(parabolic) reasons.push(`Parabolic EMA extension (${emaStretch.toFixed(1)}%)`);
     if(distributionPhase) reasons.push('Market phase is Distribution / Breakdown');
     if(weakSupport) reasons.push(`Weak accumulation support (${Math.round(Number(item.accumCombined?.confidence ?? item.accum ?? 0))}%)`);
+    if(ema200CorrectionConfirmed){
+      reasons.unshift(`15m EMA200 confirmation active (${Number(item.correctionGuide?.ema200Stretch15).toFixed(2)}%) — post-top/correction state`);
+      const dd=Number(item.dropFromPeak);
+      if(Number.isFinite(dd) && dd<=-20) reasons.push(`Major peak drawdown (${dd.toFixed(1)}%)`);
+      else if(Number.isFinite(dd) && dd<=-10) reasons.push(`Peak drawdown (${dd.toFixed(1)}%)`);
+    }
     if(!reasons.length) reasons.push('No strong top-development alignment');
 
-    return {score,level,components,reasons,meta:{rsiNow, rsiPrev, priceHH, rsiLH, volSpike, volumeFalling, wickRatio, emaStretch, ema20Stretch, recentHigh, priorRangeHigh, failedBreakout, lowerHighSignal}};
+    return {score,level,components,reasons,meta:{rsiNow, rsiPrev, priceHH, rsiLH, volSpike, volumeFalling, wickRatio, emaStretch, ema20Stretch, recentHigh, priorRangeHigh, failedBreakout, lowerHighSignal, ema200CorrectionConfirmed}};
   }catch(err){
     return {score:0,level:'TOP DETECTOR ERROR',components:{},reasons:[err.message],meta:{}};
   }
@@ -1136,8 +1148,10 @@ function renderTopDetectionStack(r){
   const c=t.components||{};
   const pct=(v)=>`${Math.round(Number(v)||0)}%`;
   const bar=(label,v)=>`<div class="topDetRow"><span>${label}</span><div class="topDetBar"><i style="width:${Math.max(0,Math.min(100,Number(v)||0))}%"></i></div><b>${pct(v)}</b></div>`;
-  const tone=t.score>=80?'danger':t.score>=65?'danger':t.score>=45?'warn':t.score>=25?'watch':'good';
-  return `<div class="topDetPanel">
+  const postTop=String(t.level||'').includes('POST-TOP');
+  const tone=postTop?'info':t.score>=80?'danger':t.score>=65?'danger':t.score>=45?'warn':t.score>=25?'watch':'good';
+  const postTopNote=postTop ? '<div class="topDetPostNote">Correction is already confirmed by the 15m EMA200 layer. Top-detection signals are now context only; this is a post-top/correction state, not a new top call.</div>' : '';
+  return `<div class="topDetPanel">${postTopNote}
     <div class="topDetHeader"><span>🎯 TOP-DETECTION STACK</span><strong class="topDetScore ${tone}">${t.score}/100</strong></div>
     <div class="topDetLevel ${tone}">${mspEscape(t.level)}</div>
     <div class="topDetGrid">
