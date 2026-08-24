@@ -1971,6 +1971,18 @@ function updateSingleLiveStatus(extra=''){
   }
 }
 
+function updateMarketAutoStatus(){
+  if(!el.countdown) return;
+  if(activeViewMode !== 'scan') return;
+  if(running) return;
+  if(!marketAutoEnabled){
+    el.countdown.innerText = 'Market scan auto-refresh paused';
+  }else if(autoTimer && marketNextScanAt){
+    const left = Math.max(0, Math.ceil((marketNextScanAt - Date.now())/1000));
+    el.countdown.innerText = `Next scan in: ${left}s`;
+  }
+}
+
 function updateLiveModeUI(){
   const btn = document.getElementById('singleLiveBtn');
   const st = document.getElementById('singleLiveStatus');
@@ -3724,6 +3736,14 @@ function toggleFavorite(symbol){
   const s = String(symbol || '').toUpperCase();
   if(!s) return;
 
+  // IMPORTANT: clicking the small star on a result card is only a state change.
+  // It must NEVER cancel the Market Scan timer, Single Analyze timer, or running scan.
+  const wasScanning = running && activeViewMode === 'scan';
+  const marketWasScheduled = activeViewMode === 'scan' && !!autoTimer && marketNextScanAt > 0;
+  const marketRemaining = marketWasScheduled
+    ? Math.max(0, marketNextScanAt - Date.now())
+    : marketAutoRemainingMs;
+
   if(favoriteSymbols.has(s)) favoriteSymbols.delete(s);
   else favoriteSymbols.add(s);
 
@@ -3741,6 +3761,15 @@ function toggleFavorite(symbol){
     renderActiveView();
   }
 
+  // Reassert the live owner after rendering. This protects the scanner from
+  // any render/event side effect and keeps the countdown visibly moving.
+  if(activeViewMode === 'scan' && !wasScanning && marketRemaining > 0 && !autoTimer && marketAutoEnabled){
+    scheduleMarketAutoRefresh(marketRemaining);
+  }
+  if(activeViewMode === 'scan' && wasScanning){
+    // A running scan owns the UI; never restart a second scan timer here.
+    updateLiveModeUI();
+  }
   updateFavoritesButton();
 }
 
@@ -4850,6 +4879,10 @@ function startCountdown(sec){
   marketNextScanAt = end;
   countdownTimer = setInterval(()=>{
     const left = Math.max(0, Math.ceil((end - Date.now())/1000));
+    if(activeViewMode !== 'scan' || !marketAutoEnabled){
+      clearInterval(countdownTimer); countdownTimer=null;
+      return;
+    }
     if(el.countdown) el.countdown.innerText = `Next scan in: ${left}s`;
     if(left <= 0){ clearInterval(countdownTimer); countdownTimer=null; if(el.countdown) el.countdown.innerText='Starting market scan…'; }
   }, 250);
@@ -5113,9 +5146,19 @@ el.favoritesBtn.addEventListener('click', async () => {
     }else if(activeViewMode === 'scan'){
       singleViewLocked = false;
       renderActiveView();
-      // Do not start a second scanner loop automatically here. The existing
-      // scanner timer remains invalidated; the next refresh is started by the
-      // explicit scanner run path.
+      // Favorites temporarily owns the view, but it must not permanently kill
+      // Market Scan auto-refresh. Resume the exact remaining countdown (or use
+      // the configured interval if no countdown was active).
+      const resumeMs = marketAutoRemainingMs > 0
+        ? marketAutoRemainingMs
+        : Math.max(1000, (parseInt(el.interval.value,10) || 120) * 1000);
+      marketAutoRemainingMs = 0;
+      if(marketAutoEnabled){
+        scheduleMarketAutoRefresh(resumeMs);
+      }else if(el.countdown){
+        el.countdown.innerText = 'Market scan auto-refresh paused';
+      }
+      updateLiveModeUI();
       persistActiveMode();
     }else{
       activeViewMode = 'idle';
