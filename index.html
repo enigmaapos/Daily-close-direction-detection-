@@ -1146,6 +1146,113 @@ function calculateTopDetectionStack(item){
   }
 }
 
+function calculateTrendExhaustionState(item){
+  item=item||{};
+  try{
+    const top=item.topDetection || calculateTopDetectionStack(item);
+    const c=top.components||{};
+    const m=top.meta||{};
+    const correctionConfirmed = Number(item.correctionGuide?.ema200Stretch15) < 0;
+    const rsi=Number(m.rsiNow ?? item.rsi4h ?? 0);
+    const ema70=Number(m.emaStretch ?? item.ema70DistPct ?? 0);
+    const ema20=Number(m.ema20Stretch ?? 0);
+    const accum=Number(item.accumCombined?.confidence ?? item.accum ?? 0);
+    const phaseText=String(item.phase?.phase || item.phase?.phaseName || item.phase || item.structurePhase || '').toLowerCase();
+    const distributionPhase=/distribution/.test(phaseText);
+    const breakdownPhase=/breakdown|capitulation|post-crash/.test(phaseText);
+    const lowerHigh=!!m.lowerHighSignal || Number(item.lowerHighs||0)>=1 || !!item.lowerHigh;
+    const failedBreakout=!!m.failedBreakout || c.failedBreakout>=70;
+    const momentum=!!m.momentumDecel || c.momentumExhaustion>=55;
+    const volumeExhaust=c.volumeExhaustion>=55;
+    const parabolic=c.parabolicExtension>=55 || ema70>=25 || ema20>=12;
+    const rsiExtreme=rsi>=80;
+    const rsiHot=rsi>=70;
+    const weakSupport=accum<50;
+    const structureCount=[lowerHigh,failedBreakout,distributionPhase].filter(Boolean).length;
+    const exhaustionCount=[rsiExtreme,parabolic,momentum,volumeExhaust].filter(Boolean).length;
+
+    // Dedicated development score. This is a state classifier, not a
+    // probability of a correction and never confirms the EMA200 layer.
+    let score=0;
+    if(lowerHigh) score+=22;
+    if(failedBreakout) score+=20;
+    if(distributionPhase) score+=22;
+    if(breakdownPhase) score+=14;
+    if(momentum) score+=12;
+    if(volumeExhaust) score+=8;
+    if(c.rsiDivergence>=70) score+=8;
+    if(parabolic) score+=10;
+    if(rsiExtreme) score+=7;
+    else if(rsiHot) score+=3;
+    if(weakSupport) score+=7;
+
+    // Agreement bonuses favor structure + deterioration over RSI alone.
+    if(structureCount>=2) score+=10;
+    if(lowerHigh && (failedBreakout || momentum || distributionPhase)) score+=8;
+    if(distributionPhase && (lowerHigh || failedBreakout) && (parabolic || weakSupport || momentum)) score+=8;
+    if(rsiExtreme && parabolic && (lowerHigh || failedBreakout || distributionPhase)) score+=6;
+
+    score=Math.max(0,Math.min(100,Math.round(score)));
+
+    let code,label,tone,explanation;
+    if(correctionConfirmed){
+      code='POST_TOP';
+      label='🔵 POST-TOP / CORRECTION CONFIRMED';
+      tone='info';
+      explanation='Significant correction is already confirmed by the separate 15m EMA200 layer; exhaustion signals are now context only.';
+    }else if(breakdownPhase && (lowerHigh || failedBreakout || momentum)){
+      code='BREAKDOWN_DEVELOPING';
+      label='🟠 BREAKDOWN DEVELOPING';
+      tone='warn';
+      explanation='Downside structure is becoming established, but the authoritative 15m EMA200 correction confirmation is not active.';
+    }else if((distributionPhase && (lowerHigh || failedBreakout || momentum)) || (structureCount>=2 && exhaustionCount>=2 && score>=58)){
+      code='DISTRIBUTION_DEVELOPING';
+      label='🟠 DISTRIBUTION DEVELOPING';
+      tone='warn';
+      explanation='Structural weakening and exhaustion evidence are aligning; this is a distribution warning, not a confirmed correction.';
+    }else if((score>=42 && exhaustionCount>=2) || (lowerHigh && (momentum || failedBreakout) && (parabolic || rsiHot))){
+      code='EXHAUSTION_DEVELOPING';
+      label='🟠 EXHAUSTION DEVELOPING';
+      tone='warn';
+      explanation='Multiple exhaustion signals are agreeing, but distribution/breakdown is not sufficiently established.';
+    }else if(ema70>=25 || ema20>=12 || rsiExtreme || (parabolic && rsiHot)){
+      code='TREND_EXTENDED';
+      label='🟡 TREND EXTENDED';
+      tone='watch';
+      explanation='Price is materially extended or overheated, while stronger structural deterioration is not yet established.';
+    }else{
+      code='TREND_HEALTHY';
+      label='🟢 TREND HEALTHY';
+      tone='good';
+      explanation='No sufficient combination of extension, momentum deterioration and structural weakening is present.';
+    }
+
+    const reasons=[];
+    if(lowerHigh) reasons.push('Lower-high / CHoCH');
+    if(failedBreakout) reasons.push('Failed breakout');
+    if(distributionPhase) reasons.push('Distribution phase');
+    if(momentum) reasons.push('Momentum deceleration');
+    if(volumeExhaust) reasons.push('Volume exhaustion');
+    if(parabolic) reasons.push(`EMA extension ${ema70.toFixed(1)}%`);
+    if(rsiExtreme) reasons.push(`4H RSI ${rsi.toFixed(1)}`);
+    if(weakSupport) reasons.push(`Weak accumulation ${Math.round(accum)}%`);
+
+    return {score,code,label,tone,explanation,reasons,meta:{rsi,ema70,ema20,accum,lowerHigh,failedBreakout,distributionPhase,breakdownPhase,momentum,volumeExhaust,parabolic,rsiExtreme,structureCount,exhaustionCount,correctionConfirmed}};
+  }catch(err){
+    return {score:0,code:'ERROR',label:'⚪ TREND STATE UNAVAILABLE',tone:'good',explanation:'Trend-state calculation failed; existing correction confirmation remains unchanged.',reasons:[err.message],meta:{}};
+  }
+}
+
+function renderTrendExhaustionState(r){
+  const t=calculateTrendExhaustionState(r||{});
+  const reasons=t.reasons&&t.reasons.length ? t.reasons.slice(0,4).map(mspEscape).join(' • ') : 'No strong exhaustion/distribution alignment';
+  return `<div class="trendStateCompact trendState-${mspEscape(t.tone)}" title="Trend Exhaustion / Distribution development layer — not correction confirmation">
+    <strong>Trend State</strong> <span>${mspEscape(t.label)}</span> <b>${t.score}/100</b>
+    <div class="small trendStateReason">${mspEscape(t.explanation)}</div>
+    <div class="small trendStateReasons">${reasons}</div>
+  </div>`;
+}
+
 function renderTopDetectionStack(r){
   // IMPORTANT: do not trust a stale/cached topDetection.level.
   // The authoritative post-top override is re-evaluated at render time
@@ -4682,7 +4789,7 @@ function renderTable(results){
     let status=r.score>=threshold?'<span class="blowBadge">🔥 Blowoff</span>':r.score===threshold-1?'<span class="potBadge">⚠ Potential</span>':'<span class="small">normal</span>';
     const tf=(r.accumChecks||[]).map(t=>`${t.tf}:${t.result.confidence}%${t.result.isAccum?'✓':''}`).join(' | ');
     const pro=renderProfessionalAnalysis(r,rec,srec,lt);
-    return `<tr><td class="coinCell"><div class="coinName">${String(r.symbol||'').replace(/USDT$/i,'')}</div><div class="coinTicker">${r.symbol}</div><div style="margin-top:7px">${favoriteButtonHtml(r.symbol)} ${closeButtonHtml(r.symbol)}</div><div style="margin-top:7px">${histGet(histSymbol(r)) ? histCardActionsHtml(r) : `<button type="button" class="alt histSaveBtn" data-symbol="${histSymbol(r)}">📌 Save observation</button>`}</div><div style="margin-top:7px">${status} <span class="accBadge">Accum ${accum.confidence}%</span> <span class="phaseTag">${phase.phase}</span></div></td><td>${r.closeNow}</td><td>${Number(r.rsi4h||0).toFixed(1)}</td><td class="small">Vol×${r.volSpike4} • Wick ${Number(r.wickRatio4||0).toFixed(2)} • EMA70 ${r.ema70DistPct}%<br>EMA200 ${cg.ema200Stretch15==null?'n/a':Number(cg.ema200Stretch15).toFixed(2)+'%'}</td><td class="small"><span class="phasePill">${cyclePhase}</span><br><strong>Similarity:</strong> <span class="metricPill">${simPct}%</span> • Blowoff ${r.score??0}/8 • ${r.expl?.label||'None'}<br>${tf}</td></tr><tr><td colspan="5" style="padding:10px 12px"><div class="small" style="color:var(--muted)">${expl.label} • reversal estimate ${expl.prob}%</div><details class="coinDetails"><summary><strong>＋ Detailed evidence</strong></summary><div class="coinDetailsBody" style="margin-top:10px">${pro}</div></details></td></tr>`;
+    return `<tr><td class="coinCell"><div class="coinName">${String(r.symbol||'').replace(/USDT$/i,'')}</div><div class="coinTicker">${r.symbol}</div><div style="margin-top:7px">${favoriteButtonHtml(r.symbol)} ${closeButtonHtml(r.symbol)}</div><div style="margin-top:7px">${histGet(histSymbol(r)) ? histCardActionsHtml(r) : `<button type="button" class="alt histSaveBtn" data-symbol="${histSymbol(r)}">📌 Save observation</button>`}</div><div style="margin-top:7px">${status} <span class="accBadge">Accum ${accum.confidence}%</span> <span class="phaseTag">${phase.phase}</span></div><div style="margin-top:7px">${renderTrendExhaustionState(r)}</div></td><td>${r.closeNow}</td><td>${Number(r.rsi4h||0).toFixed(1)}</td><td class="small">Vol×${r.volSpike4} • Wick ${Number(r.wickRatio4||0).toFixed(2)} • EMA70 ${r.ema70DistPct}%<br>EMA200 ${cg.ema200Stretch15==null?'n/a':Number(cg.ema200Stretch15).toFixed(2)+'%'}</td><td class="small"><span class="phasePill">${cyclePhase}</span><br><strong>Similarity:</strong> <span class="metricPill">${simPct}%</span> • Blowoff ${r.score??0}/8 • ${r.expl?.label||'None'}<br>${tf}</td></tr><tr><td colspan="5" style="padding:10px 12px"><div class="small" style="color:var(--muted)">${expl.label} • reversal estimate ${expl.prob}%</div><details class="coinDetails"><summary><strong>＋ Detailed evidence</strong></summary><div class="coinDetailsBody" style="margin-top:10px">${pro}</div></details></td></tr>`;
   }).join('');
   el.tableView.innerHTML=`<div class="card-panel"><div class="tableScroll"><table><thead><tr><th>Symbol / Status</th><th>Last</th><th>RSI4H</th><th>Signals</th><th>Context / Accumulation</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
 }
@@ -4747,6 +4854,7 @@ function renderCards(results){
             <div class="correctionCompactTitle">🔴 Correction Status — authoritative confirmation layer</div>
             <div class="correctionCompactStatus" style="color:${cgColor}">${cg.label||'🟢 NOT CONFIRMED / PRE-CORRECTION'} <span style="font-size:12px;color:#cfe8ff;font-weight:800">(${Number(cg.confidence||0)}%)</span></div>
           </div>
+          <div style="flex:1 1 100%;margin-top:2px">${renderTrendExhaustionState(r)}</div>
           <span class="phaseTag" style="margin-left:0;flex:1 1 100%">${phase.phase}</span>
           <div style="flex:1 1 100%;margin-top:6px">${renderTopDetectionStack(r)}</div>
           <div class="latestUpdateCompact" style="flex:1 1 100%;margin-top:4px;padding:9px 10px;border:1px solid rgba(126,220,255,.22);border-radius:10px;background:rgba(126,220,255,.045)">
@@ -4788,7 +4896,7 @@ function renderCards(results){
 
         <div style="margin-top:11px"><strong>What matters now</strong>
           <div class="signalGrid" style="margin-top:7px">
-            <div class="signalItem"><strong>🧠 Cycle</strong><br>${cyclePhase}<br><span class="small">Similarity ${simPct}% • context only</span></div>
+            <div class="signalItem"><strong>🧠 Cycle</strong><br>${cyclePhase}<br><span class="small">Similarity ${simPct}% • context only</span></div><div class="signalItem"><strong>🟠 Trend State</strong><br>${calculateTrendExhaustionState(r).label}<br><span class="small">Score ${calculateTrendExhaustionState(r).score}/100 • warning only</span></div>
             <div class="signalItem"><strong>🔥 Exhaustion</strong><br>${r.preCrash?.score||0}/${r.preCrash?.max||13}<br><span class="small">warning</span></div>
             <div class="signalItem"><strong>🟢 Accumulation</strong><br>${accum.confidence}%<br><span class="small">support</span></div>
             <div class="signalItem"><strong>🔴 Correction</strong><br>${confirmed?'CONFIRMED':'NOT CONFIRMED'}<br><span class="small">authoritative</span></div>
@@ -5586,6 +5694,11 @@ if('Notification' in window){ try{ Notification.requestPermission().catch(()=>{}
 .professional-read{border:1px solid rgba(127,127,127,.28);border-radius:12px;padding:14px;margin:12px 0;line-height:1.45}
 .professional-read .state{font-weight:800;font-size:1.08em;margin-bottom:6px}
 .professional-read .label{font-weight:700}
+
+/* v10 TREND EXHAUSTION / DISTRIBUTION DEVELOPMENT */
+.trendStateCompact{margin-top:6px;padding:8px 10px;border:1px solid rgba(255,255,255,.10);border-radius:9px;background:rgba(255,255,255,.025);font-size:12px;line-height:1.4}
+.trendStateCompact>strong{letter-spacing:.02em}.trendStateCompact>span{font-weight:900;margin-left:4px}.trendStateCompact>b{float:right;font-size:12px}.trendStateReason{margin-top:3px;color:var(--muted)}.trendStateReasons{margin-top:2px;color:#cfe8ff;overflow-wrap:anywhere}.trendState-good{border-color:rgba(46,204,113,.20)}.trendState-good>span{color:#8ff0b0}.trendState-watch{border-color:rgba(241,196,15,.22)}.trendState-watch>span{color:#ffe58a}.trendState-warn{border-color:rgba(243,156,18,.25);background:rgba(243,156,18,.045)}.trendState-warn>span{color:#ffc27a}.trendState-info{border-color:rgba(126,220,255,.24);background:rgba(126,220,255,.045)}.trendState-info>span{color:#bdeeff}
+@media(max-width:680px){.trendStateCompact{font-size:11px}.trendStateCompact>b{font-size:11px}}
 
 /* v9 TOP-DETECTION STACK */
 /* RENDERER STALE-RESULT GUARD: re-check EMA200 correction at render time */
