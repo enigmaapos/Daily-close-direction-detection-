@@ -2178,6 +2178,10 @@ function getActiveBaseResults(){
   return [];
 }
 
+// Favorites no longer has an independent refresh timer.
+// Keep this cleanup hook for compatibility with mode-switch code.
+function clearFavoritesRefreshTimer(){}
+
 function setActiveMode(mode, scannerMode){
   // If leaving Market Scan for Single/Favorites, preserve the remaining auto-refresh time.
   if(activeViewMode === 'scan' && mode !== 'scan' && autoTimer && marketNextScanAt){
