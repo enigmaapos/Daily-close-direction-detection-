@@ -1971,6 +1971,25 @@ function updateSingleLiveStatus(extra=''){
   }
 }
 
+function updateLiveModeUI(){
+  const btn = document.getElementById('singleLiveBtn');
+  const st = document.getElementById('singleLiveStatus');
+  if(!btn || !st) return;
+  if(activeViewMode === 'single'){
+    btn.disabled = false;
+    btn.title = 'Pause/resume Single Analyze automatic updates';
+    updateSingleLiveStatus();
+  }else if(activeViewMode === 'scan'){
+    btn.disabled = true;
+    btn.title = 'Single Analyze Live Updates are inactive during Market Scan';
+    st.innerText = 'Single Live: inactive • Market Scan auto-refresh active';
+  }else{
+    btn.disabled = true;
+    btn.title = 'Available when viewing Single Analyze results';
+    st.innerText = 'Single Live: inactive';
+  }
+}
+
 function clearSingleLiveTimer(){
   if(singleLiveTimer){ clearTimeout(singleLiveTimer); singleLiveTimer=null; }
 }
@@ -2128,6 +2147,11 @@ let marketScanResults = [];
 let singleSearchResults = [];
 let favoriteViewResults = [];
 
+// Market Scan auto-refresh state is intentionally separate from Single Analyze Live Updates.
+let marketAutoEnabled = true;
+let marketNextScanAt = 0;
+let marketAutoRemainingMs = 0;
+
 const SAFETY_WINDOW_MS=60000, SAFETY_MAX=900, SAFETY_PAUSE=30;
 let prevBlowoffSet = new Set();
 
@@ -2143,6 +2167,11 @@ function getActiveBaseResults(){
 }
 
 function setActiveMode(mode, scannerMode){
+  // If leaving Market Scan for Single/Favorites, preserve the remaining auto-refresh time.
+  if(activeViewMode === 'scan' && mode !== 'scan' && autoTimer && marketNextScanAt){
+    marketAutoRemainingMs = Math.max(0, marketNextScanAt - Date.now());
+  }
+
   modeSession++;
   activeViewMode = mode;
   if(scannerMode) activeScannerMode = scannerMode;
@@ -2159,6 +2188,7 @@ function setActiveMode(mode, scannerMode){
   if(countdownTimer){ clearInterval(countdownTimer); countdownTimer=null; }
 
   singleViewLocked = (mode === 'single');
+  updateLiveModeUI();
   if(el.startBtn) el.startBtn.disabled = true;
   if(el.stopBtn) el.stopBtn.disabled = false;
   if(el.unifiedScanBtn) el.unifiedScanBtn.disabled = false;
@@ -4295,8 +4325,8 @@ function closeSymbol(symbol){
     singleViewLocked = false;
     clearSingleLiveTimer();
     clearFavoritesRefreshTimer();
-    if(autoTimer){ clearTimeout(autoTimer); autoTimer=null; }
-    if(countdownTimer){ clearInterval(countdownTimer); countdownTimer=null; }
+    // Preserve the Market Scan auto-refresh countdown while viewing Single Analyze.
+    pauseMarketAutoRefresh();
 
     const savedScanner = (()=>{
       try { return localStorage.getItem('magmaUnderlyingScanner') || activeScannerMode; }
@@ -4307,7 +4337,15 @@ function closeSymbol(symbol){
     showFavoritesOnly = false;
     persistActiveMode();
     renderActiveView();
-    if(el.countdown) el.countdown.innerText='Market scan results restored';
+    updateLiveModeUI();
+    const resumeMs = marketAutoRemainingMs > 0 ? marketAutoRemainingMs : Math.max(1000, (parseInt(el.interval.value,10)||120) * 1000);
+    marketAutoRemainingMs = 0;
+    if(marketAutoEnabled){
+      scheduleMarketAutoRefresh(resumeMs);
+    }else if(el.countdown){
+      el.countdown.innerText='Market scan auto-refresh paused';
+    }
+    if(el.message) el.message.innerText='Market scan restored.';
     return;
   }
 
@@ -4806,7 +4844,45 @@ function updateTradingInterpretation(results){
 
 /* ---------- Progress & countdown ---------- */
 function updateProgress(){ const pct = totalTasks ? Math.round((doneTasks/totalTasks)*100) : 0; el.bar.style.width = pct + '%'; el.message.innerText = `Scanning ${doneTasks}/${totalTasks} (${pct}%) — delay ${el.delay.value}ms`; el.safetyStatus.innerText = `Req/min: ${requestsThisWindow}`; }
-function startCountdown(sec){ if(countdownTimer) clearInterval(countdownTimer); const end = Date.now() + sec*1000; countdownTimer = setInterval(()=>{ const left = Math.max(0, Math.round((end - Date.now())/1000)); el.countdown.innerText = `Next scan in: ${left}s`; if(left <= 0){ clearInterval(countdownTimer); el.countdown.innerText='Running...'; } }, 500); }
+function startCountdown(sec){
+  if(countdownTimer) clearInterval(countdownTimer);
+  const end = Date.now() + Math.max(0, sec * 1000);
+  marketNextScanAt = end;
+  countdownTimer = setInterval(()=>{
+    const left = Math.max(0, Math.ceil((end - Date.now())/1000));
+    if(el.countdown) el.countdown.innerText = `Next scan in: ${left}s`;
+    if(left <= 0){ clearInterval(countdownTimer); countdownTimer=null; if(el.countdown) el.countdown.innerText='Starting market scan…'; }
+  }, 250);
+}
+
+function scheduleMarketAutoRefresh(delayMs){
+  if(autoTimer) clearTimeout(autoTimer);
+  if(countdownTimer) clearInterval(countdownTimer);
+  autoTimer = null;
+  countdownTimer = null;
+  if(!marketAutoEnabled || activeViewMode !== 'scan') return;
+
+  const delay = Math.max(0, delayMs);
+  marketNextScanAt = Date.now() + delay;
+  startCountdown(Math.ceil(delay / 1000));
+  const session = modeSession;
+  autoTimer = setTimeout(()=>{
+    autoTimer = null;
+    marketNextScanAt = 0;
+    if(session !== modeSession || activeViewMode !== 'scan' || running) return;
+    runScan(false, session);
+  }, delay);
+}
+
+function pauseMarketAutoRefresh(){
+  if(activeViewMode === 'scan' && marketNextScanAt){
+    marketAutoRemainingMs = Math.max(0, marketNextScanAt - Date.now());
+  }
+  if(autoTimer) clearTimeout(autoTimer);
+  if(countdownTimer) clearInterval(countdownTimer);
+  autoTimer = null;
+  countdownTimer = null;
+}
 
 // v3 startup restoration.
 // Favorites visibility is persistent. If it was ON before reload, Favorites
@@ -4868,8 +4944,6 @@ async function runScan(once=false, suppliedSession=null){
     queue = []; totalTasks = top.length; doneTasks = 0; updateProgress(); const results = [];
 
     top.forEach(t => queueSymbolAnalysis(t.symbol, results));
-    if(!once) startCountdown(intervalSec);
-
     while(queue.length && running && session === modeSession && activeViewMode === 'scan'){
       if(checkSafetyAndMaybePause()) break;
       const job = queue.shift();
@@ -4960,12 +5034,24 @@ async function runScan(once=false, suppliedSession=null){
       );
     }
 
+    running=false;
+
+    // Schedule the NEXT Market Scan only after this scan has completely finished.
+    // This timer is independent from the Single Analyze 60s watchlist timer.
     if(!once){
-      if(requestsThisWindow >= RATE_LIMIT_MAX_REQUESTS){ el.debug.innerText += '\nAuto-paused due to safety'; }
-      else { if(autoTimer) clearTimeout(autoTimer); autoTimer = setTimeout(()=>{ if(session === modeSession && activeViewMode === 'scan' && !singleViewLocked && requestsThisWindow <= SAFETY_MAX) runScan(false, session); }, intervalSec * 1000); startCountdown(intervalSec); }
+      if(requestsThisWindow >= RATE_LIMIT_MAX_REQUESTS){
+        marketAutoEnabled = false;
+        marketNextScanAt = 0;
+        el.debug.innerText += '\nAuto-refresh paused due to safety';
+        if(el.countdown) el.countdown.innerText = 'Auto-refresh paused';
+      }else{
+        marketAutoEnabled = true;
+        scheduleMarketAutoRefresh(intervalSec * 1000);
+      }
     }
 
-    running=false; el.startBtn.disabled=false; el.stopBtn.disabled=true; if(el.unifiedScanBtn) el.unifiedScanBtn.disabled=false;
+    updateLiveModeUI();
+    el.message.innerText = once ? 'Scan complete.' : 'Scan complete — waiting for next automatic scan.'; el.startBtn.disabled=false; el.stopBtn.disabled=true; if(el.unifiedScanBtn) el.unifiedScanBtn.disabled=false;
   } catch(e){
     el.debug.innerText += `\nRun error: ${e.message}`;
     running=false; el.startBtn.disabled=false; el.stopBtn.disabled=true; if(el.unifiedScanBtn) el.unifiedScanBtn.disabled=false;
@@ -5103,6 +5189,9 @@ el.stopBtn.addEventListener('click', ()=>{
   if(autoTimer) clearTimeout(autoTimer);
   if(countdownTimer) clearInterval(countdownTimer);
   autoTimer=null; countdownTimer=null;
+  marketAutoEnabled=false;
+  marketNextScanAt=0;
+  marketAutoRemainingMs=0;
   persistActiveMode();
   el.startBtn.disabled=false;
   el.stopBtn.disabled=true;
