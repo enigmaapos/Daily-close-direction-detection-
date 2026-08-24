@@ -4717,6 +4717,23 @@ function renderCards(results){
             <div class="correctionCompactStatus" style="color:${cgColor}">${cg.label||'🟢 NOT CONFIRMED / PRE-CORRECTION'} <span style="font-size:12px;color:#cfe8ff;font-weight:800">(${Number(cg.confidence||0)}%)</span></div>
           </div>
           <span class="phaseTag" style="margin-left:0;flex:1 1 100%">${phase.phase}</span>
+          <div style="flex:1 1 100%;margin-top:6px">${renderTopDetectionStack(r)}</div>
+          <div class="latestUpdateCompact" style="flex:1 1 100%;margin-top:4px;padding:9px 10px;border:1px solid rgba(126,220,255,.22);border-radius:10px;background:rgba(126,220,255,.045)">
+            <div style="font-size:12px;font-weight:900;letter-spacing:.04em;color:#cfe8ff">⚡ LATEST UPDATE</div>
+            <div style="margin-top:4px;line-height:1.5;font-size:13px">
+              <strong>Top Risk:</strong> ${Number(r.topDetection?.score||0)}/100 ${r.topDetection?.label||'—'}
+              <span style="opacity:.55"> • </span>
+              <strong>Correction:</strong> ${confirmed?'CONFIRMED':'NOT CONFIRMED'}
+              <span style="opacity:.55"> • </span>
+              <strong>RSI4H:</strong> ${rsi4h.toFixed(1)}
+              <span style="opacity:.55"> • </span>
+              <strong>EMA70:</strong> ${ema70.toFixed(1)}%
+              <span style="opacity:.55"> • </span>
+              <strong>EMA200:</strong> ${ema200==null?'n/a':Number(ema200).toFixed(1)+'%'}
+              ${Number.isFinite(Number(r.dropFromPeak))?`<span style="opacity:.55"> • </span><strong>Peak DD:</strong> -${Math.abs(Number(r.dropFromPeak)).toFixed(1)}%`:''}
+            </div>
+            <div class="small" style="margin-top:3px;color:#9fb3cc">${lowerHighReasons.length?lowerHighReasons[0]:(dist?'Distribution / Breakdown risk developing':'No major structural top warning')}</div>
+          </div>
           <div style="flex:1 1 100%;margin-top:3px">${histCardActionsHtml(r)}</div>
         </div>
 
