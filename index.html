@@ -2046,6 +2046,22 @@ if(singleLiveBtn){
 
 // Robust mode switch: invalidate every older async scanner and make Single Search immediately usable.
 function enterSingleMode(){
+  // Remember the view that was active before Single Analyze. This is important
+  // because a user may run a market scan first, then inspect one coin. Closing
+  // that single-coin result must return to the existing market-scan dataset.
+  try{
+    const underlying = activeViewMode === 'single'
+      ? (localStorage.getItem('magmaUnderlyingMode') || (marketScanResults.length ? 'scan' : 'idle'))
+      : activeViewMode;
+    const underlyingScanner = activeViewMode === 'single'
+      ? (localStorage.getItem('magmaUnderlyingScanner') || activeScannerMode)
+      : activeScannerMode;
+    if(underlying !== 'favorite' && underlying !== 'idle'){
+      localStorage.setItem('magmaUnderlyingMode', underlying);
+      localStorage.setItem('magmaUnderlyingScanner', underlyingScanner);
+    }
+  }catch(e){}
+
   const session = setActiveMode('single');
   if(el.countdown) el.countdown.innerText='Single analysis ready';
   persistActiveMode();
@@ -4268,6 +4284,33 @@ function closeButtonHtml(symbol){
 function closeSymbol(symbol){
   const s = String(symbol || '').trim().toUpperCase();
   if(!s) return;
+
+  // Closing a Single Analyze result is a navigation action, not just a filter.
+  // If the user entered Single mode from a market scan, restore that scan view
+  // and its already-fetched results instead of leaving the results area blank.
+  if(activeViewMode === 'single' && marketScanResults.length){
+    modeSession++;
+    running = false;
+    queue = [];
+    singleViewLocked = false;
+    clearSingleLiveTimer();
+    clearFavoritesRefreshTimer();
+    if(autoTimer){ clearTimeout(autoTimer); autoTimer=null; }
+    if(countdownTimer){ clearInterval(countdownTimer); countdownTimer=null; }
+
+    const savedScanner = (()=>{
+      try { return localStorage.getItem('magmaUnderlyingScanner') || activeScannerMode; }
+      catch(e){ return activeScannerMode; }
+    })();
+    activeViewMode = 'scan';
+    activeScannerMode = savedScanner;
+    showFavoritesOnly = false;
+    persistActiveMode();
+    renderActiveView();
+    if(el.countdown) el.countdown.innerText='Market scan results restored';
+    return;
+  }
+
   closedSymbols.add(s);
   renderActiveView();
 }
