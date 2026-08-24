@@ -6,7 +6,7 @@
 
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Blowoff Top Detector — Phase, Cycle Match, Multi-TF Accumulation, & Alerts</title>
+<title>Blowoff Top Detector — v8.1 Safe Batch Live</title>
 <style>
   :root{
     --bg:#07101a;
@@ -1981,6 +1981,52 @@ function scheduleSingleLiveUpdate(){
   singleLiveTimer = setTimeout(refreshSingleWatchlist, SINGLE_LIVE_INTERVAL_MS);
 }
 
+// v8.1 Safe Batch Live Refresh
+// Refresh the Single Analyze watchlist in controlled batches instead of
+// awaiting every symbol sequentially. The existing global safeFetch()
+// controller still paces every Binance request and handles weight/429/418
+// protection, so this is controlled concurrency rather than an API burst.
+const SINGLE_LIVE_BATCH_SIZE = 5;
+
+async function analyzeSingleLiveBatch(items, session){
+  const batchSize = Math.max(1, Math.min(SINGLE_LIVE_BATCH_SIZE, Number(SINGLE_LIVE_BATCH_SIZE) || 5));
+  const refreshed = [];
+
+  for(let start = 0;
+      start < items.length && session === modeSession && activeViewMode === 'single';
+      start += batchSize){
+
+    // Respect the same global safety state used by the market scanners.
+    if(typeof checkSafetyAndMaybePause === 'function' && checkSafetyAndMaybePause()){
+      await delay(RATE_LIMIT_PAUSE_MS);
+      if(session !== modeSession || activeViewMode !== 'single') break;
+      if(checkSafetyAndMaybePause()) break;
+    }
+
+    const batch = items.slice(start, start + batchSize);
+
+    const batchResults = await Promise.all(batch.map(async (item) => {
+      if(!item || !item.symbol) return null;
+      try{
+        return await analyzeSymbol(item.symbol, {
+          allowIfNotRunning: true,
+          useCache: false
+        });
+      }catch(e){
+        console.warn(`Live update failed for ${item.symbol}:`, e.message);
+        return item; // preserve the last good snapshot if one request fails
+      }
+    }));
+
+    refreshed.push(...batchResults.filter(Boolean));
+
+    // Yield to the UI between batches without adding an unnecessary Binance delay.
+    await delay(0);
+  }
+
+  return refreshed;
+}
+
 async function refreshSingleWatchlist(){
   if(!singleLiveEnabled || !singleViewLocked || singleLiveUpdating || running){
     scheduleSingleLiveUpdate();
@@ -1993,19 +2039,10 @@ async function refreshSingleWatchlist(){
   singleLiveUpdating = true;
   updateSingleLiveStatus();
   try{
-    // Refresh each tracked symbol from Binance, bypassing the 5-minute symbol cache.
-    // Keep the current order so the 10-coin watchlist remains stable.
-    const refreshed = [];
-    for(const item of current){
-      if(!item || !item.symbol) continue;
-      try{
-        const fresh = await analyzeSymbol(item.symbol, { allowIfNotRunning:true, useCache:false });
-        refreshed.push(fresh);
-      }catch(e){
-        console.warn(`Live update failed for ${item.symbol}:`, e.message);
-        refreshed.push(item); // preserve the last good snapshot if one request fails
-      }
-    }
+    // v8.1: refresh up to 5 symbols concurrently per controlled batch.
+    // The global safeFetch() gate remains responsible for Binance pacing,
+    // request-weight monitoring, and 429/418 backoff.
+    const refreshed = await analyzeSingleLiveBatch(current, session);
 
     if(session !== modeSession || activeViewMode !== 'single') return;
 
