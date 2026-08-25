@@ -529,7 +529,7 @@ table{min-width:0!important;width:100%}.tableScroll{width:100%;overflow-x:auto;-
       <div class="controlGrid">
         <div class="controlItem">
           <label class="controlLabel">Prefilter — Top by 24h</label>
-          <input id="prefilter" type="number" value="30" min="5" max="60"/>
+          <input id="prefilter" type="number" value="15" min="5" max="60"/>
           <div class="dashboardHint">How many symbols enter the scan.</div>
         </div>
         <div class="controlItem">
@@ -4318,7 +4318,9 @@ function filterResultsForDist(results) {
     source = [...bySymbol.values()];
   }
   let filtered = source.filter(r => r && !closedSymbols.has(r.symbol));
-  if (showFavoritesOnly) filtered = filtered.filter(r => favoriteSymbols.has(String(r.symbol || '').trim().toUpperCase()));
+  if (activeViewMode === 'favorite' || showFavoritesOnly) {
+    filtered = filtered.filter(r => favoriteSymbols.has(String(r.symbol || '').trim().toUpperCase()));
+  }
   const correctionCode = el.correctionFilter ? el.correctionFilter.value : 'ALL';
   if (correctionCode !== 'ALL') {
     filtered = filtered.filter(r => String(r?.correctionGuide?.code || '').toUpperCase() === correctionCode);
@@ -4387,8 +4389,11 @@ function toggleFavorite(symbol){
   const s = String(symbol || '').toUpperCase();
   if(!s) return;
 
-  // IMPORTANT: clicking the small star on a result card is only a state change.
-  // It must NEVER cancel the Market Scan timer, Single Analyze timer, or running scan.
+  // IMPORTANT:
+  // The ⭐ on an individual coin is only a favorite-state toggle.
+  // It must NEVER filter or replace the underlying Market/Top/Single dataset.
+  // The only time a coin disappears is when the user is explicitly inside
+  // Favorites view and removes that coin from Favorites.
   const wasScanning = running && activeViewMode === 'scan';
   const marketWasScheduled = activeViewMode === 'scan' && !!autoTimer && marketNextScanAt > 0;
   const marketRemaining = marketWasScheduled
@@ -4400,27 +4405,31 @@ function toggleFavorite(symbol){
 
   localStorage.setItem('magmaFavoriteSymbols', JSON.stringify([...favoriteSymbols]));
 
-  // Favorites are state only. They never mutate scanner or single-search data.
-  const active = getActiveBaseResults();
-  saveFavoriteResultSnapshots(active);
-
   if(activeViewMode === 'favorite'){
-    favoriteViewResults = favoriteViewResults.filter(r => favoriteSymbols.has(String(r?.symbol || '').toUpperCase()));
+    // Explicit Favorites view: removing the star should remove only that
+    // coin from the Favorites projection. The underlying market results
+    // remain untouched.
+    favoriteViewResults = favoriteViewResults.filter(
+      r => favoriteSymbols.has(String(r?.symbol || '').toUpperCase())
+    );
     renderActiveView(true);
   }else{
+    // Normal scan / single view: ALWAYS render from the underlying dataset.
+    // Do not run a favorites filter here.
     renderActiveView(true);
   }
 
-  // Reassert the live owner after rendering. This protects the scanner from
-  // any render/event side effect and keeps the countdown visibly moving.
+  // Preserve the current Market Scan countdown. Clicking a star must not
+  // restart, cancel, or create a second scan timer.
   if(activeViewMode === 'scan' && !wasScanning && marketRemaining > 0 && !autoTimer && marketAutoEnabled){
     scheduleMarketAutoRefresh(marketRemaining);
   }
   if(activeViewMode === 'scan' && wasScanning){
-    // A running scan owns the UI; never restart a second scan timer here.
     updateLiveModeUI();
   }
+
   updateFavoritesButton();
+  saveFavoriteResultSnapshots(getActiveBaseResults());
 }
 
 function updateFavoritesButton(){
@@ -5780,6 +5789,9 @@ function pauseMarketAutoRefresh(){
 // starts its own network refresh.
 (function restoreActiveModeOnLoad(){
   try{
+    // User requested a fixed startup default: every app open starts with
+    // Prefilter — Top by 24h = 15. Do not restore an older value.
+    if(el.prefilter) el.prefilter.value = '15';
     const savedFavView = localStorage.getItem('magmaFavoritesView') === '1';
     const savedMode = localStorage.getItem('magmaActiveViewMode') || 'idle';
     const savedScanner = localStorage.getItem('magmaActiveScannerMode') || 'main';
