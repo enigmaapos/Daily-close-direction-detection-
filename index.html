@@ -6,7 +6,7 @@
 
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Blowoff + Multi-Detector Top ScannerSafe Batch Live • Post-Top State</title>
+<title>Blowoff Scanner • Secure Login</title>
 <style>
   :root{
     --bg:#07101a;
@@ -598,8 +598,27 @@ table{min-width:0!important;width:100%}.tableScroll{width:100%;overflow-x:auto;-
 <!-- v3 ACTIVE-MODE FIX:
      Market/Top30/Below50, Single Search, and Favorites now have isolated
      datasets and a single active live-refresh owner. -->
+<style id="auth-shell-css">
+body.authLocked{overflow:hidden}
+#authScreen{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;background:radial-gradient(circle at 50% 0%,rgba(45,212,191,.10),transparent 38%),#050b12;overflow:auto}
+.authCard{width:min(460px,100%);background:#0b1220;border:1px solid #223047;border-radius:18px;box-shadow:0 22px 70px rgba(0,0,0,.55);padding:24px}
+.authBrand{display:flex;align-items:center;gap:12px;margin-bottom:20px}.authLogo{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;background:linear-gradient(135deg,#2dd4bf,#2563eb);font-size:22px;font-weight:900;color:#04131a}.authBrand h2{margin:0;font-size:20px}.authBrand p{margin:3px 0 0;color:#9fb3cc;font-size:12px}
+.authTabs{display:grid;grid-template-columns:1fr 1fr;gap:6px;background:#07101a;padding:5px;border-radius:10px;margin-bottom:18px}.authTab{border:0;background:transparent;color:#9fb3cc;font-weight:800}.authTab.active{background:#17283a;color:#e6eef8}
+.authForm{display:grid;gap:12px}.authField{display:grid;gap:6px}.authField label{font-size:12px;font-weight:800;color:#cfe8ff}.authField input{width:100%;min-height:42px;padding:10px 11px;border-radius:9px}.authPrimary{width:100%;min-height:44px;border-radius:9px;font-weight:900;background:#1f6feb}.authHint{font-size:11px;color:#8195ad;line-height:1.45}.authError,.authSuccess{display:none;padding:9px 10px;border-radius:9px;font-size:12px}.authError{background:rgba(255,92,92,.09);border:1px solid rgba(255,92,92,.25);color:#ffb3b3}.authSuccess{background:rgba(45,212,191,.08);border:1px solid rgba(45,212,191,.22);color:#a8f6e6}
+#protectedApp[hidden]{display:none!important}.accountBar{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 12px;margin-bottom:12px;border:1px solid #1d2b3d;border-radius:12px;background:#09131f}.accountIdentity{display:flex;align-items:center;gap:9px;min-width:0}.accountAvatar{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:#173548;color:#8ff4e0;font-weight:900}.accountText{min-width:0}.accountText strong{display:block;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.accountText span{display:block;color:#8195ad;font-size:10px}.accountActions{display:flex;gap:6px;flex-wrap:wrap}.accountBtn{padding:7px 9px!important;font-size:11px!important}.accountBadge{display:inline-flex;align-items:center;gap:5px;padding:5px 8px;border-radius:999px;background:rgba(45,212,191,.08);border:1px solid rgba(45,212,191,.18);color:#9ef4e2;font-size:10px;font-weight:900}.accountBadge i{width:6px;height:6px;border-radius:50%;background:#2dd4bf}.profilePanel{display:none;margin-bottom:12px;padding:13px;border:1px solid #1d2b3d;border-radius:12px;background:#09131f}.profileGrid{display:grid;grid-template-columns:1fr 1fr;gap:9px}.profileItem{padding:10px;border:1px solid rgba(255,255,255,.07);border-radius:9px;background:rgba(255,255,255,.02)}.profileItem small{display:block;color:#8195ad;font-size:10px}.profileItem strong{display:block;margin-top:3px;font-size:13px;overflow-wrap:anywhere}.profileNote{margin-top:9px;font-size:11px;color:#9fb3cc;line-height:1.4}.authPhaseCard{margin-top:12px;padding:12px;border:1px dashed #29445b;border-radius:10px;background:rgba(126,220,255,.035)}.authPhaseCard strong{font-size:12px}.authPhaseCard p{margin:5px 0 0;color:#9fb3cc;font-size:11px;line-height:1.4}@media(max-width:520px){.authCard{padding:18px}.profileGrid{grid-template-columns:1fr}.accountBar{align-items:flex-start}.accountActions{justify-content:flex-end}}
+</style>
 </head>
-<body>
+<body class="authLocked">
+<div id="authScreen"><div class="authCard">
+<div class="authBrand"><div class="authLogo">S</div><div><h2>Scanner Account</h2><p>Personal workspace for your market scanner</p></div></div>
+<div class="authTabs"><button id="loginTab" class="authTab active" type="button">Login</button><button id="registerTab" class="authTab" type="button">Create Account</button></div>
+<form id="loginForm" class="authForm" autocomplete="on"><div class="authField"><label>Email</label><input id="loginEmail" type="email" autocomplete="username" required placeholder="you@example.com"></div><div class="authField"><label>Password</label><input id="loginPassword" type="password" autocomplete="current-password" required placeholder="Your password"></div><div id="loginError" class="authError"></div><button class="authPrimary" type="submit">Login to Scanner</button><div class="authHint">This first Login Version is a browser-only prototype. Real multi-user authentication and encrypted server-side sessions will be added in the backend phase.</div></form>
+<form id="registerForm" class="authForm" style="display:none" autocomplete="on"><div class="authField"><label>Display Name</label><input id="registerName" type="text" autocomplete="name" required placeholder="Your name"></div><div class="authField"><label>Email</label><input id="registerEmail" type="email" autocomplete="username" required placeholder="you@example.com"></div><div class="authField"><label>Password</label><input id="registerPassword" type="password" autocomplete="new-password" minlength="8" required placeholder="At least 8 characters"></div><div class="authField"><label>Confirm Password</label><input id="registerPassword2" type="password" autocomplete="new-password" minlength="8" required placeholder="Repeat password"></div><div id="registerError" class="authError"></div><div id="registerSuccess" class="authSuccess"></div><button class="authPrimary" type="submit">Create My Account</button><div class="authHint">Prototype accounts are stored only in this browser. Do not use a real password here. This is intentionally not the production authentication layer.</div></form>
+<div class="authPhaseCard"><strong>🔐 Binance connection: Phase 2</strong><p>After the account system is moved to a secure backend, users will be able to connect their Binance account with read-only permissions for balances, active positions and other private account data.</p></div>
+</div></div>
+<div id="protectedApp" hidden>
+<div class="accountBar"><div class="accountIdentity"><div id="accountAvatar" class="accountAvatar">U</div><div class="accountText"><strong id="accountName">User</strong><span id="accountEmail">user@example.com</span></div></div><div class="accountActions"><span class="accountBadge"><i></i> ACCOUNT ACTIVE</span><button id="profileBtn" class="accountBtn alt" type="button">Profile</button><button id="logoutBtn" class="accountBtn alt" type="button">Logout</button></div></div>
+<div id="profilePanel" class="profilePanel"><div class="profileGrid"><div class="profileItem"><small>Profile</small><strong id="profileName">—</strong></div><div class="profileItem"><small>Email</small><strong id="profileEmail">—</strong></div><div class="profileItem"><small>Binance</small><strong>Not connected</strong></div><div class="profileItem"><small>Access</small><strong>Scanner workspace</strong></div></div><div class="profileNote">Binance private-account access is deliberately not enabled in this first version. The next backend phase will handle secure read-only account connections.</div></div>
 <div class="card-panel">
   <h1>Blowoff + Multi-Detector Top Scanner</h1>
   <div class="small" style="margin-top:6px;color:var(--muted)">
@@ -6417,5 +6436,24 @@ if('Notification' in window){ try{ Notification.requestPermission().catch(()=>{}
 })();
 </script>
 
+</div><!-- /protectedApp -->
+<script id="auth-shell-js">
+(function(){
+ const KEY="magmaLoginPrototype",SESSION="magmaLoginSession",$=id=>document.getElementById(id),screen=$("authScreen"),app=$("protectedApp");
+ const loginForm=$("loginForm"),registerForm=$("registerForm"),loginTab=$("loginTab"),registerTab=$("registerTab");
+ function norm(v){return String(v||"").trim().toLowerCase()}
+ async function digest(t){try{const b=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(t));return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,"0")).join("")}catch(e){return btoa(unescape(encodeURIComponent(t)))}}
+ function account(){try{return JSON.parse(localStorage.getItem(KEY)||"null")}catch(e){return null}}
+ function err(id,msg){const x=$(id);x.textContent=msg;x.style.display=msg?"block":"none"}
+ function tab(t){const l=t!=="register";loginForm.style.display=l?"grid":"none";registerForm.style.display=l?"none":"grid";loginTab.classList.toggle("active",l);registerTab.classList.toggle("active",!l);err("loginError","");err("registerError","")}
+ function stopWork(){try{if(typeof setActiveMode==="function")setActiveMode("idle")}catch(e){}try{if(typeof clearSingleLiveTimer==="function")clearSingleLiveTimer()}catch(e){}try{if(typeof clearFavoritesRefreshTimer==="function")clearFavoritesRefreshTimer()}catch(e){}try{if(typeof autoTimer!=="undefined"&&autoTimer)clearTimeout(autoTimer)}catch(e){}try{if(typeof countdownTimer!=="undefined"&&countdownTimer)clearInterval(countdownTimer)}catch(e){}}
+ function open(a){const n=a.name||a.email.split("@")[0];$("accountName").textContent=n;$("accountEmail").textContent=a.email;$("accountAvatar").textContent=(n[0]||"U").toUpperCase();$("profileName").textContent=n;$("profileEmail").textContent=a.email;screen.style.display="none";app.hidden=false;document.body.classList.remove("authLocked");localStorage.setItem(SESSION,"1")}
+ function close(){stopWork();app.hidden=true;screen.style.display="flex";document.body.classList.add("authLocked");localStorage.removeItem(SESSION)}
+ loginTab.onclick=()=>tab("login");registerTab.onclick=()=>tab("register");$("logoutBtn").onclick=close;$("profileBtn").onclick=()=>{const p=$("profilePanel");p.style.display=p.style.display==="block"?"none":"block"};
+ loginForm.addEventListener("submit",async e=>{e.preventDefault();err("loginError","");const a=account(),email=norm($("loginEmail").value),hash=await digest($("loginPassword").value);if(!a||a.email!==email){err("loginError","No local prototype account was found for this email. Create an account first.");return}if(hash!==a.passwordHash){err("loginError","Incorrect password.");return}open(a)});
+ registerForm.addEventListener("submit",async e=>{e.preventDefault();err("registerError","");$("registerSuccess").style.display="none";const n=$("registerName").value.trim(),email=norm($("registerEmail").value),p=$("registerPassword").value,p2=$("registerPassword2").value;if(p.length<8){err("registerError","Password must be at least 8 characters.");return}if(p!==p2){err("registerError","Passwords do not match.");return}const a=account();if(a&&a.email===email){err("registerError","An account with this email already exists in this browser.");return}localStorage.setItem(KEY,JSON.stringify({name:n,email,passwordHash:await digest(p),createdAt:new Date().toISOString()}));$("registerSuccess").textContent="Account created. You can now log in.";$("registerSuccess").style.display="block";$("loginEmail").value=email;$("loginPassword").value="";tab("login")});
+ const a=account();if(a&&localStorage.getItem(SESSION)==="1")open(a);else{close();tab("login")}
+})();
+</script>
 </body>
 </html>
