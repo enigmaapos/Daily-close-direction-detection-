@@ -662,46 +662,7 @@ body.authLocked{overflow:hidden}
         </div>
       </div>
 
-      <div class="controlGrid three" style="margin-top:10px">
-        <div class="controlItem">
-          <label class="controlLabel">Sort Results</label>
-          <select id="sortBy">
-            <option value="score" selected>Blowoff Score</option>
-            <option value="topScore">Top-Detection Score</option>
-            <option value="similarity">Cycle similarity</option>
-            <option value="accum">Accum confidence</option>
-            <option value="preCrash">Exhaustion Warning</option>
-            <option value="rsi4h">RSI (4H)</option>
-            <option value="ema70DistPct">EMA70 stretch %</option>
-            <option value="ema200Stretch15">15m EMA200 stretch %</option>
-            <option value="last">Last price</option>
-            <option value="symbol">Symbol</option>
-            <option value="volSpike">Vol Spike</option>
-            <option value="vol1d">Volume 1D</option>
-            <option value="vol4h">Volume 4H</option>
-            <option value="vol15m">Volume 15m</option>
-            <option value="cycleMatch">Cycle Match %</option>
-            <option value="correctionRank">Correction Status</option>
-            <option value="correctionConfidence">Correction Confidence</option>
-            <option value="phase">Market Phase</option>
-            <option value="phaseRank">Market Phase Rank</option>
-            <option value="simPhase">Similarity Phase</option>
-            <option value="simPhaseRank">Similarity Phase Rank</option>
-          </select>
-        </div>
-        <div class="controlItem">
-          <label class="controlLabel">Sort Direction</label>
-          <button id="sortDir" class="alt" title="Toggle sort direction" style="width:100%">Desc</button>
-        </div>
-        <div class="controlItem">
-          <label class="controlToggle">
-            <input id="showDistBtn" type="checkbox">
-            <span>Show Distribution / Breakdown</span>
-          </label>
-          <div class="dashboardHint">Focus the results view on structural weakness.</div>
-        </div>
-      </div>
-    </div>
+
 
     <div class="controlSection controlZone timeframeZone">
       <div class="controlSectionTitle"><span>📊</span> 2 · Multi-Timeframe Accumulation</div>
@@ -815,6 +776,46 @@ body.authLocked{overflow:hidden}
 
     <div class="controlSection controlZone filtersZone">
       <div class="controlSectionTitle"><span>🎯</span> 5 · Result Filters</div>
+      <div class="controlGrid three" style="margin-top:10px">
+        <div class="controlItem">
+          <label class="controlLabel">Sort Results</label>
+          <select id="sortBy">
+            <option value="score" selected>Blowoff Score</option>
+            <option value="topScore">Top-Detection Score</option>
+            <option value="similarity">Cycle similarity</option>
+            <option value="accum">Accum confidence</option>
+            <option value="preCrash">Exhaustion Warning</option>
+            <option value="rsi4h">RSI (4H)</option>
+            <option value="ema70DistPct">EMA70 stretch %</option>
+            <option value="ema200Stretch15">15m EMA200 stretch %</option>
+            <option value="last">Last price</option>
+            <option value="symbol">Symbol</option>
+            <option value="volSpike">Vol Spike</option>
+            <option value="vol1d">Volume 1D</option>
+            <option value="vol4h">Volume 4H</option>
+            <option value="vol15m">Volume 15m</option>
+            <option value="cycleMatch">Cycle Match %</option>
+            <option value="correctionRank">Correction Status</option>
+            <option value="correctionConfidence">Correction Confidence</option>
+            <option value="phase">Market Phase</option>
+            <option value="phaseRank">Market Phase Rank</option>
+            <option value="simPhase">Similarity Phase</option>
+            <option value="simPhaseRank">Similarity Phase Rank</option>
+          </select>
+        </div>
+        <div class="controlItem">
+          <label class="controlLabel">Sort Direction</label>
+          <button id="sortDir" class="alt" title="Toggle sort direction" style="width:100%">Desc</button>
+        </div>
+        <div class="controlItem">
+          <label class="controlToggle">
+            <input id="showDistBtn" type="checkbox">
+            <span>Show Distribution / Breakdown</span>
+          </label>
+          <div class="dashboardHint">Focus the results view on structural weakness.</div>
+        </div>
+      </div>
+    </div>
       <div class="controlGrid three">
         <div class="controlItem">
           <label class="controlLabel">Correction Status</label>
