@@ -1254,6 +1254,34 @@ function renderTrendExhaustionState(r){
   </div>`;
 }
 
+
+function renderAccumulationReversal(r){
+  const d=r?.accumulationReversal || (Array.isArray(r?.k4h) ? detectAccumulationDoubleTopReversal({
+    k4h:r.k4h, closeNow:r.closeNow, accumConfidence:Number(r.accumCombined?.confidence||0)
+  }) : null);
+  if(!d || d.stage==='NONE' || d.state==='NO PATTERN' || d.state==='INSUFFICIENT DATA') return '';
+
+  const tone=d.confirmed?'danger':d.stage==='RETEST'?'warn':d.stage==='BREAKOUT'?'warn':'watch';
+  const esc=(v)=>mspEscape(v==null?'—':String(v));
+  const money=(v)=>Number.isFinite(Number(v))?Number(v).toLocaleString(undefined,{maximumFractionDigits:8}):'—';
+  const stats=[
+    `Top 1 ${money(d.firstTop)}`,
+    `Top 2 ${money(d.secondTop)}`,
+    `Neckline ${money(d.neckline)}`,
+    `Equal-high diff ${Number(d.equalHighDiffPct||0).toFixed(2)}%`,
+    `Accum range ${Number(d.accumulationRangePct||0).toFixed(1)}%`
+  ];
+  return `<div class="recBox adrPanel" style="margin-top:10px;border-left:4px solid ${tone==='danger'?'#ff5c5c':tone==='warn'?'#ff9f43':'#ffd966'}">
+    <div style="font-weight:900">${d.confirmed?'🔴':'📐'} ACCUMULATION → DOUBLE TOP → NECKLINE → REVERSAL</div>
+    <div style="margin-top:4px"><strong>${esc(d.state)}</strong> • <strong>${Math.round(Number(d.confidence||0))}%</strong></div>
+    <div style="margin-top:5px;line-height:1.45">${esc(d.reason)}</div>
+    <div class="small" style="margin-top:6px">${stats.map(esc).join(' • ')}</div>
+    ${d.stage==='BREAKOUT'?'<div class="small" style="margin-top:5px;color:#ffd966"><strong>Next:</strong> wait for the neckline retest and rejection. A break alone is not reversal confirmation.</div>':''}
+    ${d.stage==='RETEST'?'<div class="small" style="margin-top:5px;color:#ff9f43"><strong>Next:</strong> bearish continuation below the neckline strengthens confirmation.</div>':''}
+    ${d.confirmed?'<div class="small" style="margin-top:5px;color:#ff8c8c"><strong>Confirmed sequence:</strong> accumulation → equal highs → neckline break → failed retest → downside continuation.</div>':''}
+  </div>`;
+}
+
 function renderTopDetectionStack(r){
   // IMPORTANT: do not trust a stale/cached topDetection.level.
   // The authoritative post-top override is re-evaluated at render time
@@ -1288,6 +1316,7 @@ function renderTopDetectionStack(r){
       ${bar('🔻 Lower High / CHoCH',c.lowerHighCHoCH)}
       ${bar('📊 Volume Exhaustion',c.volumeExhaustion)}
       ${bar('🚀 Parabolic Extension',c.parabolicExtension)}
+      ${c.accumulationDoubleTop!=null ? bar('📐 Accumulation Double Top',c.accumulationDoubleTop) : ''}
     </div>
     <div class="topDetReasons"><strong>Evidence:</strong> ${t.reasons.map(x=>mspEscape(x)).join(' • ')}</div>
     <div class="topDetNote">Top risk is an early-warning/formation detector. It does not confirm a correction and never overrides the scanner's separate 15m EMA200 confirmation layer.</div>
@@ -2033,7 +2062,22 @@ async function analyzeSymbol(symbol, opts = { allowIfNotRunning: true }) {
     const cached = getCachedSymbol(sym);
     if(cached && Number(cached.ema200_15) > 0) {
       cached.correctionGuide = getCorrectionGuide(cached);
+      cached.accumulationReversal = cached.accumulationReversal || (Array.isArray(cached.k4h) ? detectAccumulationDoubleTopReversal({
+        k4h:cached.k4h, closeNow:cached.closeNow, accumConfidence:Number(cached.accumCombined?.confidence||0)
+      }) : null);
       cached.topDetection = calculateTopDetectionStack(cached);
+      const cachedAdrStage=cached.accumulationReversal?.stage||'NONE';
+      const cachedAdrBoost={DOUBLE_TOP:4,BREAKOUT:10,RETEST:16,REVERSAL_CONFIRMED:20}[cachedAdrStage]||0;
+      if(cachedAdrBoost){
+        cached.topDetection.score=Math.min(100,Number(cached.topDetection.score||0)+cachedAdrBoost);
+        cached.topDetection.components=cached.topDetection.components||{};
+        cached.topDetection.components.accumulationDoubleTop=Math.min(100,cachedAdrBoost*5);
+        cached.topDetection.reasons=cached.topDetection.reasons||[];
+        cached.topDetection.reasons.unshift(`Accumulation → double-top sequence: ${cached.accumulationReversal.state}`);
+        if(cached.topDetection.score>=70) cached.topDetection.level='🔴 HIGH TOP RISK';
+        else if(cached.topDetection.score>=45) cached.topDetection.level='🟠 TOPPING DEVELOPING';
+        else if(cached.topDetection.score>=25) cached.topDetection.level='🟡 TOP RISK INCREASING';
+      }
       el.symbolStatus.innerText = `Loaded ${sym} from cache (${Math.round((Date.now()-cached._cachedAt)/1000)}s ago)`;
       return cached;
     }
@@ -2162,6 +2206,9 @@ async function analyzeSymbol(symbol, opts = { allowIfNotRunning: true }) {
     // ===== MARKET STRUCTURE PSYCHOLOGY ENGINE =====
     // Uses the fetched 4H structure as the primary higher-timeframe source,
     // with 15m data for short-term confirmation/trap detection.
+    const accumulationReversal = detectAccumulationDoubleTopReversal({
+      k4h, closeNow: close4, accumConfidence: combinedConfidence
+    });
     const structure4h = calculateMarketStructurePsychology({
       k4h,
       k15m: k15,
@@ -2197,6 +2244,7 @@ async function analyzeSymbol(symbol, opts = { allowIfNotRunning: true }) {
       closeNow: close4,
       k4h, k1h, k15m: k15,
       marketStructure: structure4h,
+      accumulationReversal,
       higherHighs: structure4h.higherHighs,
       higherLows: structure4h.higherLows,
       lowerHighs: structure4h.lowerHighs,
@@ -2225,6 +2273,22 @@ async function analyzeSymbol(symbol, opts = { allowIfNotRunning: true }) {
 
     // ===== upgraded multi-detector top stack =====
     result.topDetection = calculateTopDetectionStack(result);
+
+    // The dedicated accumulation/double-top sequence is structural context,
+    // not a replacement for the independent correction confirmation layer.
+    // It raises top-risk only when the sequence has actually progressed.
+    const adrStage = result.accumulationReversal?.stage || 'NONE';
+    const adrBoost = {DOUBLE_TOP:4, BREAKOUT:10, RETEST:16, REVERSAL_CONFIRMED:20}[adrStage] || 0;
+    if(adrBoost){
+      result.topDetection.score = Math.min(100, Number(result.topDetection.score||0) + adrBoost);
+      result.topDetection.components = result.topDetection.components || {};
+      result.topDetection.components.accumulationDoubleTop = Math.min(100, adrBoost * 5);
+      result.topDetection.reasons = result.topDetection.reasons || [];
+      result.topDetection.reasons.unshift(`Accumulation → double-top sequence: ${result.accumulationReversal.state}`);
+      if(result.topDetection.score>=70) result.topDetection.level='🔴 HIGH TOP RISK';
+      else if(result.topDetection.score>=45) result.topDetection.level='🟠 TOPPING DEVELOPING';
+      else if(result.topDetection.score>=25) result.topDetection.level='🟡 TOP RISK INCREASING';
+    }
 
     // ===== compute a blowoff-style score (same logic as queueSymbolAnalysis) =====
     let s = 0;
@@ -3389,6 +3453,170 @@ function calculateMarketStructurePsychology({k4h=[], k15m=[], closeNow=0, volSpi
     volumeContext: Number(volSpike4||1),
     fundingContext: Number(fundingRate||0)
   };
+}
+
+
+// ===== ACCUMULATION → DOUBLE TOP → NECKLINE RETEST → REVERSAL =====
+// Dedicated structural detector for the pattern illustrated in the reference
+// setup. This is deliberately separate from the generic top/exhaustion stack:
+// accumulation provides context, equal highs form the double top, the valley
+// between the highs defines the neckline, and a break + failed retest confirms
+// the reversal sequence.
+function detectAccumulationDoubleTopReversal({k4h=[], closeNow=0, accumConfidence=0} = {}){
+  try{
+    const raw=Array.isArray(k4h)?k4h:[];
+    if(raw.length<20) return {
+      state:'INSUFFICIENT DATA', confidence:0, detected:false, confirmed:false,
+      stage:'NONE', reason:'At least 20 four-hour candles are required.',
+      firstTop:null, secondTop:null, neckline:null, breakoutPrice:null, retestPrice:null
+    };
+
+    // Prefer completed candles so an unfinished 4H candle cannot confirm a pattern.
+    const now=Date.now();
+    const h=raw.filter(k=>Number(k?.[6])>0 ? Number(k[6])<=now : true);
+    if(h.length<20) return {
+      state:'INSUFFICIENT DATA', confidence:0, detected:false, confirmed:false,
+      stage:'NONE', reason:'Not enough completed four-hour candles.',
+      firstTop:null, secondTop:null, neckline:null, breakoutPrice:null, retestPrice:null
+    };
+
+    const highs=h.map(k=>Number(k[2]));
+    const lows=h.map(k=>Number(k[3]));
+    const closes=h.map(k=>Number(k[4]));
+    const opens=h.map(k=>Number(k[1]));
+    const n=h.length;
+    const lastClose=Number(closeNow)||closes.at(-1);
+    const finite=(a)=>a.every(Number.isFinite);
+    if(!finite(highs)||!finite(lows)||!finite(closes)) throw new Error('Invalid OHLC data');
+
+    function pivots(values, look=2){
+      const out=[];
+      for(let i=look;i<values.length-look;i++){
+        let ok=true;
+        for(let j=1;j<=look;j++){
+          if(values[i] < values[i-j] || values[i] < values[i+j]) {ok=false;break;}
+        }
+        if(ok) out.push({index:i,value:values[i]});
+      }
+      return out;
+    }
+
+    const peaks=pivots(highs,2);
+    const tolerancePct=0.009;      // equal-high tolerance: 0.9%
+    const breakPct=0.0035;         // decisive neckline break: 0.35%
+    const retestPct=0.006;         // neckline retest zone: 0.6%
+    const minTopDepthPct=0.012;     // valley should be meaningfully below tops
+
+    // Search the most recent viable pair first. This keeps the detector focused
+    // on an actionable setup instead of an old historical double top.
+    let candidate=null;
+    for(let j=peaks.length-1;j>=1 && !candidate;j--){
+      const p2=peaks[j];
+      if(p2.index < n-24) continue;
+      for(let i=j-1;i>=0;i--){
+        const p1=peaks[i];
+        const span=p2.index-p1.index;
+        if(span<3) continue;
+        if(span>20) break;
+        const avgTop=(p1.value+p2.value)/2;
+        const equalDiff=Math.abs(p2.value-p1.value)/avgTop;
+        if(equalDiff>tolerancePct) continue;
+
+        const valleySlice=lows.slice(p1.index+1,p2.index);
+        if(!valleySlice.length) continue;
+        const valley=Math.min(...valleySlice);
+        const depth=(avgTop-valley)/avgTop;
+        if(depth<minTopDepthPct) continue;
+
+        // Accumulation context immediately before the first top. A compressed
+        // range plus the scanner's multi-TF accumulation score is required.
+        const accStart=Math.max(0,p1.index-12);
+        const accEnd=Math.max(accStart+1,p1.index-1);
+        const accHigh=Math.max(...highs.slice(accStart,accEnd));
+        const accLow=Math.min(...lows.slice(accStart,accEnd));
+        const accMid=(accHigh+accLow)/2 || 1;
+        const accRange=(accHigh-accLow)/accMid;
+        const accumulationContext=(accRange<=0.12 && Number(accumConfidence)>=45);
+        if(!accumulationContext) continue;
+
+        candidate={p1,p2,valley,depth,accRange,accHigh,accLow};
+        break;
+      }
+    }
+
+    if(!candidate){
+      return {
+        state:'NO PATTERN', confidence:0, detected:false, confirmed:false,
+        stage:'NONE', reason:'No recent accumulation-backed equal-high structure with a defined neckline.',
+        firstTop:null, secondTop:null, neckline:null, breakoutPrice:null, retestPrice:null
+      };
+    }
+
+    const {p1,p2,valley,depth,accRange}=candidate;
+    const neckline=valley;
+    const equalDiff=Math.abs(p2.value-p1.value)/((p1.value+p2.value)/2);
+    const postStart=p2.index+1;
+    let breakIndex=-1;
+    for(let i=postStart;i<n;i++){
+      if(closes[i] < neckline*(1-breakPct)) { breakIndex=i; break; }
+    }
+
+    // If price has not broken the neckline, the double top is still only a setup.
+    if(breakIndex<0){
+      const nearSecond=n-1-p2.index<=6;
+      const confidence=Math.round(Math.min(78,
+        45 + (Number(accumConfidence)-45)*0.22 + Math.max(0,(0.009-equalDiff)*1200) + Math.min(10,depth*100)
+      ));
+      return {
+        state:'DOUBLE TOP — WATCH', confidence, detected:true, confirmed:false,
+        stage:'DOUBLE_TOP', reason:'Accumulation context + two similar highs detected; neckline has not broken.',
+        firstTop:p1.value, secondTop:p2.value, firstTopIndex:p1.index, secondTopIndex:p2.index,
+        neckline, breakoutPrice:null, retestPrice:null, breakoutIndex:-1,
+        equalHighDiffPct:equalDiff*100, necklineDepthPct:depth*100, accumulationRangePct:accRange*100,
+        recent:nearSecond
+      };
+    }
+
+    // Find a retest after the break: price trades back into the neckline zone.
+    let retestIndex=-1;
+    for(let i=breakIndex+1;i<n;i++){
+      const hi=highs[i], lo=lows[i], c=closes[i], o=opens[i];
+      const touched=hi >= neckline*(1-retestPct) && lo <= neckline*(1+retestPct);
+      if(!touched) continue;
+      const rejection=((Math.min(o,c)-lo) > Math.abs(c-o)*1.15) || c < neckline*(1-0.0015);
+      if(rejection){ retestIndex=i; break; }
+    }
+
+    if(retestIndex>=0){
+      const afterRetestClose=closes.at(-1);
+      const confirmed=afterRetestClose < neckline*(1-breakPct);
+      const confidence=Math.round(Math.min(98,
+        72 + Math.min(10,Number(accumConfidence)/10) + Math.min(8,depth*100) + (confirmed?8:0)
+      ));
+      return {
+        state:confirmed?'REVERSAL CONFIRMED':'NECKLINE RETEST — BEARISH', confidence,
+        detected:true, confirmed, stage:confirmed?'REVERSAL_CONFIRMED':'RETEST',
+        reason:confirmed
+          ? 'Accumulation → double top → neckline break → failed retest → bearish continuation confirmed.'
+          : 'Neckline broke and price retested/rejected the neckline; bearish reversal is developing.',
+        firstTop:p1.value, secondTop:p2.value, firstTopIndex:p1.index, secondTopIndex:p2.index,
+        neckline, breakoutPrice:closes[breakIndex], retestPrice:highs[retestIndex], breakoutIndex:breakIndex, retestIndex,
+        equalHighDiffPct:equalDiff*100, necklineDepthPct:depth*100, accumulationRangePct:accRange*100
+      };
+    }
+
+    return {
+      state:'NECKLINE BREAK — RETEST PENDING', confidence:Math.round(Math.min(88,62+Math.min(12,Number(accumConfidence)/8)+Math.min(8,depth*100))),
+      detected:true, confirmed:false, stage:'BREAKOUT',
+      reason:'The double-top neckline has broken decisively; wait for a failed retest before treating the reversal as confirmed.',
+      firstTop:p1.value, secondTop:p2.value, firstTopIndex:p1.index, secondTopIndex:p2.index,
+      neckline, breakoutPrice:closes[breakIndex], retestPrice:null, breakoutIndex:breakIndex, retestIndex:-1,
+      equalHighDiffPct:equalDiff*100, necklineDepthPct:depth*100, accumulationRangePct:accRange*100
+    };
+  }catch(err){
+    return {state:'DETECTOR ERROR',confidence:0,detected:false,confirmed:false,stage:'ERROR',reason:err.message,
+      firstTop:null,secondTop:null,neckline:null,breakoutPrice:null,retestPrice:null};
+  }
 }
 
 
@@ -4616,6 +4844,19 @@ function professionalState(item, rec){
     sentence:'Price has crossed the scanner’s authoritative correction threshold. The priority is now support and recovery structure.',
     tone:'red'
   };
+  const adr=r.accumulationReversal||{};
+  if(adr.confirmed) return {
+    title:'🔴 ACCUMULATION DOUBLE-TOP REVERSAL CONFIRMED', confidence:Math.max(Number(rec.confidence||0),Number(adr.confidence||0)),
+    sentence:'The scanner has identified the full accumulation → double-top → neckline break → failed retest → bearish continuation sequence. This is structural reversal confirmation, separate from the authoritative EMA200 correction layer.', tone:'red'
+  };
+  if(adr.stage==='RETEST') return {
+    title:'🟠 DOUBLE-TOP NECKLINE RETEST — BEARISH', confidence:Math.max(Number(rec.confidence||0),Number(adr.confidence||0)),
+    sentence:'The accumulation-backed double top has broken its neckline and price has retested/rejected that level. Bearish continuation is developing; confirmation strengthens if price remains below the neckline.', tone:'orange'
+  };
+  if(adr.stage==='BREAKOUT') return {
+    title:'🟡 DOUBLE-TOP NECKLINE BREAK — RETEST PENDING', confidence:Math.max(Number(rec.confidence||0),Number(adr.confidence||0)),
+    sentence:'The accumulation-backed double top has broken its neckline. Wait for a failed retest rather than treating the first breakdown as a fully confirmed reversal.', tone:'yellow'
+  };
   if(dist && rsi4h>=80) return {
     title:'🟠 TOPPING / DISTRIBUTION DEVELOPING — NOT CONFIRMED', confidence:rec.confidence,
     sentence:`Price is extremely overbought and beginning to form weaker highs. Distribution evidence is developing, but breakdown is not confirmed.`, tone:'orange'
@@ -4680,6 +4921,8 @@ function renderProfessionalAnalysis(r, rec, srec, longTargets){
         <div class="signalItem"><strong>🔴 Correction</strong><br>${confirmed?'CONFIRMED':'NOT CONFIRMED'}<br><span class="small">authoritative</span></div>
       </div>
     </div>
+
+    ${renderAccumulationReversal(r)}
 
     ${dist ? `<div class="recBox" style="margin-top:10px;border-left:4px solid ${dist.level==='low'?'#ffd966':dist.level==='moderate'?'#ff9f43':'#ff5c5c'}">
       <strong>Distribution / Breakdown — ${phasePct}%</strong><br>
@@ -4881,6 +5124,7 @@ function renderCards(results){
           <div style="flex:1 1 100%;margin-top:2px">${renderTrendExhaustionState(r)}</div>
           <span class="phaseTag" style="margin-left:0;flex:1 1 100%">${phase.phase}</span>
           <div style="flex:1 1 100%;margin-top:6px">${renderTopDetectionStack(r)}</div>
+          <div style="flex:1 1 100%;margin-top:6px">${renderAccumulationReversal(r)}</div>
           <div class="latestUpdateCompact" style="flex:1 1 100%;margin-top:4px;padding:9px 10px;border:1px solid rgba(126,220,255,.22);border-radius:10px;background:rgba(126,220,255,.045)">
             <div style="font-size:12px;font-weight:900;letter-spacing:.04em;color:#cfe8ff">⚡ LATEST UPDATE</div>
             <div style="margin-top:4px;line-height:1.5;font-size:13px">
