@@ -2111,7 +2111,9 @@ async function analyzeSymbol(symbol, opts = { allowIfNotRunning: true }) {
     const promises = [
       safeFetch(`${API_BASE}/fapi/v1/klines?symbol=${sym}&interval=4h&limit=240`, { allowIfNotRunning: opts.allowIfNotRunning }),
       safeFetch(`${API_BASE}/fapi/v1/klines?symbol=${sym}&interval=1h&limit=60`, { allowIfNotRunning: opts.allowIfNotRunning }),
-      safeFetch(`${API_BASE}/fapi/v1/klines?symbol=${sym}&interval=15m&limit=240`, { allowIfNotRunning: opts.allowIfNotRunning }),
+      opts.prefetchedK15
+        ? Promise.resolve(opts.prefetchedK15)
+        : safeFetch(`${API_BASE}/fapi/v1/klines?symbol=${sym}&interval=15m&limit=240`, { allowIfNotRunning: opts.allowIfNotRunning }),
       safeFetch(`${API_BASE}/fapi/v1/klines?symbol=${sym}&interval=1d&limit=10`, { allowIfNotRunning: opts.allowIfNotRunning }), // NEW: 1D
       safeFetch(`${API_BASE}/fapi/v1/fundingRate?symbol=${sym}&limit=1`, { allowIfNotRunning: opts.allowIfNotRunning })
     ];
@@ -5832,6 +5834,79 @@ function commitMarketScanResults(nextResults){
   });
 }
 
+/* ---------- BALANCED FAST MARKET SCREEN ----------
+ * Stage 1: one lightweight 15m klines request per candidate. Results are
+ * cached briefly because the 15m candle normally does not change between
+ * consecutive market scans. Only the strongest candidates enter full analysis.
+ */
+const FAST_SCREEN_TTL_MS = 75 * 1000;
+const FAST_SCREEN_LIMIT = 240;
+const FAST_SCREEN_CACHE = new Map();
+
+function fastScreenScore(item){
+  const k = Array.isArray(item.k15) ? item.k15 : [];
+  if(k.length < 20) return -Infinity;
+  const last = k[k.length - 1];
+  const open = Number(last[1]), high = Number(last[2]), close = Number(last[4]);
+  const body = Math.abs(close-open) || 1e-9;
+  const upperWick = Math.max(0, high-Math.max(open,close));
+  const wickRatio = upperWick/body;
+  const vols = k.map(x=>Number(x[5]));
+  const closes = k.map(x=>Number(x[4]));
+  const recent = closes.slice(-12);
+  const base = closes.slice(-48,-12);
+  const recentMean = recent.length ? recent.reduce((a,b)=>a+b,0)/recent.length : close;
+  const baseMean = base.length ? base.reduce((a,b)=>a+b,0)/base.length : close;
+  const movePct = baseMean ? ((recentMean/baseMean)-1)*100 : 0;
+  const volMA = sma(vols, Math.min(10, vols.length)) || 1;
+  const volSpike = Number(last[5]) / volMA;
+  const recentSD = stdDev(recent);
+  const relSD = recentMean ? (recentSD/recentMean)*100 : 0;
+
+  // Include both exhaustion and quiet accumulation/compression candidates.
+  let score = 0;
+  if(wickRatio >= 1.2) score += 5; else if(wickRatio >= 0.8) score += 2;
+  if(volSpike >= 2) score += 4; else if(volSpike >= 1.4) score += 2;
+  if(movePct >= 4) score += 4; else if(movePct >= 2) score += 2;
+  if(relSD <= 2.5) score += 4; else if(relSD <= 4.5) score += 2;
+  if(item.change24 >= 8) score += 3; else if(item.change24 >= 4) score += 1;
+  return score;
+}
+
+async function fastScreenMarketCandidates(top, session){
+  const out = [];
+  for(let i=0; i<top.length && session===modeSession && activeViewMode==='scan'; i+=SCAN_BATCH_SIZE){
+    if(checkSafetyAndMaybePause()){
+      await delay(RATE_LIMIT_PAUSE_MS);
+      if(session!==modeSession || activeViewMode!=='scan') break;
+      if(checkSafetyAndMaybePause()) break;
+    }
+    const batch = top.slice(i, i+SCAN_BATCH_SIZE);
+    const rows = await Promise.all(batch.map(async t=>{
+      const sym = String(t.symbol||'').toUpperCase();
+      const cached = FAST_SCREEN_CACHE.get(sym);
+      if(cached && Date.now()-cached.ts < FAST_SCREEN_TTL_MS){
+        return {...t, k15:cached.k15, fastScore:fastScreenScore({...t,k15:cached.k15})};
+      }
+      try{
+        const k15 = await safeFetch(`${API_BASE}/fapi/v1/klines?symbol=${sym}&interval=15m&limit=${FAST_SCREEN_LIMIT}`, {allowIfNotRunning:true});
+        FAST_SCREEN_CACHE.set(sym,{ts:Date.now(),k15});
+        return {...t,k15,fastScore:fastScreenScore({...t,k15})};
+      }catch(e){
+        el.debug.innerText += `\nFast screen error ${sym}: ${e.message}`;
+        return null;
+      }
+    }));
+    out.push(...rows.filter(Boolean));
+    totalTasks = top.length;
+    doneTasks = Math.min(top.length, i+batch.length);
+    updateProgress();
+    await delay(0);
+  }
+  out.sort((a,b)=>b.fastScore-a.fastScore);
+  return out;
+}
+
 async function runScan(once=false, suppliedSession=null){
   const session = suppliedSession ?? modeSession;
   if(activeViewMode !== 'scan' || session !== modeSession) return;
@@ -5852,11 +5927,18 @@ async function runScan(once=false, suppliedSession=null){
 
     const top = await getTopN(N);
     if(session !== modeSession || activeViewMode !== 'scan') return;
-    queue = []; totalTasks = top.length; doneTasks = 0; updateProgress(); const results = [];
-
-    // v8 Safe Batch Scanner: 5 symbols concurrently. safeFetch() remains
-    // the single global safety controller for Binance request starts.
+    // v9.1 BALANCED FAST+SAFE MARKET SCREENING.
+    // Stage 1 uses one lightweight 15m request per candidate. Stage 2 runs
+    // the existing full 5-request analysis only on the strongest candidates.
     const scanBatchSize = SCAN_BATCH_SIZE;
+    const fastCandidates = await fastScreenMarketCandidates(top, session);
+    if(session !== modeSession || activeViewMode !== 'scan') return;
+
+    // Normally deep-scan 6–8 symbols. A minimum of 6 preserves coverage on
+    // small scans, while the fast screen keeps the request count controlled.
+    const deepCount = Math.min(top.length, Math.max(6, Math.min(8, Math.ceil(top.length * 0.55))));
+    const deepTop = fastCandidates.slice(0, deepCount);
+    queue = []; totalTasks = deepTop.length; doneTasks = 0; updateProgress(); const results = [];
     const finalizeBatch = (batch) => {
       batch.forEach(r => {
         try{
@@ -5877,16 +5959,16 @@ async function runScan(once=false, suppliedSession=null){
       });
     };
 
-    for(let batchStart=0; batchStart<top.length && running && session===modeSession && activeViewMode==='scan'; batchStart+=scanBatchSize){
+    for(let batchStart=0; batchStart<deepTop.length && running && session===modeSession && activeViewMode==='scan'; batchStart+=scanBatchSize){
       if(checkSafetyAndMaybePause()){
         await delay(RATE_LIMIT_PAUSE_MS);
         if(checkSafetyAndMaybePause()) break;
       }
 
-      const batch = top.slice(batchStart,batchStart+scanBatchSize);
+      const batch = deepTop.slice(batchStart,batchStart+scanBatchSize);
       const batchResults = await Promise.all(batch.map(async t=>{
         try{
-          return await analyzeSymbol(t.symbol,{allowIfNotRunning:true,useCache:false});
+          return await analyzeSymbol(t.symbol,{allowIfNotRunning:true,useCache:false,prefetchedK15:t.k15});
         }catch(e){
           el.debug.innerText += `\nError ${t.symbol}: ${e.message}`;
           return null;
