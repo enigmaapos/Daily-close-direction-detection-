@@ -5050,6 +5050,10 @@ function preserveExpandedDetailState(){
 
 /* ---------- RESPONSIVE RESULT RENDERER ---------- */
 function renderResponsiveResults(results, allowFast=false){
+  const softRefresh = !!window.__magmaSoftRefresh;
+  const savedScrollX = softRefresh ? window.scrollX : 0;
+  const savedScrollY = softRefresh ? window.scrollY : 0;
+  const activeBefore = softRefresh ? document.activeElement : null;
   window.results = Array.isArray(results) ? results : [];
   preserveExpandedDetailState();
   preserveHistoricalCompareState();
@@ -5062,6 +5066,9 @@ function renderResponsiveResults(results, allowFast=false){
   // existing DOM nodes. No HTML generation, no indicator recomputation, no DOM teardown.
   if(allowFast && fastPatchResultDOM(safe, isMobile)){
     try{ restoreHistoricalCompareStates(); }catch(e){}
+    if(softRefresh){
+      requestAnimationFrame(()=>{ window.scrollTo(savedScrollX, savedScrollY); window.__magmaSoftRefresh=false; });
+    }
     return;
   }
 
@@ -5079,6 +5086,13 @@ function renderResponsiveResults(results, allowFast=false){
         if(summary) summary.textContent=d.open ? '− Detailed evidence' : '＋ Detailed evidence';
       });
     }catch(e){}
+  }
+  if(softRefresh){
+    requestAnimationFrame(()=>{
+      window.scrollTo(savedScrollX, savedScrollY);
+      try{ if(activeBefore && activeBefore !== document.body && document.contains(activeBefore)) activeBefore.focus({preventScroll:true}); }catch(e){}
+      window.__magmaSoftRefresh=false;
+    });
   }
 }
 
@@ -5492,7 +5506,8 @@ async function runScan(once=false, suppliedSession=null){
       window.lastScanResults=marketScanResults.slice();
       const displayBatch=filterResultsForDist(marketScanResults.slice());
       sortResults(displayBatch);
-      renderResponsiveResults(displayBatch);
+      window.__magmaSoftRefresh=true;
+      renderResponsiveResults(displayBatch, false);
 
       await delay(Math.max(0,Math.min(delayMs,150)));
     }
@@ -5508,7 +5523,8 @@ async function runScan(once=false, suppliedSession=null){
 
     prevBlowoffSet = new Set(window.lastScanResults.filter(r=> r.score >= (parseInt(el.threshold.value,10)||4)).map(r=>r.symbol));
     clearQuickTradingInterpretation();
-    renderResponsiveResults(displayResults);
+    window.__magmaSoftRefresh=true;
+    renderResponsiveResults(displayResults, false);
 
     // SINGLE SOUND RULE: only a newly detected blowoff can trigger sound.
     // Conditional accumulation alerts never trigger sound.
