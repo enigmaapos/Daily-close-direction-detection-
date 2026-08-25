@@ -759,7 +759,7 @@ table{min-width:0!important;width:100%}.tableScroll{width:100%;overflow-x:auto;-
   </div>
 
   <!-- ===== Button + results container ===== -->
-<span id="runBelow50Note" class="small" style="margin-left:8px;color:var(--muted)"></span>
+<!-- Scanner note is rendered in the dashboard status panel above. -->
 
 <!-- results area -->
 <div id="below50Results" style="margin-top:10px;"></div>
@@ -959,34 +959,6 @@ el.symbolClearCache.addEventListener('click', () => {
   el.symbolStatus.innerText = 'Symbol cache cleared.';
   setTimeout(()=> el.symbolStatus.innerText = '', 2600);
 });
-
-  // Helper: cheap fallback scoring when res.score is missing
-function computeSimpleScore(res){
-  // simple heuristic — tuned to mimic blowoff-ish signals enough for badges
-  let s = 0;
-  const v = res || {};
-  const volSpike = Number(v.volSpike4 || v.volSpike || 0);
-  const rsi4 = Number(v.rsi4h || v.rsi || 0);
-  const wick = Number(v.wickRatio4 || 0);
-  const emaDist = Number(v.ema70DistPct || 0);
-
-  if(volSpike >= 5) s += 3;
-  else if(volSpike >= 3) s += 2;
-  else if(volSpike >= 1.5) s += 1;
-
-  if(rsi4 >= 95) s += 3;
-  else if(rsi4 >= 85) s += 2;
-  else if(rsi4 >= 70) s += 1;
-
-  if(wick >= 4) s += 2;
-  else if(wick >= 2) s += 1;
-
-  if(emaDist >= 100) s += 2;
-  else if(emaDist >= 50) s += 1;
-
-  // clamp to small integer
-  return Math.max(0, Math.min(10, Math.round(s)));
-}
 
   /* ============================================================
    UPGRADED TOP-DETECTION STACK v9
@@ -1723,23 +1695,6 @@ async function scanAllPerpsForBelow50({minDelay=FULL_SCAN_MIN_DELAY_MS, batchSiz
   const lowPreCrash = [];  // preCrash.confidence < THRESH
   const errors = [];
 
-  // helper to throttle & respect safety pause
-  async function safeAnalyze(sym) {
-    // If the global safety pause indicates we should not run, wait and retry
-    if (typeof checkSafetyAndMaybePause === 'function' && checkSafetyAndMaybePause()) {
-      // sleep a bit before retrying (gives safety pause time to reset)
-      await delay(Math.max(800, minDelay));
-    }
-    try {
-      // enforce minimum inter-call delay
-      await delay(minDelay);
-      // perform analysis using your existing function (which returns accumCombined & preCrash)
-      const res = await analyzeSymbol(sym, { allowIfNotRunning: true });
-      return res;
-    } catch (err) {
-      return { error: err.message || String(err), symbol: sym };
-    }
-  }
 
   // v8 controlled batches: several symbol analyses may overlap while
   // safeFetch() keeps Binance request starts globally paced and protected.
@@ -2185,7 +2140,7 @@ async function analyzeSymbol(symbol, opts = { allowIfNotRunning: true }) {
     const ema200_4 = closes4hFull.length >= 200 ? ema(closes4hFull, 200) : null;
     const ema200DistPct = ema200_4 ? Number(pct(close4, ema200_4).toFixed(2)) : null;
     const rsi4h = rsiFromCloses(closes4h, 14);
-    const rsi1d = rsiFromCloses(closes4h.slice(-9).map(v=>v), 14);
+    const rsi1d = rsiFromCloses(closes1d, 14);
     const lowerHigh = (k4h && k4h.length>1) ? Number(high4) < Number(k4h[k4h.length-2][2]) : false;
 
     // Recent-peak drawdown used by the complete correction guide.
@@ -2285,7 +2240,7 @@ async function analyzeSymbol(symbol, opts = { allowIfNotRunning: true }) {
       dropPctFromPeak,
       fundingRate,
       closeNow: close4,
-      k4h, k1h, k15m: k15,
+      k4h, k1h, k15m: k15, k1d,
       marketStructure: structure4h,
       accumulationReversal,
       higherHighs: structure4h.higherHighs,
@@ -2980,7 +2935,7 @@ function detectPreCrash(item, opts={}) {
     if(emaDist >= Math.max(30, t.emaDistPct)){ score += 2; reasons.push(`EMA70 stretch ${emaDist >= 0 ? "+" : ""}${emaDist.toFixed(2)}%`); }
 
     if(lowerHCount >= 2){ score += 2; reasons.push(`Lower highs (${lowerHCount})`); }
-    if(dropPct >= Math.max(6, t.dropFromPeak)){ score += 1; reasons.push(`Actual decline from recent peak ${dropPct.toFixed(1)}%`); }
+    if(dropPct <= -Math.max(6, t.dropFromPeak)){ score += 1; reasons.push(`Actual decline from recent peak ${Math.abs(dropPct).toFixed(1)}%`); }
 
     if(typeof funding === 'number' && funding < -0.001){ score += 1; reasons.push(`Funding neg ${(funding*100).toFixed(3)}%`); }
 
@@ -3890,6 +3845,7 @@ function makeFeatureVector(item){
 }
 const GENERAL_CYCLE_REFERENCE_VECTOR = makeFeatureVector(GENERAL_CYCLE_REFERENCE);
 
+// Cycle similarity is normalized cosine similarity: mathematical range -1..1 maps to UI range 0..100%.
 function normalizeCycleSimilarity(raw){
   // Cosine similarity is naturally [-1,1]. The UI uses a 0..100%
   // similarity scale, so map the mathematical range into [0,1].
@@ -3968,7 +3924,7 @@ function histSnapshotFromResult(r){
       marketPhase:String(phase.phase || ''), marketPhaseConfidence:histNum(phase.confidence),
       cyclePhase:String(cycle.cyclePhase || ''), similarity:histNum(cycle.similarityPct),
       structuralBias:String(r.marketStructure?.bias || r.structureBias || ''),
-      support:histNum(r.support), resistance:histNum(r.resistance),
+      support:histNum(r.support ?? r.supportLevel ?? r.marketStructure?.support), resistance:histNum(r.resistance ?? r.resistanceLevel ?? r.marketStructure?.resistance),
       capturedText:{ phase:String(phase.phase||''), correction:String(cg.label||''), cycle:String(cycle.cyclePhase||'') }
     }
   };
@@ -4823,7 +4779,7 @@ function getFinalRecommendation(item){
   const isDistribution=/distribution|breakdown/.test(phaseLc);
   const isCapitulation=/capitulation/.test(phaseLc);
   const isRecovery=/recovery|return-to-normal/.test(phaseLc)||rtn;
-  const blowoffStrong = (Number(r.score||0)>=7 && rsi4h>=80 && vol>=2) || (rsi4h>=88 && vol>=3 && blow>=25);
+  const blowoffStrong = (Number(r.score||0)>=7 && rsi4h>=80 && vol>=2) || (rsi4h>=88 && vol>=3 && Number(r.topDetection?.score||0)>=75);
   const exhaustion = rsi4h>=75 || vol>=2 || ema70>=20 || wick>=1.5 || warningScore>=6 || blow>=20;
   const strongSupport = accum>=65 && a4h>=55 && a1h>=50;
   const broadSupport = accum>=58 && a4h>=50 && a15>=55;
