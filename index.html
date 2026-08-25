@@ -720,6 +720,19 @@ table{min-width:0!important;width:100%}.tableScroll{width:100%;overflow-x:auto;-
           </select>
         </div>
         <div class="controlItem">
+          <label class="controlLabel">Accumulation Double-Top</label>
+          <select id="accumDoubleTopFilter">
+            <option value="ALL">All</option>
+            <option value="DETECTED">📐 Any detected</option>
+            <option value="FORMING">🟡 Developing</option>
+            <option value="DOUBLE_TOP">🟡 Double Top / Break Watch</option>
+            <option value="BREAKOUT">🟡 Neckline Break — Retest Pending</option>
+            <option value="RETEST">🟠 Neckline Retest — Bearish</option>
+            <option value="REVERSAL_CONFIRMED">🔴 Reversal Confirmed</option>
+          </select>
+          <div class="dashboardHint">Filter specifically by the accumulation → double-top → neckline → reversal stage.</div>
+        </div>
+        <div class="controlItem">
           <label class="controlLabel">Scan Status</label>
           <div id="scanStatus" class="dashboardStatusValue">Ready.</div>
         </div>
@@ -797,7 +810,8 @@ const el = {
   // sorting elements (populated below)
   sortBy: document.getElementById('sortBy'),
   sortDir: document.getElementById('sortDir'),
-  correctionFilter: document.getElementById('correctionFilter')
+  correctionFilter: document.getElementById('correctionFilter'),
+  accumDoubleTopFilter: document.getElementById('accumDoubleTopFilter')
 };
 
   // ---------------------- Symbol search + single-symbol analyzer ----------------------
@@ -2037,7 +2051,8 @@ async function runTop30Scan({ positive = true, mode = 'resistance' } = {}) {
       marketScanResults = [];
       if(session === modeSession && activeViewMode === 'scan'){
         renderActiveView();
-        el.scanStatus.innerText = 'No matches found for filters.';
+        const adrLabel = el.accumDoubleTopFilter?.value !== 'ALL' ? ` • Double Top filter: ${el.accumDoubleTopFilter.options[el.accumDoubleTopFilter.selectedIndex]?.text || el.accumDoubleTopFilter.value}` : '';
+        el.scanStatus.innerText = `No matches found for filters.${adrLabel}`;
       }
     }
   } catch(e){
@@ -4282,6 +4297,21 @@ function filterResultsForDist(results) {
   if (correctionCode !== 'ALL') {
     filtered = filtered.filter(r => String(r?.correctionGuide?.code || '').toUpperCase() === correctionCode);
   }
+
+  // Dedicated Accumulation → Double Top → Neckline → Reversal filter.
+  // This is intentionally independent from the correction filter: a confirmed
+  // double-top reversal does NOT imply that the authoritative 15m EMA200
+  // correction layer is confirmed.
+  const adrFilter = el.accumDoubleTopFilter ? el.accumDoubleTopFilter.value : 'ALL';
+  if (adrFilter !== 'ALL') {
+    filtered = filtered.filter(r => {
+      const adr = r?.accumulationReversal || {};
+      const stage = String(adr.stage || 'NONE').toUpperCase();
+      if (adrFilter === 'DETECTED') return !!adr.detected && stage !== 'NONE' && stage !== 'ERROR';
+      return stage === adrFilter;
+    });
+  }
+
   if (!showOnlyDist) return filtered;
 
   return filtered.filter(r => {
@@ -4501,6 +4531,9 @@ if (el.sortBy) {
 }
 if (el.correctionFilter) {
   el.correctionFilter.addEventListener('change', () => renderActiveView(true));
+}
+if (el.accumDoubleTopFilter) {
+  el.accumDoubleTopFilter.addEventListener('change', () => renderActiveView(true));
 }
 
 
