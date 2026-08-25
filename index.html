@@ -5934,9 +5934,10 @@ async function runScan(once=false, suppliedSession=null){
     const fastCandidates = await fastScreenMarketCandidates(top, session);
     if(session !== modeSession || activeViewMode !== 'scan') return;
 
-    // Normally deep-scan 6–8 symbols. A minimum of 6 preserves coverage on
-    // small scans, while the fast screen keeps the request count controlled.
-    const deepCount = Math.min(top.length, Math.max(6, Math.min(8, Math.ceil(top.length * 0.55))));
+    // Balanced mode: keep ALL requested top symbols visible, but only deep-analyze
+    // the strongest 8. This preserves market visibility without paying the full
+    // 5-request analysis cost for every symbol.
+    const deepCount = Math.min(top.length, 8);
     const deepTop = fastCandidates.slice(0, deepCount);
     queue = []; totalTasks = deepTop.length; doneTasks = 0; updateProgress(); const results = [];
     const finalizeBatch = (batch) => {
@@ -5976,6 +5977,7 @@ async function runScan(once=false, suppliedSession=null){
       }));
 
       const valid=batchResults.filter(Boolean);
+      valid.forEach(r => { r._deepAnalyzed = true; r.analysisLevel = 'DEEP'; });
       results.push(...valid);
       doneTasks += batch.length;
       updateProgress();
@@ -5991,10 +5993,35 @@ async function runScan(once=false, suppliedSession=null){
 
     if(session!==modeSession || activeViewMode!=='scan') return;
 
-    // ATOMIC COMMIT: publish the complete scan only after every batch has
-    // finished. The previous scan remained visible throughout the analysis.
+    // Add the remaining fast-screened symbols so the requested Top-N list is
+    // still visible. These rows deliberately contain only lightweight fields;
+    // they are NOT presented as full multi-TF analysis.
+    const deepBySymbol = new Map(results.map(r => [String(r.symbol || '').toUpperCase(), r]));
+    const visibleResults = fastCandidates.map(t => {
+      const sym = String(t.symbol || '').toUpperCase();
+      const deep = deepBySymbol.get(sym);
+      if(deep) return deep;
+      return {
+        symbol: sym,
+        last: Number(t.last) || 0,
+        change24: Number(t.change24) || 0,
+        fastScore: Number(t.fastScore) || 0,
+        score: 0,
+        confidence: 0,
+        accumCombined: { confidence: 0 },
+        preCrash: { confidence: 0 },
+        _deepAnalyzed: false,
+        analysisLevel: 'FAST',
+        phase: { phase: 'Fast screened', confidence: 0, reasons: ['Deep analysis skipped this cycle to reduce API load'] },
+        reasons: ['15m fast screen only — not a full Blowoff/Accumulation verdict']
+      };
+    });
+
+    // ATOMIC COMMIT: publish all Top-N symbols after the deep stage finishes.
+    // Deep rows retain the full detector output; the other rows are explicitly
+    // marked FAST so they are never mistaken for a confirmed deep analysis.
     commitScannerSurface('main');
-    commitMarketScanResults(results);
+    commitMarketScanResults(visibleResults);
 
     // SINGLE SOUND RULE: only a newly detected blowoff can trigger sound.
     // Conditional accumulation alerts never trigger sound.
