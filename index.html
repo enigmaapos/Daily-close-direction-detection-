@@ -6,7 +6,7 @@
 
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Blowoff + Multi-Detector Top Scanner — v9 Safe Batch Live • Post-Top State</title>
+<title>Blowoff + Multi-Detector Top ScannerSafe Batch Live • Post-Top State</title>
 <style>
   :root{
     --bg:#07101a;
@@ -447,6 +447,100 @@
   #startBtn, #oneShot { display:none !important; }
 </style>
 
+
+<style id="scanner-controls-segregation">
+/* Scanner Controls — strong visual segregation: each control family is an independent zone. */
+.controlDashboard{
+  padding:16px;
+  border:1px solid rgba(126,220,255,.18);
+  background:linear-gradient(180deg,rgba(9,18,31,.99),rgba(5,12,22,.99));
+}
+.controlHeader{
+  padding:2px 2px 14px;
+  margin-bottom:14px;
+}
+.controlSection{
+  position:relative;
+  margin-top:14px !important;
+  padding:15px;
+  border:1px solid rgba(159,179,204,.12);
+  border-radius:13px;
+  background:linear-gradient(180deg,rgba(255,255,255,.028),rgba(255,255,255,.012));
+  box-shadow:0 5px 16px rgba(0,0,0,.12);
+}
+.controlSection:first-of-type{margin-top:0 !important}
+.controlSection::before{
+  content:"";
+  position:absolute;
+  left:-1px; top:14px; bottom:14px;
+  width:3px;
+  border-radius:3px;
+  background:rgba(126,220,255,.55);
+}
+.controlSection:nth-of-type(2)::before{background:rgba(45,212,191,.65)}
+.controlSection:nth-of-type(3)::before{background:rgba(255,159,67,.75)}
+.controlSection:nth-of-type(4)::before{background:rgba(139,124,255,.75)}
+.controlSection:nth-of-type(5)::before{background:rgba(255,92,92,.70)}
+.controlSectionTitle{
+  padding-bottom:9px;
+  margin-bottom:12px;
+  border-bottom:1px solid rgba(159,179,204,.10);
+  font-size:11px;
+}
+.controlSectionTitle span{
+  width:27px;height:27px;border-radius:8px;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.06);
+}
+.controlSection:nth-of-type(2) .controlSectionTitle span{background:rgba(45,212,191,.10)}
+.controlSection:nth-of-type(3) .controlSectionTitle span{background:rgba(255,159,67,.12)}
+.controlSection:nth-of-type(4) .controlSectionTitle span{background:rgba(139,124,255,.12)}
+.controlSection:nth-of-type(5) .controlSectionTitle span{background:rgba(255,92,92,.12)}
+.controlItem{
+  background:rgba(2,8,16,.42);
+  border-color:rgba(159,179,204,.11);
+}
+.dashboardStatus{
+  margin-top:14px;
+  padding:12px;
+  border:1px solid rgba(126,220,255,.12);
+  border-radius:13px;
+  background:rgba(126,220,255,.018);
+}
+.dashboardStatusItem{
+  background:rgba(3,10,20,.42);
+}
+.controlDashboard > .controlSection + .controlSection,
+.controlDashboard > .dashboardStatus + .controlSection{
+  margin-top:14px;
+}
+/* Keep the four scanner status cells together as one dedicated status zone. */
+@media(max-width:600px){
+  .controlDashboard{padding:11px}
+  .controlSection{padding:12px;margin-top:12px !important}
+  .controlSection::before{top:11px;bottom:11px}
+}
+</style>
+
+<style id="scanner-zone-internal-separation">
+.scannerZone .controlGrid.two > .controlItem{
+  position:relative;
+}
+.scannerZone .controlGrid.two > .controlItem:first-child{
+  border-left:3px solid rgba(139,124,255,.55);
+}
+.scannerZone .controlGrid.two > .controlItem:last-child{
+  border-left:3px solid rgba(126,220,255,.55);
+}
+.filtersZone .controlGrid.three .controlItem{
+  min-height:86px;
+}
+@media(max-width:600px){
+  .scannerZone .controlGrid.two > .controlItem:first-child,
+  .scannerZone .controlGrid.two > .controlItem:last-child{
+    border-left-width:3px;
+  }
+}
+</style>
 <style id="responsive-final-fix">
 html,body{max-width:100%;overflow-x:hidden}*{box-sizing:border-box}.card-panel,.tradePanel,#tableView,#cardView{max-width:100%;min-width:0}.tradePanel{overflow:hidden}.tradeList,.recBox{overflow-wrap:anywhere;word-break:break-word}.interpretScores{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:10px 0 12px}.interpretScore{min-width:0;padding:9px 10px;border:1px solid #172033;border-radius:9px;background:rgba(255,255,255,.025)}.interpretScore span,.interpretScore small{display:block;color:var(--muted);font-size:11px}.interpretScore strong{display:block;margin-top:2px;font-size:15px;overflow-wrap:anywhere}
   .layerGrid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:10px 0 12px}
@@ -507,7 +601,7 @@ table{min-width:0!important;width:100%}.tableScroll{width:100%;overflow-x:auto;-
 </head>
 <body>
 <div class="card-panel">
-  <h1>Blowoff + Multi-Detector Top Scanner — v9</h1>
+  <h1>Blowoff + Multi-Detector Top Scanner</h1>
   <div class="small" style="margin-top:6px;color:var(--muted)">
     Multi-timeframe accumulation detector (15m / 1h / 4h), sensitivity slider, conditional alert (blowoff + accumulation) and AI recommendations (long-term + short-term).
     Run on a local server to avoid CORS (e.g., <code>python -m http.server</code>).
@@ -524,8 +618,8 @@ table{min-width:0!important;width:100%}.tableScroll{width:100%;overflow-x:auto;-
       <div class="systemBadge"><span class="systemDot"></span> SYSTEM READY</div>
     </div>
 
-    <div class="controlSection">
-      <div class="controlSectionTitle"><span>⚙</span> Scan Configuration</div>
+    <div class="controlSection controlZone scanConfigZone">
+      <div class="controlSectionTitle"><span>⚙</span> 1 · Scan Configuration</div>
       <div class="controlGrid">
         <div class="controlItem">
           <label class="controlLabel">Prefilter — Top by 24h</label>
@@ -590,8 +684,8 @@ table{min-width:0!important;width:100%}.tableScroll{width:100%;overflow-x:auto;-
       </div>
     </div>
 
-    <div class="controlSection">
-      <div class="controlSectionTitle"><span>📊</span> Multi-Timeframe Accumulation</div>
+    <div class="controlSection controlZone timeframeZone">
+      <div class="controlSectionTitle"><span>📊</span> 2 · Multi-Timeframe Accumulation</div>
       <div class="controlGrid two">
         <div class="controlItem">
           <label class="controlLabel">Accumulation Timeframes</label>
@@ -613,8 +707,8 @@ table{min-width:0!important;width:100%}.tableScroll{width:100%;overflow-x:auto;-
       </div>
     </div>
 
-    <div class="controlSection alertSection">
-      <div class="controlSectionTitle"><span>🔔</span> Conditional Alerts</div>
+    <div class="controlSection controlZone alertSection alertZone">
+      <div class="controlSectionTitle"><span>🔔</span> 3 · Conditional Alerts</div>
       <div class="controlGrid three">
         <div class="controlItem">
           <label class="controlLabel">Alert Condition</label>
@@ -639,8 +733,8 @@ table{min-width:0!important;width:100%}.tableScroll{width:100%;overflow-x:auto;-
       </div>
     </div>
 
-    <div class="controlSection">
-      <div class="controlSectionTitle"><span>🔎</span> Symbol Search & Scanner</div>
+    <div class="controlSection controlZone scannerZone">
+      <div class="controlSectionTitle"><span>🔎</span> 4 · Symbol Search & Scanner</div>
       <div class="controlGrid two">
         <div class="controlItem">
           <label class="controlLabel">Search Symbol</label>
@@ -700,8 +794,8 @@ table{min-width:0!important;width:100%}.tableScroll{width:100%;overflow-x:auto;-
       </div>
     </div>
 
-    <div class="controlSection">
-      <div class="controlSectionTitle"><span>🎯</span> Result Filters</div>
+    <div class="controlSection controlZone filtersZone">
+      <div class="controlSectionTitle"><span>🎯</span> 5 · Result Filters</div>
       <div class="controlGrid three">
         <div class="controlItem">
           <label class="controlLabel">Correction Status</label>
@@ -961,7 +1055,7 @@ el.symbolClearCache.addEventListener('click', () => {
 });
 
   /* ============================================================
-   UPGRADED TOP-DETECTION STACK v9
+   UPGRADED TOP-DETECTION STACK 
    Preferred stack:
    Blowoff + Momentum Exhaustion + RSI Divergence + Distribution
    + Failed Breakout + Lower-High/CHoCH + Volume Exhaustion
@@ -5927,7 +6021,7 @@ async function runScan(once=false, suppliedSession=null){
 
     const top = await getTopN(N);
     if(session !== modeSession || activeViewMode !== 'scan') return;
-    // v9.1 BALANCED FAST+SAFE MARKET SCREENING.
+    //  BALANCED FAST+SAFE MARKET SCREENING.
     // Stage 1 uses one lightweight 15m request per candidate. Stage 2 runs
     // the existing full 5-request analysis only on the strongest candidates.
     const scanBatchSize = SCAN_BATCH_SIZE;
@@ -6246,7 +6340,7 @@ if('Notification' in window){ try{ Notification.requestPermission().catch(()=>{}
 .trendStateCompact>strong{letter-spacing:.02em}.trendStateCompact>span{font-weight:900;margin-left:4px}.trendStateCompact>b{float:right;font-size:12px}.trendStateReason{margin-top:3px;color:var(--muted)}.trendStateReasons{margin-top:2px;color:#cfe8ff;overflow-wrap:anywhere}.trendState-good{border-color:rgba(46,204,113,.20)}.trendState-good>span{color:#8ff0b0}.trendState-watch{border-color:rgba(241,196,15,.22)}.trendState-watch>span{color:#ffe58a}.trendState-warn{border-color:rgba(243,156,18,.25);background:rgba(243,156,18,.045)}.trendState-warn>span{color:#ffc27a}.trendState-info{border-color:rgba(126,220,255,.24);background:rgba(126,220,255,.045)}.trendState-info>span{color:#bdeeff}
 @media(max-width:680px){.trendStateCompact{font-size:11px}.trendStateCompact>b{font-size:11px}}
 
-/* v9 TOP-DETECTION STACK */
+/*  TOP-DETECTION STACK */
 /* RENDERER STALE-RESULT GUARD: re-check EMA200 correction at render time */
 .topDetPanel{margin-top:12px;padding:14px;border:1px solid rgba(255,255,255,.10);border-radius:14px;background:rgba(255,255,255,.035)}
 .topDetHeader{display:flex;justify-content:space-between;align-items:center;gap:10px;font-weight:800}
