@@ -4057,9 +4057,9 @@ function toggleFavorite(symbol){
 
   if(activeViewMode === 'favorite'){
     favoriteViewResults = favoriteViewResults.filter(r => favoriteSymbols.has(String(r?.symbol || '').toUpperCase()));
-    renderActiveView();
+    renderActiveView(true);
   }else{
-    renderActiveView();
+    renderActiveView(true);
   }
 
   // Reassert the live owner after rendering. This protects the scanner from
@@ -4168,17 +4168,22 @@ if(favoritesLiveBtn){
   });
 }
 
-function renderActiveView(){
+function renderActiveView(allowFast=false){
   const base = getActiveBaseResults();
   window.lastScanResults = base.slice();
 
   const arr = filterResultsForDist(base.slice());
   sortResults(arr);
-  renderResponsiveResults(arr);
-  updateTradingInterpretation(arr);
+  const topKey = arr[0] ? String(arr[0].symbol || '').toUpperCase() : '';
+  const topChanged = topKey !== window.__interpretTopKey;
+  renderResponsiveResults(arr, allowFast);
+  if(topChanged){
+    window.__interpretTopKey = topKey;
+    updateTradingInterpretation(arr);
+  }
 }
 
-function applyFilterAndSortThenRender(results) {
+function applyFilterAndSortThenRender(results, allowFast=false) {
   // Legacy callers pass a result array. Store it ONLY in the dataset owned
   // by the current mode; never copy it into every mode's dataset.
   if (!Array.isArray(results)) return;
@@ -4191,14 +4196,14 @@ function applyFilterAndSortThenRender(results) {
     marketScanResults = results.slice();
   }
 
-  renderActiveView();
+  renderActiveView(allowFast);
 }
 
 if (el.sortDir) {
   el.sortDir.addEventListener('click', () => {
     sortDesc = !sortDesc;
     el.sortDir.innerText = sortDesc ? 'Desc' : 'Asc';
-    renderActiveView();
+    renderActiveView(true);
   });
   el.sortDir.innerText = sortDesc ? 'Desc' : 'Asc';
 }
@@ -4211,12 +4216,21 @@ if (showDistBtn) {
     if (showDistBtn.type === 'checkbox') showDistBtn.checked = showOnlyDist;
     const label = showDistBtn.closest('.controlToggle');
     if (label) label.classList.toggle('active', showOnlyDist);
-    if (Array.isArray(window.lastScanResults)) applyFilterAndSortThenRender(window.lastScanResults);
+    if (Array.isArray(window.lastScanResults)) applyFilterAndSortThenRender(window.lastScanResults, true);
   });
 }
 
 // Keep the old sorting default: Score, Desc.
 if (el.sortBy) el.sortBy.value = 'score';
+
+// Instant local UI controls: sorting/filtering never require a network request.
+if (el.sortBy) {
+  el.sortBy.addEventListener('change', () => renderActiveView(true));
+}
+if (el.correctionFilter) {
+  el.correctionFilter.addEventListener('change', () => renderActiveView(true));
+}
+
 
 /* ---------- Long-term target generator ---------- */
 function getLongTermTargets(item){
@@ -4762,7 +4776,7 @@ function closeSymbol(symbol){
     activeScannerMode = savedScanner;
     showFavoritesOnly = false;
     persistActiveMode();
-    renderActiveView();
+    renderActiveView(true);
     updateLiveModeUI();
     const resumeMs = marketAutoRemainingMs > 0 ? marketAutoRemainingMs : Math.max(1000, (parseInt(el.interval.value,10)||120) * 1000);
     marketAutoRemainingMs = 0;
@@ -4776,12 +4790,12 @@ function closeSymbol(symbol){
   }
 
   closedSymbols.add(s);
-  renderActiveView();
+  renderActiveView(true);
 }
 
 function restoreClosed(){
   closedSymbols.clear();
-  renderActiveView();
+  renderActiveView(true);
 }
 
 /* ---------- RENDER TABLE & CARDS ---------- */
@@ -4799,7 +4813,7 @@ function renderTable(results){
     let status=r.score>=threshold?'<span class="blowBadge">🔥 Blowoff</span>':r.score===threshold-1?'<span class="potBadge">⚠ Potential</span>':'<span class="small">normal</span>';
     const tf=(r.accumChecks||[]).map(t=>`${t.tf}:${t.result.confidence}%${t.result.isAccum?'✓':''}`).join(' | ');
     const pro=renderProfessionalAnalysis(r,rec,srec,lt);
-    return `<tr><td class="coinCell"><div class="coinName">${String(r.symbol||'').replace(/USDT$/i,'')}</div><div class="coinTicker">${r.symbol}</div><div style="margin-top:7px">${favoriteButtonHtml(r.symbol)} ${closeButtonHtml(r.symbol)}</div><div style="margin-top:7px">${histGet(histSymbol(r)) ? histCardActionsHtml(r) : `<button type="button" class="alt histSaveBtn" data-symbol="${histSymbol(r)}">📌 Save observation</button>`}</div><div style="margin-top:7px">${status} <span class="accBadge">Accum ${accum.confidence}%</span> <span class="phaseTag">${phase.phase}</span></div><div style="margin-top:7px">${renderTrendExhaustionState(r)}</div></td><td>${r.closeNow}</td><td>${Number(r.rsi4h||0).toFixed(1)}</td><td class="small">Vol×${r.volSpike4} • Wick ${Number(r.wickRatio4||0).toFixed(2)} • EMA70 ${r.ema70DistPct}%<br>EMA200 ${cg.ema200Stretch15==null?'n/a':Number(cg.ema200Stretch15).toFixed(2)+'%'}</td><td class="small"><span class="phasePill">${cyclePhase}</span><br><strong>Similarity:</strong> <span class="metricPill">${simPct}%</span> • Blowoff ${r.score??0}/8 • ${r.expl?.label||'None'}<br>${tf}</td></tr><tr><td colspan="5" style="padding:10px 12px"><div class="small" style="color:var(--muted)">${expl.label} • reversal estimate ${expl.prob}%</div><details class="coinDetails"><summary><strong>＋ Detailed evidence</strong></summary><div class="coinDetailsBody" style="margin-top:10px">${pro}</div></details></td></tr>`;
+    return `<tr data-symbol="${String(r.symbol||'').replace(/"/g,'&quot;')}"><td class="coinCell"><div class="coinName">${String(r.symbol||'').replace(/USDT$/i,'')}</div><div class="coinTicker">${r.symbol}</div><div style="margin-top:7px">${favoriteButtonHtml(r.symbol)} ${closeButtonHtml(r.symbol)}</div><div style="margin-top:7px">${histGet(histSymbol(r)) ? histCardActionsHtml(r) : `<button type="button" class="alt histSaveBtn" data-symbol="${histSymbol(r)}">📌 Save observation</button>`}</div><div style="margin-top:7px">${status} <span class="accBadge">Accum ${accum.confidence}%</span> <span class="phaseTag">${phase.phase}</span></div><div style="margin-top:7px">${renderTrendExhaustionState(r)}</div></td><td>${r.closeNow}</td><td>${Number(r.rsi4h||0).toFixed(1)}</td><td class="small">Vol×${r.volSpike4} • Wick ${Number(r.wickRatio4||0).toFixed(2)} • EMA70 ${r.ema70DistPct}%<br>EMA200 ${cg.ema200Stretch15==null?'n/a':Number(cg.ema200Stretch15).toFixed(2)+'%'}</td><td class="small"><span class="phasePill">${cyclePhase}</span><br><strong>Similarity:</strong> <span class="metricPill">${simPct}%</span> • Blowoff ${r.score??0}/8 • ${r.expl?.label||'None'}<br>${tf}</td></tr><tr data-symbol="${String(r.symbol||'').replace(/"/g,'&quot;')}" ><td colspan="5" style="padding:10px 12px"><div class="small" style="color:var(--muted)">${expl.label} • reversal estimate ${expl.prob}%</div><details class="coinDetails"><summary><strong>＋ Detailed evidence</strong></summary><div class="coinDetailsBody" style="margin-top:10px">${pro}</div></details></td></tr>`;
   }).join('');
   el.tableView.innerHTML=`<div class="card-panel"><div class="tableScroll"><table><thead><tr><th>Symbol / Status</th><th>Last</th><th>RSI4H</th><th>Signals</th><th>Context / Accumulation</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
 }
@@ -4848,7 +4862,7 @@ function renderCards(results){
     else action=rec.action;
 
     html += `
-      <div class="resultCard coinCard">
+      <div class="resultCard coinCard" data-symbol="${String(r.symbol||'').replace(/"/g,'&quot;')}">
         <div class="coinRow1">
           <div>
             <div class="coinName">${String(r.symbol||'').replace(/USDT$/i,'')}</div>
@@ -5035,30 +5049,26 @@ function preserveExpandedDetailState(){
 }
 
 /* ---------- RESPONSIVE RESULT RENDERER ---------- */
-function renderResponsiveResults(results){
+function renderResponsiveResults(results, allowFast=false){
   window.results = Array.isArray(results) ? results : [];
   preserveExpandedDetailState();
   preserveHistoricalCompareState();
   const safe = Array.isArray(results) ? results.filter(Boolean) : [];
-
-  // FIX: rendering both desktop and mobile trees on every update caused
-  // unnecessary DOM destruction/recreation and visible flashing. Render only
-  // the currently visible renderer.
   const isMobile = window.matchMedia && window.matchMedia('(max-width: 760px)').matches;
-  const nextKey = safe.map(r => r && r.symbol ? r.symbol : '').join('|');
-  const shapeChanged = window.__renderShapeKey !== nextKey;
-  window.__renderShapeKey = nextKey;
+  const key = safe.map(r => String(r?.symbol || '').toUpperCase()).join('|');
+  const prevKey = window.__renderShapeKey || '';
 
-  // The current renderer still needs fresh values, so update the visible tree.
-  // The important improvement is that the hidden renderer is no longer rebuilt.
-  if(isMobile){
-    renderCards(safe);
-  }else{
-    renderTable(safe);
+  // Fast path: when the same analyzed coins are already mounted, only reorder/show/hide
+  // existing DOM nodes. No HTML generation, no indicator recomputation, no DOM teardown.
+  if(allowFast && fastPatchResultDOM(safe, isMobile)){
+    try{ restoreHistoricalCompareStates(); }catch(e){}
+    return;
   }
 
-  // Restore user-controlled expandable state synchronously; avoid the old
-  // zero-delay timer which created a second paint immediately after rendering.
+  window.__renderShapeKey = key;
+  if(isMobile) renderCards(safe);
+  else renderTable(safe);
+
   try{ restoreHistoricalCompareStates(); }catch(e){ console.warn('compare restore error',e); }
   if(isMobile){
     try{
@@ -5072,6 +5082,45 @@ function renderResponsiveResults(results){
   }
 }
 
+function fastPatchResultDOM(results, isMobile){
+  try{
+    const symbols = new Set(results.map(r => String(r?.symbol || '').toUpperCase()));
+    if(isMobile){
+      const cards = Array.from(el.cardView.querySelectorAll('.resultCard[data-symbol]'));
+      if(cards.length < symbols.size) return false;
+      const by = new Map(cards.map(c => [String(c.dataset.symbol||'').toUpperCase(), c]));
+      for(const sym of symbols) if(!by.has(sym)) return false;
+      const frag=document.createDocumentFragment();
+      results.forEach(r=>{ const c=by.get(String(r.symbol).toUpperCase()); c.hidden=false; frag.appendChild(c); });
+      cards.forEach(c=>{ if(!symbols.has(String(c.dataset.symbol||'').toUpperCase())) c.hidden=true; });
+      el.cardView.appendChild(frag);
+      return true;
+    }
+
+    const tbody=el.tableView.querySelector('tbody');
+    if(!tbody) return false;
+    const rows=Array.from(tbody.querySelectorAll('tr[data-symbol]'));
+    const by=new Map();
+    rows.forEach(row=>{
+      const sym=String(row.dataset.symbol||'').toUpperCase();
+      if(!by.has(sym)) by.set(sym, []);
+      by.get(sym).push(row);
+    });
+    if(by.size !== rows.length/2 || by.size < symbols.size) return false;
+    for(const sym of symbols) if(!by.has(sym) || by.get(sym).length < 2) return false;
+    const frag=document.createDocumentFragment();
+    results.forEach(r=>{
+      const pair=by.get(String(r.symbol).toUpperCase());
+      pair.forEach(row=>{ row.hidden=false; frag.appendChild(row); });
+    });
+    rows.forEach(row=>{ if(!symbols.has(String(row.dataset.symbol||'').toUpperCase())) row.hidden=true; });
+    tbody.appendChild(frag);
+    return true;
+  }catch(e){
+    console.warn('Fast result DOM patch failed; falling back to full render:',e);
+    return false;
+  }
+}
 
 /* ---------- Trading interpretation renderer ---------- */
 function buildTradingInterpretation(item){
@@ -5569,7 +5618,7 @@ el.favoritesBtn.addEventListener('click', () => {
         .slice();
     }
 
-    renderActiveView();
+    renderActiveView(true);
     updateFavoritesLiveStatus();
     scheduleFavoritesLiveUpdate();
     if(session === modeSession) persistActiveMode();
@@ -5586,11 +5635,11 @@ el.favoritesBtn.addEventListener('click', () => {
 
     if(activeViewMode === 'single'){
       singleViewLocked = true;
-      renderActiveView();
+      renderActiveView(true);
       scheduleSingleLiveUpdate();
     }else if(activeViewMode === 'scan'){
       singleViewLocked = false;
-      renderActiveView();
+      renderActiveView(true);
 
       // Resume the exact remaining Market Scan countdown.
       const resumeMs = marketAutoRemainingMs > 0
@@ -5606,7 +5655,7 @@ el.favoritesBtn.addEventListener('click', () => {
       persistActiveMode();
     }else{
       activeViewMode = 'idle';
-      renderActiveView();
+      renderActiveView(true);
     }
   }
 
