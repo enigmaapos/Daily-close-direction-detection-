@@ -1935,6 +1935,10 @@ async function scanAllPerpsForBelow50({minDelay=FULL_SCAN_MIN_DELAY_MS, batchSiz
     try {
       const res = await scanAllPerpsForBelow50({ minDelay: FULL_SCAN_MIN_DELAY_MS, batchSize: FULL_SCAN_BATCH_SIZE });
       if(session !== modeSession || activeViewMode !== 'scan') return;
+
+      // ATOMIC REFRESH: the previous Below-50 tables stay visible throughout
+      // the entire scan. Publish the new Below-50 tables only after completion.
+      commitScannerSurface('below50');
       await renderResults(res);
       el.scanStatus && (el.scanStatus.innerText = `Scan finished. lowAccum:${res.lowAccum.length} lowPreCrash:${res.lowPreCrash.length} errors:${res.errors.length}`);
     } catch(err) {
@@ -1949,7 +1953,15 @@ async function scanAllPerpsForBelow50({minDelay=FULL_SCAN_MIN_DELAY_MS, batchSiz
   }
 
   // wire button
-  if (runBtn) runBtn.addEventListener('click', () => { modeSession++; activeViewMode='scan'; running=false; queue=[]; singleViewLocked=false; clearSingleLiveTimer(); if(autoTimer){clearTimeout(autoTimer);autoTimer=null;} if(countdownTimer){clearInterval(countdownTimer);countdownTimer=null;} startScan({session:modeSession}); });
+  if (runBtn) runBtn.addEventListener('click', () => {
+    const session = (typeof setActiveMode === 'function')
+      ? setActiveMode('scan', 'below50')
+      : (++modeSession, activeViewMode='scan', modeSession);
+    showFavoritesOnly = false;
+    updateFavoritesButton();
+    persistActiveMode();
+    startScan({session});
+  });
 
   // optional: expose to window for console invocation
   window.runBelow50ScanUI = startScan;
@@ -2047,11 +2059,9 @@ async function runTop30Scan({ positive = true, mode = 'resistance' } = {}) {
       mode, session, batchSize: SCAN_BATCH_SIZE,
       onBatch: (_batch, allMatches, done, total) => {
         if(session!==modeSession || activeViewMode!=='scan') return;
-        marketScanResults=allMatches.slice();
-        window.lastScanResults=marketScanResults.slice();
-        const display=filterResultsForDist(marketScanResults.slice());
-        sortResults(display);
-        renderResponsiveResults(display);
+
+        // ATOMIC REFRESH: never replace the current result pane with partial
+        // Top30 Gainer/Loser matches. Update scanner progress only.
         el.scanStatus.innerText=`Analyzed ${done}/${total} symbols • ${allMatches.length} matches`;
       }
     });
@@ -2060,12 +2070,12 @@ async function runTop30Scan({ positive = true, mode = 'resistance' } = {}) {
     clearQuickTradingInterpretation();
     if(matches.length) {
       if(session !== modeSession || activeViewMode !== 'scan') return;
-      marketScanResults = matches.slice();
-      renderActiveView();
+      commitScannerSurface('main');
+      commitMarketScanResults(matches);
     } else {
-      marketScanResults = [];
       if(session === modeSession && activeViewMode === 'scan'){
-        renderActiveView();
+        commitScannerSurface('main');
+        commitMarketScanResults([]);
         const adrLabel = el.accumDoubleTopFilter?.value !== 'ALL' ? ` • Double Top: ${el.accumDoubleTopFilter.options[el.accumDoubleTopFilter.selectedIndex]?.text || el.accumDoubleTopFilter.value}` : '';
         const exLabel = el.marketExhaustionFilter?.value !== 'ALL' ? ` • Exhaustion: ${el.marketExhaustionFilter.options[el.marketExhaustionFilter.selectedIndex]?.text || el.marketExhaustionFilter.value}` : '';
         el.scanStatus.innerText = `No matches found for filters.${adrLabel}${exLabel}`;
@@ -5803,6 +5813,57 @@ function pauseMarketAutoRefresh(){
   }
 })();
 /* ---------- MAIN RUN ---------- */
+/*
+ * Atomic market-result commit.
+ * A scan builds its next dataset in memory. The currently visible dataset
+ * stays untouched until this function is called after the scan completes.
+ */
+function commitScannerSurface(surface){
+  // A scanner surface is published only after its scan is complete.
+  // The previous surface remains untouched while analysis is running.
+  const scrollY = window.scrollY || window.pageYOffset || 0;
+  if(surface === 'below50'){
+    if(el.tableView) el.tableView.innerHTML = '';
+    if(el.cardView) el.cardView.innerHTML = '';
+    if(el.tradeInterpret){
+      el.tradeInterpret.style.display = 'none';
+      el.tradeInterpret.innerHTML = '';
+    }
+  }else{
+    const below = document.getElementById('below50Results');
+    if(below) below.innerHTML = '';
+  }
+  requestAnimationFrame(() => {
+    try { window.scrollTo(0, scrollY); } catch (_) {}
+  });
+}
+
+function commitMarketScanResults(nextResults){
+  const scrollY = window.scrollY || window.pageYOffset || 0;
+
+  marketScanResults = Array.isArray(nextResults) ? nextResults.slice() : [];
+  window.lastScanResults = marketScanResults.slice();
+  saveFavoriteResultSnapshots(marketScanResults);
+
+  const displayResults = filterResultsForDist(marketScanResults.slice());
+  sortResults(displayResults);
+
+  prevBlowoffSet = new Set(
+    window.lastScanResults
+      .filter(r => r && r.score >= (parseInt(el.threshold.value,10) || 4))
+      .map(r => r.symbol)
+  );
+
+  clearQuickTradingInterpretation();
+  window.__magmaSoftRefresh = true;
+  renderResponsiveResults(displayResults, false);
+
+  // Restore the user's page position after the single atomic DOM replacement.
+  requestAnimationFrame(() => {
+    try { window.scrollTo(0, scrollY); } catch (_) {}
+  });
+}
+
 async function runScan(once=false, suppliedSession=null){
   const session = suppliedSession ?? modeSession;
   if(activeViewMode !== 'scan' || session !== modeSession) return;
@@ -5871,29 +5932,19 @@ async function runScan(once=false, suppliedSession=null){
 
       finalizeBatch(valid);
       if(session!==modeSession || activeViewMode!=='scan') return;
-      marketScanResults=results.slice();
-      window.lastScanResults=marketScanResults.slice();
-      const displayBatch=filterResultsForDist(marketScanResults.slice());
-      sortResults(displayBatch);
-      window.__magmaSoftRefresh=true;
-      renderResponsiveResults(displayBatch, false);
 
+      // ATOMIC REFRESH: keep the previous completed scan visible while the
+      // next scan is still running. Only progress/status changes here.
+      // The new result dataset is committed after every batch has completed.
       await delay(Math.max(0,Math.min(delayMs,150)));
     }
 
     if(session!==modeSession || activeViewMode!=='scan') return;
 
-    // Store the complete market scan separately. Favorites are only a view/filter.
-    marketScanResults = results.slice();
-    window.lastScanResults = marketScanResults.slice();
-    saveFavoriteResultSnapshots(marketScanResults);
-    const displayResults = filterResultsForDist(marketScanResults.slice());
-    sortResults(displayResults);
-
-    prevBlowoffSet = new Set(window.lastScanResults.filter(r=> r.score >= (parseInt(el.threshold.value,10)||4)).map(r=>r.symbol));
-    clearQuickTradingInterpretation();
-    window.__magmaSoftRefresh=true;
-    renderResponsiveResults(displayResults, false);
+    // ATOMIC COMMIT: publish the complete scan only after every batch has
+    // finished. The previous scan remained visible throughout the analysis.
+    commitScannerSurface('main');
+    commitMarketScanResults(results);
 
     // SINGLE SOUND RULE: only a newly detected blowoff can trigger sound.
     // Conditional accumulation alerts never trigger sound.
@@ -6077,7 +6128,8 @@ el.unifiedScanBtn.addEventListener('click', async () => {
       await runTop30Scan({ positive:false, mode:'bearish', session });
     } else if (mode === 'below50') {
       el.scanStatus.innerText = 'Running Below-50 Accumulation / PreCrash scan...';
-      if(typeof runBelow50Scan === 'function') await runBelow50Scan({session});
+      if(typeof window.runBelow50ScanUI === 'function') await window.runBelow50ScanUI({session});
+      else if(typeof runBelow50Scan === 'function') await runBelow50Scan({session});
       else if(typeof runBelow50 === 'function') await runBelow50({session});
       else throw new Error('Below-50 scanner function was not found.');
     } else {
