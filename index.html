@@ -733,6 +733,20 @@ table{min-width:0!important;width:100%}.tableScroll{width:100%;overflow-x:auto;-
           <div class="dashboardHint">Filter specifically by the accumulation → double-top → neckline → reversal stage.</div>
         </div>
         <div class="controlItem">
+          <label class="controlLabel">Market Exhaustion</label>
+          <select id="marketExhaustionFilter">
+            <option value="ALL">All</option>
+            <option value="DEVELOPING">🟡 Exhaustion Developing</option>
+            <option value="STRONG">🟠 Strong Exhaustion</option>
+            <option value="EXTREME">🔴 Extreme Exhaustion</option>
+            <option value="MOMENTUM">📉 Momentum Exhaustion</option>
+            <option value="VOLUME">📊 Volume Exhaustion</option>
+            <option value="DISTRIBUTION">🟣 Distribution Exhaustion</option>
+            <option value="BLOWOFF">🔥 Blowoff / Climax</option>
+          </select>
+          <div class="dashboardHint">Filter specifically by the market-exhaustion layer, independent of correction confirmation.</div>
+        </div>
+        <div class="controlItem">
           <label class="controlLabel">Scan Status</label>
           <div id="scanStatus" class="dashboardStatusValue">Ready.</div>
         </div>
@@ -811,7 +825,8 @@ const el = {
   sortBy: document.getElementById('sortBy'),
   sortDir: document.getElementById('sortDir'),
   correctionFilter: document.getElementById('correctionFilter'),
-  accumDoubleTopFilter: document.getElementById('accumDoubleTopFilter')
+  accumDoubleTopFilter: document.getElementById('accumDoubleTopFilter'),
+  marketExhaustionFilter: document.getElementById('marketExhaustionFilter')
 };
 
   // ---------------------- Symbol search + single-symbol analyzer ----------------------
@@ -2051,8 +2066,9 @@ async function runTop30Scan({ positive = true, mode = 'resistance' } = {}) {
       marketScanResults = [];
       if(session === modeSession && activeViewMode === 'scan'){
         renderActiveView();
-        const adrLabel = el.accumDoubleTopFilter?.value !== 'ALL' ? ` • Double Top filter: ${el.accumDoubleTopFilter.options[el.accumDoubleTopFilter.selectedIndex]?.text || el.accumDoubleTopFilter.value}` : '';
-        el.scanStatus.innerText = `No matches found for filters.${adrLabel}`;
+        const adrLabel = el.accumDoubleTopFilter?.value !== 'ALL' ? ` • Double Top: ${el.accumDoubleTopFilter.options[el.accumDoubleTopFilter.selectedIndex]?.text || el.accumDoubleTopFilter.value}` : '';
+        const exLabel = el.marketExhaustionFilter?.value !== 'ALL' ? ` • Exhaustion: ${el.marketExhaustionFilter.options[el.marketExhaustionFilter.selectedIndex]?.text || el.marketExhaustionFilter.value}` : '';
+        el.scanStatus.innerText = `No matches found for filters.${adrLabel}${exLabel}`;
       }
     }
   } catch(e){
@@ -4298,6 +4314,27 @@ function filterResultsForDist(results) {
     filtered = filtered.filter(r => String(r?.correctionGuide?.code || '').toUpperCase() === correctionCode);
   }
 
+  // Dedicated Market Exhaustion filter. This is intentionally independent
+  // from both correction confirmation and the Accumulation Double-Top filter.
+  // The exhaustion score is a warning/formation layer; it never confirms the
+  // authoritative 15m EMA200 correction state.
+  const exhaustionFilter = el.marketExhaustionFilter ? el.marketExhaustionFilter.value : 'ALL';
+  if (exhaustionFilter !== 'ALL') {
+    filtered = filtered.filter(r => {
+      const ex = calculateTrendExhaustionState(r || {});
+      const score = Number(ex?.score || 0);
+      const c = (r?.topDetection?.components || calculateTopDetectionStack(r || {}).components || {});
+      if (exhaustionFilter === 'DEVELOPING') return score >= 25 && score < 45;
+      if (exhaustionFilter === 'STRONG') return score >= 45 && score < 70;
+      if (exhaustionFilter === 'EXTREME') return score >= 70;
+      if (exhaustionFilter === 'MOMENTUM') return Number(c.momentumExhaustion || 0) >= 55;
+      if (exhaustionFilter === 'VOLUME') return Number(c.volumeExhaustion || 0) >= 55;
+      if (exhaustionFilter === 'DISTRIBUTION') return Number(c.distribution || 0) >= 45;
+      if (exhaustionFilter === 'BLOWOFF') return Number(c.blowoff || 0) >= 50;
+      return false;
+    });
+  }
+
   // Dedicated Accumulation → Double Top → Neckline → Reversal filter.
   // This is intentionally independent from the correction filter: a confirmed
   // double-top reversal does NOT imply that the authoritative 15m EMA200
@@ -4534,6 +4571,9 @@ if (el.correctionFilter) {
 }
 if (el.accumDoubleTopFilter) {
   el.accumDoubleTopFilter.addEventListener('change', () => renderActiveView(true));
+}
+if (el.marketExhaustionFilter) {
+  el.marketExhaustionFilter.addEventListener('change', () => renderActiveView(true));
 }
 
 
